@@ -1,0 +1,15 @@
+resource app_signature "application/x-vnd.Test-DirectWindow";
+
+resource app_version {
+	major  = 0,
+	middle = 0,
+	minor  = 0,
+
+	variety = B_APPV_DEVELOPMENT,
+	internal = 0,
+
+	short_info = "",
+	long_info = ""
+};
+
+resource app_flags B_SINGLE_LAUNCH;
