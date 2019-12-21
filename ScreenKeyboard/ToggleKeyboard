@@ -1,0 +1,8 @@
+#!sh
+BIN_PATH=$(dirname $0)/objects.x86_64-cc8-release
+TARGET_PATH=/boot/home/config/non-packaged/add-ons/input_server/devices
+if test -f "$TARGET_PATH/screen_keyboard"; then
+    mv "$TARGET_PATH/screen_keyboard" "$BIN_PATH/screen_keyboard"
+else
+    mv "$BIN_PATH/screen_keyboard" "$TARGET_PATH/screen_keyboard"
+fi
