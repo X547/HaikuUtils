@@ -43,15 +43,20 @@ void SampleGLView::FrameResized(float newWidth, float newHeight) {
 
 void SampleGLView::KeyDown(const char* bytes, int32 numBytes)
 {
-/*
 	if ((numBytes == 1) && (bytes[0] == B_SPACE)) {
-		BRect frame = Frame();
-		LockGL();
-		gReshape(frame.Width(), frame.Height());
-		UnlockGL();
-		Render();
+		BRect rect = this->Bounds().OffsetToCopy(B_ORIGIN);
+		//rect = BRect(0, 0, 3, 3);
+		BBitmap *bmp = new BBitmap(rect, B_RGB32);
+		int8 *bits = (int8*)bmp->Bits();
+		int32 stride = bmp->BytesPerRow();
+		for (int32 y = 0; y <= (int32)rect.Height(); y++)
+			for (int32 x = 0; x <= (int32)rect.Width(); x++)
+				*(int32*)(bits + y*stride + x*4) = 0xff000000 + x%0x100 + y%0x100*0x100;
+		CopyPixelsIn(bmp, B_ORIGIN);
+		//Invalidate();
+		SwapBuffers();
+		delete bmp;
 	}
-*/
 }
 
 void SampleGLView::ErrorCallback(GLenum whichError) {
