@@ -1,3 +1,4 @@
+#include "MsgDump.h"
 #include <stdio.h>
 #include <Message.h>
 #include <String.h>
@@ -14,13 +15,15 @@
 #include <File.h>
 #include "ColumnListView.h"
 #include "ColumnTypes.h"
+#include <TextControl.h>
 
 enum {
 	msgBase = 'm'<<24,
-	expandAllMsg   = msgBase + 0,
-	collapseAllMsg = msgBase + 1,
-	invokeMsg      = msgBase + 2,
-	selectMsg      = msgBase + 3,
+	expandAllMsg   = msgBase,
+	collapseAllMsg,
+	newFieldMsg,
+	invokeMsg,
+	selectMsg
 };
 
 enum {
@@ -88,16 +91,6 @@ void WriteType(BColumnListView *view, BRow *upRow, type_code type)
 	upRow->SetField(new BStringField(buf), typeCol);
 }
 
-void WriteString(BColumnListView *view, BRow *upRow, const char *str, ssize_t len)
-{
-	// TODO: escape
-	BString dst;
-	dst.Append("\"");
-	dst.Append(str);
-	dst.Append("\"");
-	upRow->SetField(new BStringField(dst), valCol);
-}
-
 void WriteData(BColumnListView *view, BRow *upRow, const uint8 *data, ssize_t len)
 {
 	int ofs = 0;
@@ -112,7 +105,7 @@ void WriteData(BColumnListView *view, BRow *upRow, const uint8 *data, ssize_t le
 			buf.Append(buf2.SetToFormat("%02x ", *data++));
 			len--;
 		}
-		row->SetField(new BStringField(""), typeCol);
+		row->SetField(new BStringField("<binary>"), typeCol);
 		row->SetField(new BStringField(buf), valCol);
 		ofs += 16;
 	}
@@ -125,27 +118,27 @@ void WriteData(BColumnListView *view, BRow *upRow, const uint8 *data, ssize_t le
 			buf.Append(buf2.SetToFormat("%02x ", *data++));
 			len--;
 		}
-		row->SetField(new BStringField(""), typeCol);
+		row->SetField(new BStringField("<binary>"), typeCol);
 		row->SetField(new BStringField(buf), valCol);
 	}
 }
 
 void WriteValue(BColumnListView *view, BRow *upRow, type_code type, const void *data, ssize_t size)
 {
-	char buf[256];
+	BString buf;
 	switch (type) {
-	case B_BOOL_TYPE: if (*(bool*)data != 0) sprintf(buf, "true"); else sprintf(buf, "false"); break;
-	case B_FLOAT_TYPE:  sprintf(buf, "%g",          *(float*)data); break;
-	case B_DOUBLE_TYPE: sprintf(buf, "%g",         *(double*)data); break;
-	case B_INT8_TYPE:   sprintf(buf, "%" B_PRId8,    *(int8*)data); break;
-	case B_INT16_TYPE:  sprintf(buf, "%" B_PRId16,  *(int16*)data); break;
-	case B_INT32_TYPE:  sprintf(buf, "%" B_PRId32,  *(int32*)data); break;
-	case B_INT64_TYPE:  sprintf(buf, "%" B_PRId64,  *(int64*)data); break;
-	case B_UINT8_TYPE:  sprintf(buf, "%" B_PRIu8,   *(uint8*)data); break;
-	case B_UINT16_TYPE: sprintf(buf, "%" B_PRIu16, *(uint16*)data); break;
-	case B_UINT32_TYPE: sprintf(buf, "%" B_PRIu32, *(uint32*)data); break;
-	case B_UINT64_TYPE: sprintf(buf, "%" B_PRIu64, *(uint64*)data); break;
-	case B_STRING_TYPE: WriteString(view, upRow, (const char*)data, size); return; break;
+	case B_BOOL_TYPE: if (*(bool*)data != 0) buf.SetTo("true"); else buf.SetTo("false"); break;
+	case B_FLOAT_TYPE:  buf.SetToFormat("%g",          *(float*)data); break;
+	case B_DOUBLE_TYPE: buf.SetToFormat("%g",         *(double*)data); break;
+	case B_INT8_TYPE:   buf.SetToFormat("%" B_PRId8,    *(int8*)data); break;
+	case B_INT16_TYPE:  buf.SetToFormat("%" B_PRId16,  *(int16*)data); break;
+	case B_INT32_TYPE:  buf.SetToFormat("%" B_PRId32,  *(int32*)data); break;
+	case B_INT64_TYPE:  buf.SetToFormat("%" B_PRId64,  *(int64*)data); break;
+	case B_UINT8_TYPE:  buf.SetToFormat("%" B_PRIu8,   *(uint8*)data); break;
+	case B_UINT16_TYPE: buf.SetToFormat("%" B_PRIu16, *(uint16*)data); break;
+	case B_UINT32_TYPE: buf.SetToFormat("%" B_PRIu32, *(uint32*)data); break;
+	case B_UINT64_TYPE: buf.SetToFormat("%" B_PRIu64, *(uint64*)data); break;
+	case B_STRING_TYPE: buf.SetTo      (                 (char*)data); break;
 	//case B_STRING_LIST_TYPE: break;
 	//case B_AFFINE_TRANSFORM_TYPE: break;
 	//case B_ALIGNMENT_TYPE: break;
@@ -168,10 +161,10 @@ void WriteValue(BColumnListView *view, BRow *upRow, type_code type, const void *
 	//case B_OFF_T_TYPE: break;
 	//case B_PATTERN_TYPE: break;
 	//case B_POINTER_TYPE: break;
-	case B_POINT_TYPE: sprintf(buf, "(%g, %g)", ((BPoint*)data)->x, ((BPoint*)data)->y); break;
-	case B_RECT_TYPE: sprintf(buf, "(%g, %g, %g, %g)", ((BRect*)data)->left, ((BRect*)data)->top, ((BRect*)data)->right, ((BRect*)data)->bottom); break;
-	case B_SIZE_TYPE: sprintf(buf, "(%g, %g)", ((BSize*)data)->width, ((BSize*)data)->height); break;
-	case B_RGB_COLOR_TYPE: sprintf(buf, "0x%08x", *(uint32*)data); break;
+	case B_POINT_TYPE:     buf.SetToFormat("%g, %g", ((BPoint*)data)->x, ((BPoint*)data)->y); break;
+	case B_RECT_TYPE:      buf.SetToFormat("%g, %g, %g, %g", ((BRect*)data)->left, ((BRect*)data)->top, ((BRect*)data)->right, ((BRect*)data)->bottom); break;
+	case B_SIZE_TYPE:      buf.SetToFormat("%g, %g", ((BSize*)data)->width, ((BSize*)data)->height); break;
+	case B_RGB_COLOR_TYPE: buf.SetToFormat("0x%08x", *(uint32*)data); break;
 	//case B_PROPERTY_INFO_TYPE: break;
 	//case B_RAW_TYPE: break;
 	//case B_REF_TYPE: break;
@@ -185,7 +178,7 @@ void WriteValue(BColumnListView *view, BRow *upRow, type_code type, const void *
 	//case B_MIME_STRING_TYPE: break;
 	//case B_ASCII_TYPE: break;
 	default:
-		sprintf(buf, "<%d bytes>", size);
+		buf.SetToFormat("<%d bytes>", size);
 		upRow->SetField(new BStringField(buf), valCol);
 		WriteData(view, upRow, (const uint8*)data, size);
 		return;
@@ -193,27 +186,47 @@ void WriteValue(BColumnListView *view, BRow *upRow, type_code type, const void *
 	upRow->SetField(new BStringField(buf), valCol);
 }
 
+void WriteFourCC(BString &buf, int32 code)
+{
+	char chars[4];
+	int i;
+	memcpy(chars, &code, 4);
+	i = 0; while (
+		(i < 4) && (
+			((chars[i] >= 'A') && (chars[i] <= 'Z')) ||
+			((chars[i] >= 'a') && (chars[i] <= 'z')) ||
+			((chars[i] >= '0') && (chars[i] <= '9')) ||
+			((chars[i] == '_'))
+		)
+	) i++;
+	if (!(i < 4)) {
+		buf.Append(" = '");
+		buf.Append(chars, 4);
+		buf.Append("'");
+	}
+}
+
 void WriteMessage(BColumnListView *view, BRow *upRow, BMessage &msg)
 {
-	char buf[256];
+	BString buf;
 	BRow *row, *row2;
 	char *name;
 	type_code type;
 	const void *data;
 	ssize_t size;
 	int32 count;
-	sprintf(buf, "%d\n", msg.what); upRow->SetField(new BStringField(buf), valCol);
+	buf.SetToFormat("%d\n", msg.what); WriteFourCC(buf, msg.what); upRow->SetField(new BStringField(buf), valCol);
 	for (int32 i = 0; msg.GetInfo(B_ANY_TYPE, i, &name, &type, &count) == B_OK; i++) {
 		row = new BRow();
 		view->AddRow(row, upRow);
 		row->SetField(new BStringField(name), nameCol);
 		if (count > 1) {
 			row->SetField(new BStringField("<array>"), typeCol);
-			sprintf(buf, "<%d items>\n", count); row->SetField(new BStringField(buf), valCol);
+			buf.SetToFormat("<%d items>\n", count); row->SetField(new BStringField(buf), valCol);
 			for (int32 j = 0; j < count; j++) {
 				row2 = new BRow();
 				view->AddRow(row2, row);
-				sprintf(buf, "[%d]", j); row2->SetField(new BStringField(buf), nameCol);
+				buf.SetToFormat("[%d]", j); row2->SetField(new BStringField(buf), nameCol);
 				msg.FindData(name, B_ANY_TYPE, j, &data, &size);
 				WriteType(view, row2, type);
 				if (type == B_MESSAGE_TYPE) {
@@ -238,6 +251,7 @@ void WriteMessage(BColumnListView *view, BRow *upRow, BMessage &msg)
 	}
 }
 
+
 void ExpandAll(BColumnListView *view, BRow *row)
 {
 	int32 count;
@@ -258,130 +272,253 @@ void CollapseAll(BColumnListView *view, BRow *row)
 	view->ExpandOrCollapse(row, false);
 }
 
-class TestWindow: public BWindow
-{
-private:
-	BMenuBar *menu;
-	BColumnListView *view;
-	BMessage message;
-	
-public:
-	TestWindow(BRect frame): BWindow(frame, "Window", B_DOCUMENT_WINDOW, B_ASYNCHRONOUS_CONTROLS)
-	{
-		BMenu *menu2;
-		BMenuItem *it;
-		this->menu = new BMenuBar(BRect(0, 0, 32, 32), "menu", B_FOLLOW_LEFT_RIGHT | B_FOLLOW_TOP, B_ITEMS_IN_ROW, true);
-		menu2 = new BMenu("File");
-			menu2->AddItem(new BMenuItem("New", new BMessage('item'), 'N'));
-			menu2->AddItem(new BMenuItem("Open...", new BMessage('item'), 'O'));
-			menu2->AddItem(new BMenuItem("Close", new BMessage(B_QUIT_REQUESTED), 'W'));
-			menu2->AddItem(new BSeparatorItem());
-			menu2->AddItem(new BMenuItem("Save", new BMessage('item'), 'S'));
-			menu2->AddItem(new BMenuItem("Save as...", new BMessage('item'), 'S', B_SHIFT_KEY));
-			menu2->AddItem(new BSeparatorItem());
-			menu2->AddItem(it = new BMenuItem("Quit", new BMessage(B_QUIT_REQUESTED), 'Q')); it->SetTarget(be_app);
-			this->menu->AddItem(menu2);
-		menu2 = new BMenu("Edit");
-			menu2->AddItem(new BMenuItem("Expand all", new BMessage(expandAllMsg)));
-			menu2->AddItem(new BMenuItem("Collapse all", new BMessage(collapseAllMsg)));
-			this->menu->AddItem(menu2);
-		this->AddChild(this->menu);
-		
-		this->view = new BColumnListView(BRect(BPoint(0, this->menu->Frame().Height()), frame.Size()).InsetByCopy(-1, -1), "view", B_FOLLOW_ALL, 0);
-		this->AddChild(this->view, NULL);
-		this->view->SetInvocationMessage(new BMessage(invokeMsg));
-		this->view->SetSelectionMessage(new BMessage(selectMsg));
 
-		view->AddColumn(new BStringColumn("Name", 250, 50, 500, B_TRUNCATE_MIDDLE), nameCol);
-		view->AddColumn(new BStringColumn("Type", 96, 32, 500, B_TRUNCATE_MIDDLE), typeCol);
-		view->AddColumn(new BStringColumn("Value", 128, 32, 500, B_TRUNCATE_MIDDLE), valCol);	
-	}
+// #pragma mark - EditWindow
+
+EditWindow::EditWindow(TestWindow *base, BRect frame): BWindow(frame, "", B_TITLED_WINDOW, B_ASYNCHRONOUS_CONTROLS), base(base)
+{
+	BRect rect, rect2;
+
+	rect = frame.OffsetToCopy(B_ORIGIN);
 	
-	bool Load(BEntry &entry)
-	{
-		BRow *row;
-		BFile file(&entry, B_READ_ONLY);
-		if (file.InitCheck() < B_OK) {(new BAlert("Error", "Can't open file.", "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_STOP_ALERT))->Go(); return false;}
-		if (this->message.Unflatten(&file) < B_OK) {(new BAlert("Error", "Bad file format.", "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_STOP_ALERT))->Go(); return false;}
-		this->SetTitle(entry.Name());
-		
-		this->view->Clear();
-		row = new BRow();
-		this->view->AddRow(row);
-		view->ExpandOrCollapse(row, true);
-		row->SetField(new BStringField("<root>"), nameCol);
-		WriteType(this->view, row, B_MESSAGE_TYPE);
-		WriteMessage(this->view, row, this->message);
-		return true;
-	}
+	this->rootView = new BView(rect, "root", B_FOLLOW_ALL, 0);
+	rootView->SetViewUIColor(B_PANEL_BACKGROUND_COLOR);
+	this->AddChild(this->rootView);
 	
-	void Quit()
-	{
-		if (be_app->CountWindows() == 1) {
-			be_app->PostMessage(B_QUIT_REQUESTED);
-		}
-		BWindow::Quit();
-	}
+	rect2 = rect; rect2.bottom = rect2.top;
+	this->nameView = new BTextControl(rect2.InsetByCopy(4, 4), "name", "Name: ", "", NULL, B_FOLLOW_LEFT_RIGHT);
+	this->nameView->SetDivider(48);
+	this->rootView->AddChild(this->nameView);
+	rect.top += this->nameView->Frame().Height() + 8;
 	
-	void MessageReceived(BMessage* msg)
-	{
-		switch (msg->what) {
-		case expandAllMsg: ExpandAll(this->view, this->view->RowAt(0)); break;
-		case collapseAllMsg: CollapseAll(this->view, this->view->RowAt(0)); break;
-		case invokeMsg: {
-			BRow *row, *parent;
-			bool isVisible;
-			const char *str;
-			BString path;
-			row = this->view->CurrentSelection(NULL);
-			if (row == NULL) {return;}
-			path = ((BStringField*)row->GetField(nameCol))->String();
-			while (this->view->FindParent(row, &parent, &isVisible)) {
-				str = ((BStringField*)parent->GetField(nameCol))->String();
-				path.Prepend("/");
-				path.Prepend(str);
-				row = parent;
+	rect2 = rect; rect2.bottom = rect2.top;
+	this->typeView = new BTextControl(rect2.InsetByCopy(4, 4), "type", "Type: ", "", NULL, B_FOLLOW_LEFT_RIGHT);
+	this->typeView->SetDivider(48);
+	this->rootView->AddChild(this->typeView);
+	rect.top += this->typeView->Frame().Height() + 8;
+	
+	rect2 = rect; rect2.bottom = rect2.top;
+	this->valueView = new BTextControl(rect2.InsetByCopy(4, 4), "value", "Value: ", "", NULL, B_FOLLOW_LEFT_RIGHT);
+	this->valueView->SetDivider(48);
+	this->rootView->AddChild(this->valueView);
+	this->valueView->MakeFocus(true);
+	rect.top += this->valueView->Frame().Height() + 8;
+	
+	rect.right -= 256;
+	
+	ResizeBy(-rect.Width(), -rect.Height());
+	MoveBy(rect.Width()/2, rect.Height()/2);
+}
+
+void EditWindow::SetTo(BRow *row)
+{
+	BRow *parent;
+	bool isVisible;
+	const char *str;
+	if (this->Lock()) {
+		if (row == NULL) {
+			this->SetTitle("New field");
+			this->nameView->SetEnabled(true); this->nameView->TextView()->SetText("");
+			this->typeView->SetEnabled(true); this->typeView->TextView()->SetText("");
+			this->valueView->SetEnabled(true); this->valueView->TextView()->SetText("");
+		} else {
+			this->SetTitle("Edit field");
+			if (!this->base->view->FindParent(row, &parent, &isVisible)) parent = NULL;
+			this->nameView->SetEnabled(true);
+			if ((parent != NULL) && (strcmp(((BStringField*)parent->GetField(typeCol))->String(), "<array>") == 0)) {
+				this->nameView->SetEnabled(false);
 			}
-			(new BAlert("Path", path, "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_INFO_ALERT))->Go();
-			break;
+			if (strcmp(((BStringField*)row->GetField(typeCol))->String(), "<binary>") == 0) {
+				this->nameView->SetEnabled(false);
+			}
+			this->valueView->SetEnabled(strcmp(((BStringField*)row->GetField(typeCol))->String(), "<array>") != 0);
+			this->typeView->SetEnabled(false);
+			this->nameView->TextView()->SetText(((BStringField*)row->GetField(nameCol))->String());
+			this->typeView->TextView()->SetText(((BStringField*)row->GetField(typeCol))->String());
+			this->valueView->TextView()->SetText(((BStringField*)row->GetField(valCol))->String());
+			
 		}
-		case selectMsg:
-			//msg->PrintToStream();
-			break;
-		default:
-			BWindow::MessageReceived(msg);
-		}
+		this->Unlock();
 	}
-};
+}
 
-class TestApplication: public BApplication
+void EditWindow::Quit()
 {
-public:
-	TestApplication(): BApplication("application/x-vnd.Test-MsgDump")
-	{
+	if (base->Lock()) {
+		base->editWnd = NULL;
+		base->Unlock();
 	}
+	BWindow::Quit();
+}
+
+
+// #pragma mark - TestWindow
+
+TestWindow::TestWindow(BRect frame): BWindow(frame, "", B_DOCUMENT_WINDOW, B_ASYNCHRONOUS_CONTROLS),
+	editWnd(NULL)
+{
+	BMenu *menu2;
+	BMenuItem *it;
+	BRect rect, rect2;
+
+	rect = frame.OffsetToCopy(B_ORIGIN);
 	
-	void RefsReceived(BMessage *refsMsg)
-	{
-		entry_ref ref;
-		if (refsMsg->FindRef("refs", &ref) < B_OK) {(new BAlert("Error", "No \"be:refs\" field.", "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_STOP_ALERT))->Go(); return;}
-		BEntry entry(&ref);
-		
-		BRect rect(0, 0, 640, 480);
-		rect.OffsetBy(64, 64);
-		TestWindow *wnd = new TestWindow(rect);
-		if (!wnd->Load(entry)) {wnd->PostMessage(B_QUIT_REQUESTED); return;}
-		wnd->Show();
-	}
+	this->rootView = new BView(rect, "root", B_FOLLOW_ALL, 0);
+	rootView->SetViewUIColor(B_PANEL_BACKGROUND_COLOR);
+	this->AddChild(this->rootView);
 	
-	void ReadyToRun()
-	{
-		if (be_app->CountWindows() == 0) {
-			be_app->PostMessage(B_QUIT_REQUESTED);
+	this->menu = new BMenuBar(BRect(0, 0, 32, 32), "menu", B_FOLLOW_LEFT_RIGHT | B_FOLLOW_TOP, B_ITEMS_IN_ROW, true);
+	menu2 = new BMenu("File");
+		menu2->AddItem(new BMenuItem("New", new BMessage('item'), 'N'));
+		menu2->AddItem(new BMenuItem("Open...", new BMessage('item'), 'O'));
+		menu2->AddItem(new BMenuItem("Close", new BMessage(B_QUIT_REQUESTED), 'W'));
+		menu2->AddItem(new BSeparatorItem());
+		menu2->AddItem(new BMenuItem("Save", new BMessage('item'), 'S'));
+		menu2->AddItem(new BMenuItem("Save as...", new BMessage('item'), 'S', B_SHIFT_KEY));
+		menu2->AddItem(new BSeparatorItem());
+		menu2->AddItem(it = new BMenuItem("Quit", new BMessage(B_QUIT_REQUESTED), 'Q')); it->SetTarget(be_app);
+		this->menu->AddItem(menu2);
+	menu2 = new BMenu("Edit");
+		menu2->AddItem(new BMenuItem("Undo", new BMessage('item'), 'Z'));
+		menu2->AddItem(new BMenuItem("Redo", new BMessage('item'), 'Y'));
+		menu2->AddItem(new BSeparatorItem());
+		menu2->AddItem(new BMenuItem("Cut", new BMessage('item'), 'X'));
+		menu2->AddItem(new BMenuItem("Copy", new BMessage('item'), 'C'));
+		menu2->AddItem(new BMenuItem("Paste", new BMessage('item'), 'V'));
+		menu2->AddItem(new BMenuItem("Delete", new BMessage('item')));
+		menu2->AddItem(new BSeparatorItem());
+		menu2->AddItem(new BMenuItem("New field", new BMessage(newFieldMsg)));
+		menu2->AddItem(new BSeparatorItem());
+		menu2->AddItem(new BMenuItem("Expand all", new BMessage(expandAllMsg)));
+		menu2->AddItem(new BMenuItem("Collapse all", new BMessage(collapseAllMsg)));
+		this->menu->AddItem(menu2);
+	this->rootView->AddChild(this->menu);
+	rect.top += this->menu->Frame().Height();
+	
+	rect2 = rect; rect2.bottom = rect2.top;
+	this->pathView = new BTextControl(rect2.InsetByCopy(4, 4), "path", "Path: ", "", NULL, B_FOLLOW_LEFT_RIGHT);
+	this->pathView->SetDivider(48);
+	this->rootView->AddChild(this->pathView);
+	rect.top += this->pathView->Frame().Height() + 8;
+	
+	this->view = new BColumnListView(rect.InsetByCopy(-1, -1), "view", B_FOLLOW_ALL, B_NAVIGABLE);
+	this->rootView->AddChild(this->view, NULL);
+	this->view->SetInvocationMessage(new BMessage(invokeMsg));
+	this->view->SetSelectionMessage(new BMessage(selectMsg));
+
+	view->AddColumn(new BStringColumn("Name", 250, 50, 500, B_TRUNCATE_MIDDLE), nameCol);
+	view->AddColumn(new BStringColumn("Type", 96, 32, 500, B_TRUNCATE_MIDDLE), typeCol);
+	view->AddColumn(new BStringColumn("Value", 256, 32, 500, B_TRUNCATE_MIDDLE), valCol);	
+}
+
+bool TestWindow::Load(BEntry &entry)
+{
+	BRow *row;
+	BFile file(&entry, B_READ_ONLY);
+	if (file.InitCheck() < B_OK) {(new BAlert("Error", "Can't open file.", "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_STOP_ALERT))->Go(); return false;}
+	if (this->message.Unflatten(&file) < B_OK) {
+		// skip signature
+		file.Seek(4, SEEK_SET);
+		if (this->message.Unflatten(&file) < B_OK) {
+			(new BAlert("Error", "Bad file format.", "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_STOP_ALERT))->Go(); return false;
 		}
 	}
+	this->SetTitle(entry.Name());
 	
-};
+	this->view->Clear();
+	row = new BRow();
+	this->view->AddRow(row);
+	view->ExpandOrCollapse(row, true);
+	row->SetField(new BStringField("<root>"), nameCol);
+	WriteType(this->view, row, B_MESSAGE_TYPE);
+	WriteMessage(this->view, row, this->message);
+	this->view->AddToSelection(row); this->PostMessage(new BMessage(selectMsg));
+	return true;
+}
+
+void TestWindow::Quit()
+{
+	if (be_app->CountWindows() == 1) {
+		be_app->PostMessage(B_QUIT_REQUESTED);
+	}
+	BWindow::Quit();
+}
+
+void TestWindow::MessageReceived(BMessage* msg)
+{
+	switch (msg->what) {
+	case expandAllMsg: ExpandAll(this->view, this->view->RowAt(0)); break;
+	case collapseAllMsg: CollapseAll(this->view, this->view->RowAt(0)); break;
+	case newFieldMsg: {
+		if (this->editWnd != NULL) {
+			this->editWnd->Activate();
+			this->editWnd->SetTo(NULL);
+		} else {
+			this->editWnd = new EditWindow(this, Frame());
+			this->editWnd->SetTo(NULL);
+			this->editWnd->Show();
+		}
+		break;
+	}
+	case invokeMsg: {
+		if (this->editWnd != NULL) {
+			this->editWnd->Activate();
+			this->editWnd->SetTo(this->view->CurrentSelection(NULL));
+		} else {
+			this->editWnd = new EditWindow(this, Frame());
+			this->editWnd->SetTo(this->view->CurrentSelection(NULL));
+			this->editWnd->Show();
+		}
+		break;
+	}
+	case selectMsg: {
+		BRow *row, *parent;
+		bool isVisible;
+		const char *str;
+		BString path;
+		row = this->view->CurrentSelection(NULL);
+		if (row == NULL) {return;}
+		path = ((BStringField*)row->GetField(nameCol))->String();
+		while (this->view->FindParent(row, &parent, &isVisible)) {
+			str = ((BStringField*)parent->GetField(nameCol))->String();
+			path.Prepend("/");
+			path.Prepend(str);
+			row = parent;
+		}
+		this->pathView->TextView()->SetText(path);
+		break;
+	}
+	default:
+		BWindow::MessageReceived(msg);
+	}
+}
+
+
+// #pragma mark - TestApplication
+
+TestApplication::TestApplication(): BApplication("application/x-vnd.Test-MsgDump")
+{
+}
+
+void TestApplication::RefsReceived(BMessage *refsMsg)
+{
+	entry_ref ref;
+	if (refsMsg->FindRef("refs", &ref) < B_OK) {(new BAlert("Error", "No \"be:refs\" field.", "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_STOP_ALERT))->Go(); return;}
+	BEntry entry(&ref);
+	
+	BRect rect(0, 0, 640, 480);
+	rect.OffsetBy(64, 64);
+	TestWindow *wnd = new TestWindow(rect);
+	if (!wnd->Load(entry)) {wnd->PostMessage(B_QUIT_REQUESTED); return;}
+	wnd->Show();
+}
+
+void TestApplication::ReadyToRun()
+{
+	if (be_app->CountWindows() == 0) {
+		be_app->PostMessage(B_QUIT_REQUESTED);
+	}
+}
 
 
 int main()
@@ -390,8 +527,3 @@ int main()
 	app.Run();
 	return 0;
 }
-
-/*
-gcc -g -lbe MsgDump.cpp /boot/system/develop/lib/libcolumnlistview.a -o MsgDump
-MsgDump "/boot/data/packages/haiku/data/artwork/GET HAIKU - download box 2"
-*/
