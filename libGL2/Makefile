@@ -8,7 +8,7 @@
 ## file:///system/develop/documentation/makefile-engine.html
 
 # The name of the binary.
-NAME = OSMesaDriver
+NAME = libGL.so.1.0.0
 
 # The type of binary, must be one of:
 #	APP:	Application
@@ -31,7 +31,7 @@ APP_MIME_SIG =
 #	means this Makefile will not work correctly if two source files with the
 #	same name (source.c or source.cpp) are included from different directories.
 #	Also note that spaces in folder names do not work well with this Makefile.
-SRCS = SoftwareRenderer.cpp
+SRCS = GLView.cpp GLRenderer.cpp ../OSMesaDriver/SoftwareRenderer.cpp
 
 #	Specify the resource definition files to use. Full or relative paths can be
 #	used.
@@ -57,19 +57,19 @@ RSRCS =
 #	- 	if your library does not follow the standard library naming scheme,
 #		you need to specify the path to the library and it's name.
 #		(e.g. for mylib.a, specify "mylib.a" or "path/mylib.a")
-LIBS = $(STDCPPLIBS) be OSMesa
+LIBS = $(STDCPPLIBS) be glapi glapi_static OSMesa
 
 #	Specify additional paths to directories following the standard libXXX.so
 #	or libXXX.a naming scheme. You can specify full paths or paths relative
 #	to the Makefile. The paths included are not parsed recursively, so
 #	include all of the paths where libraries must be found. Directories where
 #	source files were specified are	automatically included.
-LIBPATHS =
+LIBPATHS = /boot/home/downloads/mesa-19.2.8/builddir/install/lib /boot/home/downloads/mesa-19.2.8/builddir/src/mapi/glapi
 
 #	Additional paths to look for system headers. These use the form
 #	"#include <header>". Directories that contain the files in SRCS are
 #	NOT auto-included here.
-SYSTEM_INCLUDE_PATHS = ../libGL
+SYSTEM_INCLUDE_PATHS =
 
 #	Additional paths paths to look for local headers. These use the form
 #	#include "header". Directories that contain the files in SRCS are

@@ -17,8 +17,14 @@ float pntB[3] = {
 SampleGLView::SampleGLView(BRect frame, uint32 type)
 	: BGLView(frame, "SampleGLView", B_FOLLOW_ALL_SIDES, 0, type)
 {
+	printf("+SampleGLView\n");
 	width = frame.right-frame.left;
 	height = frame.bottom-frame.top;
+}
+
+SampleGLView::~SampleGLView()
+{
+	printf("-SampleGLView\n");
 }
 
 void SampleGLView::AttachedToWindow(void) {
@@ -36,7 +42,7 @@ void SampleGLView::FrameResized(float newWidth, float newHeight) {
 	LockGL();
 	width = newWidth;
 	height = newHeight;
-	gReshape(width,height);
+	gReshape(width, height);
 	UnlockGL();
 	Render();
 }

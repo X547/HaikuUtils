@@ -3,13 +3,14 @@
 
 
 #include <kernel/image.h>
-#include <GLRenderer.h>
+#include "GLRenderer.h"
 #include <GL/osmesa.h>
 
 class SoftwareRenderer: public BGLRenderer {
 public:
-	SoftwareRenderer(BGLView *view, ulong bgl_options, BGLDispatcher *dispatcher);
+	SoftwareRenderer(BGLView *view, ulong bgl_options);
 	virtual ~SoftwareRenderer();
+	void* GetGLProcAddress(const char* procName);
 
 	void LockGL();
 	void UnlockGL();

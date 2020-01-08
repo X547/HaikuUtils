@@ -5,11 +5,12 @@
 
 class SampleGLView : public BGLView {
 public:
-	     SampleGLView(BRect frame, uint32 type);
-	void AttachedToWindow(void);
-	void FrameResized(float newWidth, float newHeight);
-	void KeyDown(const char* bytes, int32 numBytes);
-	void ErrorCallback(GLenum which);
+	         SampleGLView(BRect frame, uint32 type);
+	virtual ~SampleGLView();
+	void     AttachedToWindow(void);
+	void     FrameResized(float newWidth, float newHeight);
+	void     KeyDown(const char* bytes, int32 numBytes);
+	void     ErrorCallback(GLenum which);
 
 	void Render(void);
 

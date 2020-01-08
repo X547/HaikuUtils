@@ -11,9 +11,9 @@
 #define _EXPORT __attribute__((__visibility__("default")))
 
 extern "C" _EXPORT BGLRenderer*
-instantiate_gl_renderer(BGLView *view, ulong opts, BGLDispatcher *dispatcher)
+instantiate_gl_renderer2(BGLView *view, ulong opts)
 {
-	return new SoftwareRenderer(view, opts, dispatcher);
+	return new SoftwareRenderer(view, opts);
 }
 
 struct RasBuf32
@@ -101,10 +101,11 @@ struct RasBuf32
 	}
 };
 
-SoftwareRenderer::SoftwareRenderer(BGLView *view, ulong options, BGLDispatcher* dispatcher)
-	: BGLRenderer(view, options, dispatcher), fBackBuf(NULL), fWidth(1), fHeight(1), fDirectModeEnabled(false), fInfo(NULL), fSwapBuffersLevel(0)
+SoftwareRenderer::SoftwareRenderer(BGLView *view, ulong options)
+	: BGLRenderer(view, options), fBackBuf(NULL), fWidth(1), fHeight(1), fDirectModeEnabled(false), fInfo(NULL), fSwapBuffersLevel(0)
 {
 	printf("+SoftwareRenderer\n");
+	#if 0
 	int attribList[] = {
 		OSMESA_FORMAT,                OSMESA_BGRA,
 		OSMESA_DEPTH_BITS,            16,
@@ -113,6 +114,9 @@ SoftwareRenderer::SoftwareRenderer(BGLView *view, ulong options, BGLDispatcher* 
 		0, 0
 	};
 	fCtx = OSMesaCreateContextAttribs(attribList, NULL);
+	#else
+	fCtx = OSMesaCreateContextExt(OSMESA_BGRA, 16, 0, 0, NULL);
+ 	#endif
 	if (fCtx == NULL) {
 		printf("[!] can't create context\n");
 	}
@@ -130,6 +134,11 @@ SoftwareRenderer::~SoftwareRenderer()
 	if (fInfo != NULL) {
 		free(fInfo); fInfo = NULL;
 	}
+}
+
+void* SoftwareRenderer::GetGLProcAddress(const char* procName)
+{
+	return (void*)OSMesaGetProcAddress(procName);
 }
 
 void SoftwareRenderer::LockGL()
@@ -161,8 +170,6 @@ void SoftwareRenderer::SwapBuffers(bool vsync)
 		if (GLView()->LockLooperWithTimeout(1000) == B_OK) {
 			GLView()->DrawBitmap(fBackBuf, B_ORIGIN);
 			GLView()->UnlockLooper();
-			if (vsync)
-				screen.WaitForRetrace();
 		}
 	} else {
 		BAutolock lock(fLocker);
@@ -176,6 +183,7 @@ void SoftwareRenderer::SwapBuffers(bool vsync)
 			dstClip.Blit(srcBuf);
 		}
 	}
+	if (vsync) screen.WaitForRetrace();
 	{
 		BAutolock lock(fLocker);
 		if(_AllocBackBuf()) _UpdateContext();
