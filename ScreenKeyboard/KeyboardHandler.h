@@ -36,6 +36,7 @@ private:
 	int32 repeatRate;
 	BMessage repeatMsg;
 	thread_id repeatThread;
+	sem_id repeatThreadSem;
 	
 	KeyboardNotifier *notifiers;
 	

@@ -26,6 +26,7 @@ void KeyboardHandler::StartRepeating(BMessage *msg)
 	
 	repeatMsg = *msg;
 	repeatThread = spawn_thread(RepeatThread, "repeat thread", B_REAL_TIME_PRIORITY, this);
+	repeatThreadSem = create_sem(0, "repeat thread sem");
 	if (repeatThread > 0)
 		resume_thread(repeatThread);
 }
@@ -33,7 +34,11 @@ void KeyboardHandler::StartRepeating(BMessage *msg)
 void KeyboardHandler::StopRepeating()
 {
 	if (repeatThread > 0) {
-		kill_thread(repeatThread);
+		status_t res;
+		sem_id sem = repeatThreadSem;
+		repeatThreadSem = B_BAD_SEM_ID;
+		delete_sem(sem);
+		wait_for_thread(repeatThread, &res);
 		repeatThread = 0;
 	}
 }
@@ -43,7 +48,7 @@ status_t KeyboardHandler::RepeatThread(void *arg)
 	KeyboardHandler *h = (KeyboardHandler*)arg;
 	int32 count;
 	
-	snooze(h->repeatDelay);
+	if (acquire_sem_etc(h->repeatThreadSem, 1, B_RELATIVE_TIMEOUT, h->repeatDelay) == B_BAD_SEM_ID) return B_OK;
 	while (true) {
 		h->repeatMsg.ReplaceInt64("when", system_time());
 		h->repeatMsg.FindInt32("be:key_repeat", &count);
@@ -54,7 +59,7 @@ status_t KeyboardHandler::RepeatThread(void *arg)
 			if (h->dev->EnqueueMessage(msg) != B_OK)
 				delete msg;
 		
-		snooze(/* 1000000 / h->repeatRate */ 50000);
+		if (acquire_sem_etc(h->repeatThreadSem, 1, B_RELATIVE_TIMEOUT, /* 1000000 / h->repeatRate */ 50000) == B_BAD_SEM_ID) return B_OK;
 	}
 }
 
