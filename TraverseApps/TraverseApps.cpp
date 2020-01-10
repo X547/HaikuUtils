@@ -58,6 +58,15 @@ status_t GetMessenger(BMessenger &val, BMessenger &obj, BMessage &spec)
 	return res;
 }
 
+status_t GetRect(BRect &val, BMessenger &obj, BMessage &spec)
+{
+	status_t res;
+	BMessage reply;
+	if ((res = obj.SendMessage(&spec, &reply, 1000000, 1000000)) != B_OK) return res;
+	if ((res = reply.FindRect("result", &val)) != B_OK) return res;
+	return res;
+}
+
 void WriteStringProp(BMessenger &obj, const char *field)
 {
 	BMessage spec;
@@ -69,6 +78,20 @@ void WriteStringProp(BMessenger &obj, const char *field)
 		WriteError(res);
 	} else {
 		WriteString(str);
+	}
+}
+
+void WriteRectProp(BMessenger &obj, const char *field)
+{
+	BMessage spec;
+	BRect rect;
+	status_t res;
+	spec.what = B_GET_PROPERTY;
+	spec.AddSpecifier(field);
+	if ((res = GetRect(rect, obj, spec)) != B_OK) {
+		WriteError(res);
+	} else {
+		printf("(%g, %g, %g, %g)", rect.left, rect.top, rect.right, rect.bottom);
 	}
 }
 
@@ -104,7 +127,8 @@ void WriteView(BMessenger &view)
 	status_t res;
 	printf("BView(");
 	WriteSuites(view); printf(", ");
-	WriteStringProp(view, "InternalName");
+	WriteStringProp(view, "InternalName"); printf(", ");
+	WriteRectProp(view, "Frame");
 	printf(")\n");
 	indent++;
 	spec = BMessage(B_COUNT_PROPERTIES);
@@ -136,7 +160,8 @@ void WriteWindow(BMessenger &wnd)
 	printf("BWindow(");
 	WriteSuites(wnd); printf(", ");
 	WriteStringProp(wnd, "InternalName"); printf(", ");
-	WriteStringProp(wnd, "Title");
+	WriteStringProp(wnd, "Title"); printf(", ");
+	WriteRectProp(wnd, "Frame");
 	printf(")\n");
 	indent++;
 	spec = BMessage(B_COUNT_PROPERTIES);
