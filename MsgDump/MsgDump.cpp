@@ -153,7 +153,13 @@ void WriteValue(BColumnListView *view, BRow *upRow, type_code type, const void *
 	//case B_MEDIA_PARAMETER_TYPE: break;
 	//case B_MEDIA_PARAMETER_WEB_TYPE: break;
 	//case B_MESSAGE_TYPE: break;
-	//case B_MESSENGER_TYPE: break;
+	case B_MESSENGER_TYPE: {
+		BString buf2;
+		buf2.SetToFormat("port: %ld", *(int32*)data); buf.Append(buf2); ((int32*&)data)++;
+		buf2.SetToFormat(", token: %ld", *(int32*)data); buf.Append(buf2); ((int32*&)data)++;
+		buf2.SetToFormat(", team: %ld", *(int32*)data); buf.Append(buf2); ((int32*&)data)++;
+		break;
+	}
 	//case B_MIME_TYPE: break;
 	//case B_MINI_ICON_TYPE: break;
 	//case B_MONOCHROME_1_BIT_TYPE: break;
@@ -167,7 +173,13 @@ void WriteValue(BColumnListView *view, BRow *upRow, type_code type, const void *
 	case B_RGB_COLOR_TYPE: buf.SetToFormat("0x%08x", *(uint32*)data); break;
 	//case B_PROPERTY_INFO_TYPE: break;
 	//case B_RAW_TYPE: break;
-	//case B_REF_TYPE: break;
+	case B_REF_TYPE: {
+		BString buf2;
+		buf2.SetToFormat("dev: %ld", *(int32*)data); buf.Append(buf2); ((int32*&)data)++;
+		buf2.SetToFormat(", inode: %lld", *(int64*)data); buf.Append(buf2); ((int64*&)data)++;
+		buf2.SetToFormat(", name: \"%s\"", (char*)data); buf.Append(buf2);
+		break;
+	}
 	//case B_RGB_32_BIT_TYPE: break;
 	//case B_SIZE_T_TYPE: break;
 	//case B_SSIZE_T_TYPE: break;
@@ -280,32 +292,32 @@ EditWindow::EditWindow(TestWindow *base, BRect frame): BWindow(frame, "", B_TITL
 	BRect rect, rect2;
 
 	rect = frame.OffsetToCopy(B_ORIGIN);
-	
+
 	this->rootView = new BView(rect, "root", B_FOLLOW_ALL, 0);
 	rootView->SetViewUIColor(B_PANEL_BACKGROUND_COLOR);
 	this->AddChild(this->rootView);
-	
+
 	rect2 = rect; rect2.bottom = rect2.top;
 	this->nameView = new BTextControl(rect2.InsetByCopy(4, 4), "name", "Name: ", "", NULL, B_FOLLOW_LEFT_RIGHT);
 	this->nameView->SetDivider(48);
 	this->rootView->AddChild(this->nameView);
 	rect.top += this->nameView->Frame().Height() + 8;
-	
+
 	rect2 = rect; rect2.bottom = rect2.top;
 	this->typeView = new BTextControl(rect2.InsetByCopy(4, 4), "type", "Type: ", "", NULL, B_FOLLOW_LEFT_RIGHT);
 	this->typeView->SetDivider(48);
 	this->rootView->AddChild(this->typeView);
 	rect.top += this->typeView->Frame().Height() + 8;
-	
+
 	rect2 = rect; rect2.bottom = rect2.top;
 	this->valueView = new BTextControl(rect2.InsetByCopy(4, 4), "value", "Value: ", "", NULL, B_FOLLOW_LEFT_RIGHT);
 	this->valueView->SetDivider(48);
 	this->rootView->AddChild(this->valueView);
 	this->valueView->MakeFocus(true);
 	rect.top += this->valueView->Frame().Height() + 8;
-	
+
 	rect.right -= 256;
-	
+
 	ResizeBy(-rect.Width(), -rect.Height());
 	MoveBy(rect.Width()/2, rect.Height()/2);
 }
@@ -336,7 +348,7 @@ void EditWindow::SetTo(BRow *row)
 			this->nameView->TextView()->SetText(((BStringField*)row->GetField(nameCol))->String());
 			this->typeView->TextView()->SetText(((BStringField*)row->GetField(typeCol))->String());
 			this->valueView->TextView()->SetText(((BStringField*)row->GetField(valCol))->String());
-			
+
 		}
 		this->Unlock();
 	}
@@ -362,11 +374,11 @@ TestWindow::TestWindow(BRect frame): BWindow(frame, "", B_DOCUMENT_WINDOW, B_ASY
 	BRect rect, rect2;
 
 	rect = frame.OffsetToCopy(B_ORIGIN);
-	
+
 	this->rootView = new BView(rect, "root", B_FOLLOW_ALL, 0);
 	rootView->SetViewUIColor(B_PANEL_BACKGROUND_COLOR);
 	this->AddChild(this->rootView);
-	
+
 	this->menu = new BMenuBar(BRect(0, 0, 32, 32), "menu", B_FOLLOW_LEFT_RIGHT | B_FOLLOW_TOP, B_ITEMS_IN_ROW, true);
 	menu2 = new BMenu("File");
 		menu2->AddItem(new BMenuItem("New", new BMessage('item'), 'N'));
@@ -394,13 +406,13 @@ TestWindow::TestWindow(BRect frame): BWindow(frame, "", B_DOCUMENT_WINDOW, B_ASY
 		this->menu->AddItem(menu2);
 	this->rootView->AddChild(this->menu);
 	rect.top += this->menu->Frame().Height();
-	
+
 	rect2 = rect; rect2.bottom = rect2.top;
 	this->pathView = new BTextControl(rect2.InsetByCopy(4, 4), "path", "Path: ", "", NULL, B_FOLLOW_LEFT_RIGHT);
 	this->pathView->SetDivider(48);
 	this->rootView->AddChild(this->pathView);
 	rect.top += this->pathView->Frame().Height() + 8;
-	
+
 	this->view = new BColumnListView(rect.InsetByCopy(-1, -1), "view", B_FOLLOW_ALL, B_NAVIGABLE);
 	this->rootView->AddChild(this->view, NULL);
 	this->view->SetInvocationMessage(new BMessage(invokeMsg));
@@ -408,7 +420,7 @@ TestWindow::TestWindow(BRect frame): BWindow(frame, "", B_DOCUMENT_WINDOW, B_ASY
 
 	view->AddColumn(new BStringColumn("Name", 250, 50, 500, B_TRUNCATE_MIDDLE), nameCol);
 	view->AddColumn(new BStringColumn("Type", 96, 32, 500, B_TRUNCATE_MIDDLE), typeCol);
-	view->AddColumn(new BStringColumn("Value", 256, 32, 500, B_TRUNCATE_MIDDLE), valCol);	
+	view->AddColumn(new BStringColumn("Value", 256, 32, 500, B_TRUNCATE_MIDDLE), valCol);
 }
 
 bool TestWindow::Load(BEntry &entry)
@@ -424,7 +436,7 @@ bool TestWindow::Load(BEntry &entry)
 		}
 	}
 	this->SetTitle(entry.Name());
-	
+
 	this->view->Clear();
 	row = new BRow();
 	this->view->AddRow(row);
@@ -505,7 +517,7 @@ void TestApplication::RefsReceived(BMessage *refsMsg)
 	entry_ref ref;
 	if (refsMsg->FindRef("refs", &ref) < B_OK) {(new BAlert("Error", "No \"be:refs\" field.", "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_STOP_ALERT))->Go(); return;}
 	BEntry entry(&ref);
-	
+
 	BRect rect(0, 0, 640, 480);
 	rect.OffsetBy(64, 64);
 	TestWindow *wnd = new TestWindow(rect);
