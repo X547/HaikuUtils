@@ -1,0 +1,15 @@
+resource app_signature "application/x-vnd.Be-GLSample";
+
+resource app_flags B_MULTIPLE_LAUNCH;
+
+resource app_version {
+	major  = 0,
+	middle = 0,
+	minor  = 0,
+
+	variety = B_APPV_DEVELOPMENT,
+	internal = 0,
+
+	short_info = "OpenGLTest",
+	long_info = "OpenGLTest"
+};
