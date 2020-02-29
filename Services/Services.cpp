@@ -147,11 +147,7 @@ void ListServices(BColumnListView *view) {
 	}
 }
 
-void ListTeams(BColumnListView *view) {
-	team_info info;
-	int32 cookie;
-	BRow *row, *row2;
-	cookie = 0;
+void InitList(BColumnListView *view) {
 	view->AddColumn(new BBitmapColumn("Icon", 16, 16, 16, B_ALIGN_CENTER), iconCol);
 	view->AddColumn(new BStringColumn("Name", 192, 50, 512, B_TRUNCATE_MIDDLE), nameCol);
 	view->AddColumn(new BStringColumn("Target", 96, 50, 128, B_TRUNCATE_MIDDLE), targetCol);
@@ -185,7 +181,7 @@ public:
 		this->view = new BColumnListView("view", 0);
 		this->view->SetInvocationMessage(new BMessage(invokeMsg));
 		this->view->SetSelectionMessage(new BMessage(selectMsg));
-		ListTeams(this->view);
+		InitList(this->view);
 
 		BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
 			//.SetInsets(B_USE_DEFAULT_SPACING)
