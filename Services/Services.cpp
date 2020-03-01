@@ -165,7 +165,7 @@ private:
 	BColumnListView *view;
 	BMessageRunner listUpdater;
 public:
-	ServicesWindow(BRect frame): BWindow(frame, "Services", B_DOCUMENT_WINDOW, B_ASYNCHRONOUS_CONTROLS),
+	ServicesWindow(BRect frame): BWindow(frame, "Services", B_DOCUMENT_WINDOW, B_ASYNCHRONOUS_CONTROLS | B_AUTO_UPDATE_SIZE_LIMITS),
 		listUpdater(BMessenger(this), BMessage(updateMsg), 500000)
 	{
 		BMenu *menu, *menu2;
