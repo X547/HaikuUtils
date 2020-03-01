@@ -186,10 +186,10 @@ public:
 		BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
 			//.SetInsets(B_USE_DEFAULT_SPACING)
 			.Add(menu)
-			.Add(this->view)
-			//.SetInsets(-1)
-			//.AddGlue()
-		;
+			.AddGroup(B_HORIZONTAL)
+				.Add(this->view)
+				.SetInsets(-1)
+			.End();
 	}
 
 	void MessageReceived(BMessage* msg)
