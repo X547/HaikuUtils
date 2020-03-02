@@ -239,15 +239,16 @@ public:
 	ServicesWindow(BRect frame): BWindow(frame, "Services", B_DOCUMENT_WINDOW, B_ASYNCHRONOUS_CONTROLS | B_AUTO_UPDATE_SIZE_LIMITS),
 		listUpdater(BMessenger(this), BMessage(updateMsg), 500000)
 	{
-		BMenu *menu, *menu2, *toolbar;
+		BMenuBar *menubar, *toolbar;
+		BMenu *menu;
 		BMenuItem *it;
 
-		menu = new BMenuBar("menu", B_ITEMS_IN_ROW, true);
-		menu2 = new BMenu("Action");
-			menu2->AddItem(new BMenuItem("Start", new BMessage(startMsg)));
-			menu2->AddItem(new BMenuItem("Stop", new BMessage(stopMsg)));
-			menu2->AddItem(new BMenuItem("Restart", new BMessage(restartMsg)));
-			menu->AddItem(menu2);
+		menubar = new BMenuBar("menu", B_ITEMS_IN_ROW, true);
+		menu = new BMenu("Action");
+			menu->AddItem(new BMenuItem("Start", new BMessage(startMsg)));
+			menu->AddItem(new BMenuItem("Stop", new BMessage(stopMsg)));
+			menu->AddItem(new BMenuItem("Restart", new BMessage(restartMsg)));
+			menubar->AddItem(menu);
 
 		toolbar = new BMenuBar("toolbar", B_ITEMS_IN_ROW, true);
 		toolbar->AddItem(new IconMenuItem(LoadIcon(resStartIcon, 16, 16), new BMessage(startMsg)));
@@ -260,12 +261,14 @@ public:
 		InitList(this->view);
 
 		BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
-			.Add(menu)
+			.Add(menubar)
 			.Add(toolbar)
 			.AddGroup(B_HORIZONTAL)
 				.Add(this->view)
 				.SetInsets(-1)
 			.End();
+
+		SetKeyMenuBar(menubar);
 	}
 
 	void MessageReceived(BMessage* msg)
