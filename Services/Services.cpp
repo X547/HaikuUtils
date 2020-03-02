@@ -4,6 +4,7 @@
 #include <View.h>
 #include <MessageRunner.h>
 #include <MenuBar.h>
+#include <MenuItem.h>
 #include <LayoutBuilder.h>
 #include <Rect.h>
 #include <OS.h>
@@ -12,8 +13,13 @@
 #include <private/interface/ColumnListView.h>
 #include <private/interface/ColumnTypes.h>
 
+#include <Resources.h>
+#include <IconUtils.h>
+
 #include <Entry.h>
 #include <NodeInfo.h>
+
+#include "Resources.h"
 
 enum {
 	invokeMsg = 1,
@@ -159,6 +165,71 @@ void InitList(BColumnListView *view) {
 	ListServices(view);
 }
 
+class IconMenuItem: public BMenuItem
+{
+public:
+	IconMenuItem(BBitmap *bitmap, BMessage* message, char shortcut = 0, uint32 modifiers = 0):
+		BMenuItem("", message, shortcut, modifiers),
+		fBitmap(bitmap)
+	{
+	}
+
+	~IconMenuItem()
+	{
+		if (fBitmap != NULL) {
+			delete fBitmap; fBitmap = NULL;
+		}
+	}
+
+	void GetContentSize(float* width, float* height)
+	{
+		if (fBitmap == NULL) {
+			*width = 0;
+			*height = 0;
+			return;
+		}
+		*width = fBitmap->Bounds().Width() + 1;
+		*height = fBitmap->Bounds().Height() + 1;
+	};
+
+	void DrawContent()
+	{
+		if (fBitmap == NULL)
+			return;
+
+		BRect frame = Frame();
+		BPoint center = BPoint((frame.left + frame.right)/2, (frame.top + frame.bottom)/2);
+		Menu()->PushState();
+		Menu()->SetDrawingMode(B_OP_ALPHA);
+		Menu()->DrawBitmap(fBitmap, center - BPoint(fBitmap->Bounds().Width()/2, fBitmap->Bounds().Height()/2));
+		Menu()->PopState();
+	}
+
+private:
+	BBitmap *fBitmap;
+};
+
+
+BBitmap *LoadIcon(int32 id, int32 width, int32 height)
+{
+	size_t dataSize;
+	const void* data = BApplication::AppResources()->FindResource(B_VECTOR_ICON_TYPE, id, &dataSize);
+
+	if (data == NULL) return NULL;
+
+	BBitmap *bitmap = new BBitmap(BRect(0, 0, width - 1, height - 1), B_RGBA32);
+
+	if (bitmap == NULL) return NULL;
+
+	if (BIconUtils::GetVectorIcon((const uint8*)data, dataSize, bitmap) != B_OK) {
+		delete bitmap;
+		return NULL;
+	}
+
+	return bitmap;
+}
+
+
 class ServicesWindow: public BWindow
 {
 private:
@@ -168,7 +239,7 @@ public:
 	ServicesWindow(BRect frame): BWindow(frame, "Services", B_DOCUMENT_WINDOW, B_ASYNCHRONOUS_CONTROLS | B_AUTO_UPDATE_SIZE_LIMITS),
 		listUpdater(BMessenger(this), BMessage(updateMsg), 500000)
 	{
-		BMenu *menu, *menu2;
+		BMenu *menu, *menu2, *toolbar;
 		BMenuItem *it;
 
 		menu = new BMenuBar("menu", B_ITEMS_IN_ROW, true);
@@ -178,14 +249,19 @@ public:
 			menu2->AddItem(new BMenuItem("Restart", new BMessage(restartMsg)));
 			menu->AddItem(menu2);
 
+		toolbar = new BMenuBar("toolbar", B_ITEMS_IN_ROW, true);
+		toolbar->AddItem(new IconMenuItem(LoadIcon(resStartIcon, 16, 16), new BMessage(startMsg)));
+		toolbar->AddItem(new IconMenuItem(LoadIcon(resStopIcon, 16, 16), new BMessage(stopMsg)));
+		toolbar->AddItem(new IconMenuItem(LoadIcon(resRestartIcon, 16, 16), new BMessage(restartMsg)));
+
 		this->view = new BColumnListView("view", 0);
 		this->view->SetInvocationMessage(new BMessage(invokeMsg));
 		this->view->SetSelectionMessage(new BMessage(selectMsg));
 		InitList(this->view);
 
 		BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
-			//.SetInsets(B_USE_DEFAULT_SPACING)
 			.Add(menu)
+			.Add(toolbar)
 			.AddGroup(B_HORIZONTAL)
 				.Add(this->view)
 				.SetInsets(-1)
@@ -247,8 +323,3 @@ int main()
 	app.Run();
 	return 0;
 }
-
-/*
-gcc -g -lbe ListArea.cpp /boot/system/develop/lib/libcolumnlistview.a -o ListArea
-ListArea
-*/
