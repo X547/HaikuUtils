@@ -60,7 +60,6 @@ void ListHandles(BColumnListView *view, BRow *teamRow, team_id team) {
 	cookie = 0;
 	int i;
 
-
 	for (int32 i = 0; i < view->CountRows(teamRow); i++) {
 		row = view->RowAt(i, teamRow);
 		prevFds.insert(((BIntegerField*)row->GetField(idCol))->Value());
@@ -97,7 +96,9 @@ void ListHandles(BColumnListView *view, BRow *teamRow, team_id team) {
 	}
 
 	for (std::set<int32>::iterator it = prevFds.begin(); it != prevFds.end(); ++it) {
-		view->RemoveRow(FindIntRow(view, teamRow, *it));
+		row = FindIntRow(view, teamRow, *it);
+		view->RemoveRow(row);
+		delete row;
 	}
 }
 
@@ -129,7 +130,9 @@ void ListTeams(BColumnListView *view) {
 	}
 
 	for (std::set<int32>::iterator it = prevTeams.begin(); it != prevTeams.end(); ++it) {
-		view->RemoveRow(FindIntRow(view, NULL, *it));
+		row = FindIntRow(view, NULL, *it);
+		view->RemoveRow(row);
+		delete row;
 	}
 }
 

@@ -149,7 +149,9 @@ void ListServices(BColumnListView *view) {
 	}
 
 	for (int32 i = 0; i < prevNames.CountStrings(); i++) {
-		view->RemoveRow(FindStringRow(view, prevNames.StringAt(i)));
+		row = FindStringRow(view, prevNames.StringAt(i));
+		view->RemoveRow(row);
+		delete row;
 	}
 }
 
