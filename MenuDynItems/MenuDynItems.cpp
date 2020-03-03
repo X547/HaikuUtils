@@ -49,9 +49,9 @@ public:
 	void UpdateDynItems(int32 modifiers)
 	{
 		if (((modifiers & B_SHIFT_KEY) != 0) != fModified) {
-			fModified = !fModified;
 			BMenu *menu = fDynItem->Menu();
-			if (menu->LockLooper()) {
+			if (menu->Window() == NULL || menu->LockLooper()) {
+				fModified = !fModified;
 				if (fModified) {
 					fOrigText = fDynItem->Label();
 					BString buf;
@@ -64,7 +64,8 @@ public:
 				int32 index = menu->IndexOf(fDynItem);
 				menu->RemoveItem(fDynItem);
 				menu->AddItem(fDynItem, index);
-				menu->UnlockLooper();
+				if (menu->Window() != NULL)
+					menu->UnlockLooper();
 			}
 		}
 	}
