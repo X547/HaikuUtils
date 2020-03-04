@@ -43,7 +43,7 @@ public:
 	TestMenuBar(): BMenuBar(BRect(0, 0, 32, 32), "menu", B_FOLLOW_LEFT_RIGHT | B_FOLLOW_TOP, B_ITEMS_IN_ROW, true)
 	{
 		BuildMenu(this, 0);
-		fDynItem = ItemAt(2)->Submenu()->ItemAt(1);
+		fDynItem = ItemAt(1)->Submenu()->ItemAt(1);
 	}
 
 	void UpdateDynItems(int32 modifiers)
