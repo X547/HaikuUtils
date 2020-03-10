@@ -16,10 +16,6 @@ resource app_version {
 	long_info = "Control Haiku Services powered by launch_daemon."
 };
 
-resource file_types message {
-	"types" = "application/octet-stream"
-};
-
 resource vector_icon array {
 	$"6E6369661304004C03FFCB9A01CD9866B201CD9966B201CD9966B201CD9966B2"
 	$"01CD9966B201CD9966B201CD9966B201CD9866B204FFF204FFF204FFF204FFF2"
