@@ -235,11 +235,11 @@ BBitmap *LoadIcon(int32 id, int32 width, int32 height)
 class ServicesWindow: public BWindow
 {
 private:
-	BColumnListView *view;
-	BMessageRunner listUpdater;
+	BColumnListView *fView;
+	BMessageRunner fListUpdater;
 public:
 	ServicesWindow(BRect frame): BWindow(frame, "Services", B_DOCUMENT_WINDOW, B_ASYNCHRONOUS_CONTROLS | B_AUTO_UPDATE_SIZE_LIMITS),
-		listUpdater(BMessenger(this), BMessage(updateMsg), 500000)
+		fListUpdater(BMessenger(this), BMessage(updateMsg), 500000)
 	{
 		BMenuBar *menubar, *toolbar;
 		BMenu *menu;
@@ -257,16 +257,16 @@ public:
 		toolbar->AddItem(new IconMenuItem(LoadIcon(resStopIcon, 16, 16), new BMessage(stopMsg)));
 		toolbar->AddItem(new IconMenuItem(LoadIcon(resRestartIcon, 16, 16), new BMessage(restartMsg)));
 
-		this->view = new BColumnListView("view", 0);
-		this->view->SetInvocationMessage(new BMessage(invokeMsg));
-		this->view->SetSelectionMessage(new BMessage(selectMsg));
-		InitList(this->view);
+		fView = new BColumnListView("view", 0);
+		fView->SetInvocationMessage(new BMessage(invokeMsg));
+		fView->SetSelectionMessage(new BMessage(selectMsg));
+		InitList(fView);
 
 		BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
 			.Add(menubar)
 			.Add(toolbar)
 			.AddGroup(B_HORIZONTAL)
-				.Add(this->view)
+				.Add(fView)
 				.SetInsets(-1)
 			.End();
 
@@ -280,7 +280,7 @@ public:
 		case selectMsg:
 			break;
 		case updateMsg:
-			ListServices(this->view);
+			ListServices(fView);
 			break;
 		case startMsg:
 		case stopMsg:
@@ -288,7 +288,7 @@ public:
 			BLaunchRoster roster;
 			BRow *row;
 			BString name;
-			row = this->view->CurrentSelection(NULL);
+			row = fView->CurrentSelection(NULL);
 			if (row == NULL) {return;}
 			name = ((BStringField*)row->GetField(nameCol))->String();
 			switch (msg->what) {
