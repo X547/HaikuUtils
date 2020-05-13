@@ -33,6 +33,7 @@ void SampleGLView::AttachedToWindow(void) {
 void SampleGLView::DetachedFromWindow(void) {
 	printf("DetachedFromWindow\n");
 	status_t res;
+	suspend_thread(fThread);
 	fRun = false;
 	wait_for_thread(fThread, &res);
 	BGLView::AttachedToWindow();
