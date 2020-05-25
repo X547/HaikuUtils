@@ -46,6 +46,7 @@ void ReadStringLen(BDataIO &rd, BString &val, size_t len) {
 }
 
 void DumpBool(bool val) {if (val) printf("true"); else printf("false");}
+void DumpBool8(int8 val) {if (val == 1) printf("true"); else if (val == 0) printf("false"); else printf("?(%d)", val);}
 void DumpPoint(const BPoint &pt) {printf("(%g, %g)", pt.x, pt.y);}
 void DumpRect(const BRect &rc) {printf("(%g, %g, %g, %g)", rc.left, rc.top, rc.right, rc.bottom);}
 
@@ -152,15 +153,33 @@ void DumpOp(BPositionIO &rd, int16 op, int32 opSize)
 
 	Indent();
 	switch (op) {
-	case 0x0010: printf("MOVE_PEN_BY"); break;
-	case 0x0100: printf("STROKE_LINE"); break;
-	case 0x0101: printf("STROKE_RECT"); break;
+	case 0x0010: printf("MOVE_PEN_BY\n"); {indent++;
+		Indent(); ReadPoint(rd, pt); printf("where: "); DumpPoint(pt);
+		indent--; break;
+	}
+	case 0x0100: printf("STROKE_LINE\n"); {indent++;
+		Indent(); ReadPoint(rd, pt); printf("start: "); DumpPoint(pt); printf("\n");
+		Indent(); ReadPoint(rd, pt); printf("end: "); DumpPoint(pt);
+		indent--; break;
+	}
+	case 0x0101: printf("STROKE_RECT\n"); {indent++;
+		Indent(); ReadRect(rd, rc); printf("rect: "); DumpRect(rc);
+		indent--; break;
+	}
 	case 0x0102: printf("FILL_RECT\n"); {indent++;
 		Indent(); ReadRect(rd, rc); printf("rect: "); DumpRect(rc);
 		indent--; break;
 	}
-	case 0x0103: printf("STROKE_ROUND_RECT"); break;
-	case 0x0104: printf("FILL_ROUND_RECT"); break;
+	case 0x0103: printf("STROKE_ROUND_RECT\n"); {indent++;
+		Indent(); ReadRect(rd, rc); printf("rect: "); DumpRect(rc); printf("\n");
+		Indent(); ReadPoint(rd, pt); printf("radii: "); DumpPoint(pt);
+		indent--; break;
+	}
+	case 0x0104: printf("FILL_ROUND_RECT\n"); {indent++;
+		Indent(); ReadRect(rd, rc); printf("rect: "); DumpRect(rc); printf("\n");
+		Indent(); ReadPoint(rd, pt); printf("radii: "); DumpPoint(pt);
+		indent--; break;
+	}
 	case 0x0105: printf("STROKE_BEZIER"); break;
 	case 0x0106: printf("FILL_BEZIER"); break;
 	case 0x010B: printf("STROKE_POLYGON"); break;
@@ -173,7 +192,13 @@ void DumpOp(BPositionIO &rd, int16 op, int32 opSize)
 		Indent(); printf("shape: "); DumpShape(rd);
 		indent--; break;
 	}
-	case 0x010F: printf("DRAW_STRING"); break;
+	case 0x010F: printf("DRAW_STRING\n"); {indent++;
+		off_t pos = rd.Position();
+		Indent(); ReadFloat(rd, floatVal); printf("escapementSpace: %g\n", floatVal);
+		Indent(); ReadFloat(rd, floatVal); printf("escapementNonSpace: %g\n", floatVal);
+		Indent(); ReadStringLen(rd, str, opSize - (rd.Position() - pos)); printf("string: "); DumpString(str);
+		indent--; break;
+	}
 	case 0x0110: printf("DRAW_PIXELS\n"); {indent++;
 		off_t pos = rd.Position();
 		Indent(); ReadRect(rd, rc); printf("sourceRect: "); DumpRect(rc); printf("\n");
@@ -186,11 +211,21 @@ void DumpOp(BPositionIO &rd, int16 op, int32 opSize)
 		Indent(); printf("data: <%d bytes>", opSize - (rd.Position() - pos));
 		indent--; break;
 	}
-	case 0x0112: printf("DRAW_PICTURE"); break;
+	case 0x0112: printf("DRAW_PICTURE\n"); {indent++;
+		Indent(); ReadPoint(rd, pt); printf("where: "); DumpPoint(pt); printf("\n");
+		Indent(); Read32(rd, val32); printf("token: %d", val32);
+		indent--; break;
+	}
 	case 0x0113: printf("STROKE_ARC"); break;
 	case 0x0114: printf("FILL_ARC"); break;
-	case 0x0115: printf("STROKE_ELLIPSE"); break;
-	case 0x0116: printf("FILL_ELLIPSE"); break;
+	case 0x0115: printf("STROKE_ELLIPSE\n"); {indent++;
+		Indent(); ReadRect(rd, rc); printf("rect: "); DumpRect(rc);
+		indent--; break;
+	}
+	case 0x0116: printf("FILL_ELLIPSE\n"); {indent++;
+		Indent(); ReadRect(rd, rc); printf("rect: "); DumpRect(rc);
+		indent--; break;
+	}
 	case 0x0117: printf("DRAW_STRING_LOCATIONS\n"); {indent++;
 		off_t pos = rd.Position();
 		int32 pointCount;
@@ -230,24 +265,12 @@ void DumpOp(BPositionIO &rd, int16 op, int32 opSize)
 	case 0x0204: printf("POP_STATE"); indent--; break;
 	case 0x0205: printf("CLEAR_CLIPPING_RECTS"); break;
 	case 0x0206: printf("CLIP_TO_RECT\n"); {indent++;
-		Indent(); Read8(rd, val8); printf("inverse: ");
-		switch (val8) {
-		case 0: printf("false"); break;
-		case 1: printf("true"); break;
-		default: printf("?(%d)", val8);
-		}
-		printf("\n");
+		Indent(); Read8(rd, val8); printf("inverse: "); DumpBool8(val8); printf("\n");
 		Indent(); ReadRect(rd, rc); printf("rect: "); DumpRect(rc);
 		indent--; break;
 	}
 	case 0x0207: printf("CLIP_TO_SHAPE\n"); {indent++;
-		Indent(); Read8(rd, val8); printf("inverse: ");
-		switch (val8) {
-		case 0: printf("false"); break;
-		case 1: printf("true"); break;
-		default: printf("?(%d)", val8);
-		}
-		printf("\n");
+		Indent(); Read8(rd, val8); printf("inverse: "); DumpBool8(val8); printf("\n");
 		Indent(); printf("shape: "); DumpShape(rd);
 		indent--; break;
 	}
