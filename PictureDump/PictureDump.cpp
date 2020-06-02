@@ -1,5 +1,6 @@
 #include <View.h>
 #include <Shape.h>
+#include <Gradient.h>
 #include <Picture.h>
 #include <Rect.h>
 #include <String.h>
@@ -47,6 +48,7 @@ void ReadStringLen(BDataIO &rd, BString &val, size_t len) {
 
 void DumpBool(bool val) {if (val) printf("true"); else printf("false");}
 void DumpBool8(int8 val) {if (val == 1) printf("true"); else if (val == 0) printf("false"); else printf("?(%d)", val);}
+void DumpColor(int32 val) {printf("0x%08x", val);}
 void DumpPoint(const BPoint &pt) {printf("(%g, %g)", pt.x, pt.y);}
 void DumpRect(const BRect &rc) {printf("(%g, %g, %g, %g)", rc.left, rc.top, rc.right, rc.bottom);}
 
@@ -138,6 +140,62 @@ void DumpShape(BPositionIO &rd)
 		if ((op & OP_CLOSE) != 0) {
 			Indent(); printf("Close()\n");
 		}
+	}
+	indent--;
+	Indent(); printf("}");
+}
+
+void DumpGradient(BPositionIO &rd)
+{
+	int32 type;
+	int32 stopCount;
+	BPoint pt;
+	printf("{\n");
+	indent++;
+	Indent(); Read32(rd, type); printf("type: ");
+	switch (type) {
+	case BGradient::TYPE_LINEAR: printf("LINEAR"); break;
+	case BGradient::TYPE_RADIAL: printf("RADIAL"); break;
+	case BGradient::TYPE_RADIAL_FOCUS: printf("RADIAL_FOCUS"); break;
+	case BGradient::TYPE_DIAMOND: printf("DIAMOND"); break;
+	case BGradient::TYPE_CONIC: printf("CONIC"); break;
+	case BGradient::TYPE_NONE: printf("NONE"); break;
+	default: printf("?(%d)", type);
+	}
+	printf("\n");
+	Read32(rd, stopCount);
+	Indent(); printf("stops: {\n");
+	indent++;
+	for (int32 i = 0; i < stopCount; i++) {
+		Indent(); printf("(");
+		Read32(rd, val32); DumpColor(val32); printf(", ");
+		ReadFloat(rd, floatVal); printf("%g)\n", floatVal);
+	}
+	indent--;
+	Indent(); printf("}\n");
+	switch (type) {
+	case BGradient::TYPE_LINEAR:
+		Indent(); ReadPoint(rd, pt); printf("start: "); DumpPoint(pt); printf("\n");
+		Indent(); ReadPoint(rd, pt); printf("end: "); DumpPoint(pt); printf("\n");
+		break;
+	case BGradient::TYPE_RADIAL:
+		Indent(); ReadPoint(rd, pt); printf("center: "); DumpPoint(pt); printf("\n");
+		Indent(); ReadFloat(rd, floatVal); printf("radius: %g\n", floatVal);
+		break;
+	case BGradient::TYPE_RADIAL_FOCUS:
+		Indent(); ReadPoint(rd, pt); printf("center: "); DumpPoint(pt); printf("\n");
+		Indent(); ReadPoint(rd, pt); printf("focus: "); DumpPoint(pt); printf("\n");
+		Indent(); ReadFloat(rd, floatVal); printf("radius: %g\n", floatVal);
+		break;
+	case BGradient::TYPE_DIAMOND:
+		Indent(); ReadPoint(rd, pt); printf("center: "); DumpPoint(pt); printf("\n");
+		break;
+	case BGradient::TYPE_CONIC:
+		Indent(); ReadPoint(rd, pt); printf("center: "); DumpPoint(pt); printf("\n");
+		Indent(); ReadFloat(rd, floatVal); printf("angle: %g\n", floatVal);
+		break;
+	case BGradient::TYPE_NONE:
+		break;
 	}
 	indent--;
 	Indent(); printf("}");
@@ -241,6 +299,27 @@ void DumpOp(BPositionIO &rd, int16 op, int32 opSize)
 		Indent(); ReadStringLen(rd, str, opSize - (rd.Position() - pos)); printf("string: "); DumpString(str);
 		indent--; break;
 	}
+
+	/* experimental */
+	case 0x0118: printf("STROKE_RECT_GRADIENT"); break;
+	case 0x0119: printf("FILL_RECT_GRADIENT\n"); {indent++;
+		Indent(); ReadRect(rd, rc); printf("rect: "); DumpRect(rc); printf("\n");
+		Indent(); printf("gradient: "); DumpGradient(rd);
+		indent--; break;
+	}
+	case 0x011A: printf("STROKE_ROUND_RECT_GRADIENT"); break;
+	case 0x011B: printf("FILL_ROUND_RECT_GRADIENT"); break;
+	case 0x011C: printf("STROKE_BEZIER_GRADIENT"); break;
+	case 0x011D: printf("FILL_BEZIER_GRADIENT"); break;
+	case 0x011E: printf("STROKE_POLYGON_GRADIENT"); break;
+	case 0x011F: printf("FILL_POLYGON_GRADIENT"); break;
+	case 0x0120: printf("STROKE_SHAPE_GRADIENT"); break;
+	case 0x0121: printf("FILL_SHAPE_GRADIENT"); break;
+	case 0x0122: printf("STROKE_ARC_GRADIENT"); break;
+	case 0x0123: printf("FILL_ARC_GRADIENT"); break;
+	case 0x0124: printf("STROKE_ELLIPSE_GRADIENT"); break;
+	case 0x0125: printf("FILL_ELLIPSE_GRADIENT"); break;
+
 	case 0x0200: printf("ENTER_STATE_CHANGE {\n");
 		indent++;
 		DumpOps(rd, opSize);
@@ -357,9 +436,52 @@ void DumpOp(BPositionIO &rd, int16 op, int32 opSize)
 		Indent(); ReadStringLen(rd, str, opSize); printf("style: "); DumpString(str);
 		indent--; break;
 	}
-	case 0x0382: printf("SET_FONT_SPACING"); break;
-	case 0x0383: printf("SET_FONT_ENCODING"); break;
-	case 0x0384: printf("SET_FONT_FLAGS"); break;
+	case 0x0382: printf("SET_FONT_SPACING\n"); {indent++;
+		Indent(); Read32(rd, val32); printf("spacing: ");
+		switch (val32) {
+		case 0: printf("B_CHAR_SPACING"); break;
+		case 1: printf("B_STRING_SPACING"); break;
+		case 2: printf("B_BITMAP_SPACING"); break;
+		case 3: printf("B_FIXED_SPACING"); break;
+		default: printf("?(%d)", val32);
+		}
+		indent--; break;
+	}
+	case 0x0383: printf("SET_FONT_ENCODING\n"); {indent++;
+		Indent(); Read32(rd, val32); printf("encoding: ");
+		switch (val32) {
+		case 0: printf("B_UNICODE_UTF8"); break;
+		case 1: printf("B_ISO_8859_1"); break;
+		case 2: printf("B_ISO_8859_2"); break;
+		case 3: printf("B_ISO_8859_3"); break;
+		case 4: printf("B_ISO_8859_4"); break;
+		case 5: printf("B_ISO_8859_5"); break;
+		case 6: printf("B_ISO_8859_6"); break;
+		case 7: printf("B_ISO_8859_7"); break;
+		case 8: printf("B_ISO_8859_8"); break;
+		case 9: printf("B_ISO_8859_9"); break;
+		case 10: printf("B_ISO_8859_10"); break;
+		case 11: printf("B_MACINTOSH_ROMAN"); break;
+		default: printf("?(%d)", val32);
+		}
+		indent--; break;
+	}
+	case 0x0384: printf("SET_FONT_FLAGS\n"); {indent++;
+		Indent(); Read32(rd, val32); printf("flags: {");
+		bool first = true;
+		for (uint32 i = 0; i < 32; i++) {
+			if ((1 << i) & (uint32)val32) {
+				if (first) first = false; else printf(", ");
+				switch (i) {
+				case 0: printf("B_DISABLE_ANTIALIASING"); break;
+				case 1: printf("B_FORCE_ANTIALIASING"); break;
+				default: printf("?(%d)", i);
+				}
+			}
+		}
+		printf("}");
+		indent--; break;
+	}
 	case 0x0385: printf("SET_FONT_SIZE\n"); {indent++;
 		Indent(); ReadFloat(rd, floatVal); printf("size: %g", floatVal);
 		indent--; break;
@@ -373,7 +495,30 @@ void DumpOp(BPositionIO &rd, int16 op, int32 opSize)
 		indent--; break;
 	}
 	case 0x0388: printf("SET_FONT_BPP"); break;
-	case 0x0389: printf("SET_FONT_FACE"); break;
+	case 0x0389: printf("SET_FONT_FACE\n"); {indent++;
+		Indent(); Read32(rd, val32); printf("face: {");
+		bool first = true;
+		for (uint32 i = 0; i < 32; i++) {
+			if ((1 << i) & (uint32)val32) {
+				if (first) first = false; else printf(", ");
+				switch (i) {
+				case 0: printf("B_ITALIC_FACE"); break;
+				case 1: printf("B_UNDERSCORE_FACE"); break;
+				case 2: printf("B_NEGATIVE_FACE"); break;
+				case 3: printf("B_OUTLINED_FACE"); break;
+				case 4: printf("B_STRIKEOUT_FACE"); break;
+				case 5: printf("B_BOLD_FACE"); break;
+				case 6: printf("B_REGULAR_FACE"); break;
+				case 7: printf("B_CONDENSED_FACE"); break;
+				case 8: printf("B_LIGHT_FACE"); break;
+				case 9: printf("B_HEAVY_FACE"); break;
+				default: printf("?(%d)", i);
+				}
+			}
+		}
+		printf("}");
+		indent--; break;
+	}
 	case 0x0390: printf("SET_TRANSFORM\n"); {indent++;
 		Indent(); ReadTransform(rd, tr); printf("transform: "); DumpTransform(tr);
 		indent--; break;
