@@ -594,7 +594,9 @@ private:
 public:
 	TestToolBar(const char* name, menu_layout layout, FrameTree *frames, BColumnListView *view):
 		BMenuBar(name, layout),
+		fTrack(false),
 		fFrames(frames),
+		fCurFrame(NULL),
 		fView(view)
 	{
 	}
@@ -686,7 +688,7 @@ public:
 
 		fMenuBar = new BMenuBar("menuBar", B_ITEMS_IN_ROW);
 		menu2 = new BMenu("Edit");
-			menu2->AddItem(new BMenuItem("Update", new BMessage(updateMsg)));
+			menu2->AddItem(new BMenuItem("Update", new BMessage(updateMsg), 'R'));
 			menu2->AddItem(new BSeparatorItem());
 			menu2->AddItem(new BMenuItem("Expand all", new BMessage(expandAllMsg)));
 			menu2->AddItem(new BMenuItem("Collapse all", new BMessage(collapseAllMsg)));
