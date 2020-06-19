@@ -41,6 +41,29 @@ enum {
 };
 
 
+port_id GetPort(BMessenger &obj)
+{
+	void *data = (void*)&obj;
+	return *(port_id*)data; //fPort
+}
+
+team_id GetTeam(BMessenger &obj)
+{
+	port_id port = GetPort(obj);
+	port_info info;
+	status_t res = get_port_info(port, &info);
+	if (res < B_OK) return res;
+	return info.team;
+}
+
+int32 GetToken(BMessenger &obj)
+{
+	void *data = (void*)&obj;
+	((port_id*&)data)++; //fPort
+	return *(int32*)data; //fHandlerToken
+}
+
+
 class FrameTree
 {
 public:
@@ -92,6 +115,20 @@ public:
 		return NULL;
 	}
 
+	FrameTree *ThisTeamToken(team_id team, int32 token)
+	{
+		if (GetTeam(obj) == team && GetToken(obj) == token)
+			return this;
+
+		for (std::vector<FrameTree*>::iterator it = frames.begin(); it != frames.end(); ++it) {
+			FrameTree *frame = *it;
+			FrameTree *subFrame = frame->ThisTeamToken(team, token);
+			if (subFrame != NULL)
+				return subFrame;
+		}
+		return NULL;
+	}
+
 	~FrameTree()
 	{
 		for (std::vector<FrameTree*>::iterator it = frames.begin(); it != frames.end(); ++it) {
@@ -112,28 +149,6 @@ BRow *FindIntRow(BColumnListView *view, BRow *parent, int32 val)
 			return row;
 	}
 	return NULL;
-}
-
-port_id GetPort(BMessenger &obj)
-{
-	void *data = (void*)&obj;
-	return *(port_id*)data; //fPort
-}
-
-team_id GetTeam(BMessenger &obj)
-{
-	port_id port = GetPort(obj);
-	port_info info;
-	status_t res = get_port_info(port, &info);
-	if (res < B_OK) return res;
-	return info.team;
-}
-
-int32 GetToken(BMessenger &obj)
-{
-	void *data = (void*)&obj;
-	((port_id*&)data)++; //fPort
-	return *(int32*)data; //fHandlerToken
 }
 
 status_t GetBool(bool &val, BMessenger &obj, BMessage &spec)
@@ -515,6 +530,35 @@ BRow *FindRowByTeamToken(BColumnListView *view, team_id team, int32 token)
 	return FindRowByToken(view, row, token);
 }
 
+bool GetTokenForRow(BColumnListView *view, int32 &token, BRow *parent, BRow *target)
+{
+	int32 count;
+	count = view->CountRows(parent);
+	for(int32 i = 0; i < count; i++) {
+		BRow *row = view->RowAt(i, parent);
+		if (row == target) {
+			token = ((BIntegerField*)row->GetField(idCol))->Value();
+			return true;
+		}
+		if (GetTokenForRow(view, token, row, target))
+			return true;
+	}
+	return false;
+}
+
+bool GetTeamTokenForRow(BColumnListView *view, team_id &team, int32 &token, BRow *target)
+{
+	int32 count;
+	count = view->CountRows(NULL);
+	for(int32 i = 0; i < count; i++) {
+		BRow *row = view->RowAt(i, NULL);
+		team = ((BIntegerField*)row->GetField(idCol))->Value();
+		if (GetTokenForRow(view, token, row, target))
+			return true;
+	}
+	return false;
+}
+
 class IconMenuItem: public BMenuItem
 {
 public:
@@ -587,6 +631,7 @@ class TestToolBar: public BMenuBar
 {
 private:
 	bool fTrack;
+	BMenuItem *fCurItem;
 	HighlightRect fHRect;
 	FrameTree *fFrames, *fCurFrame;
 	BColumnListView *fView;
@@ -595,6 +640,7 @@ public:
 	TestToolBar(const char* name, menu_layout layout, FrameTree *frames, BColumnListView *view):
 		BMenuBar(name, layout),
 		fTrack(false),
+		fCurItem(NULL),
 		fFrames(frames),
 		fCurFrame(NULL),
 		fView(view)
@@ -613,11 +659,29 @@ public:
 	void MouseDown(BPoint where)
 	{
 		BMenuItem *selectItem = ItemAt(0);
-		if (selectItem->Frame().Contains(where)) {
+		BMenuItem *highlightItem = ItemAt(1);
+		fCurItem = NULL;
+		if (selectItem->Frame().Contains(where)) fCurItem = selectItem;
+		if (highlightItem->Frame().Contains(where)) fCurItem = highlightItem;
+
+		if (fCurItem != NULL) {
 			SetMouseEventMask(B_POINTER_EVENTS);
 			fTrack = true;
-			_ZN9BMenuItem6SelectEb(selectItem, true);
-			UpdateHighlight(where);
+			_ZN9BMenuItem6SelectEb(fCurItem, true);
+			if (fCurItem == selectItem)
+				UpdateHighlight(where);
+			else if (fCurItem == highlightItem) {
+				BRow *row = fView->CurrentSelection();
+				if (row != NULL) {
+					team_id team;
+					int32 token;
+					if (GetTeamTokenForRow(fView, team, token, row)) {
+						fCurFrame = fFrames->ThisTeamToken(team, token);
+						if (fCurFrame != NULL)
+							fHRect.Show(fCurFrame->rect);
+					}
+				}
+			}
 			return;
 		}
 		BMenuBar::MouseDown(where);
@@ -626,7 +690,8 @@ public:
 	void MouseMoved(BPoint where, uint32 code, const BMessage* dragMessage)
 	{
 		if (fTrack) {
-			UpdateHighlight(where);
+			if (fCurItem == ItemAt(0))
+				UpdateHighlight(where);
 			return;
 		}
 		BMenuBar::MouseMoved(where, code, dragMessage);
@@ -636,8 +701,9 @@ public:
 	{
 		if (fTrack) {
 			BMenuItem *selectItem = ItemAt(0);
-			_ZN9BMenuItem6SelectEb(selectItem, false);
-			if (fCurFrame != NULL) {
+			if (fCurItem != NULL)
+				_ZN9BMenuItem6SelectEb(fCurItem, false);
+			if (fCurItem == ItemAt(0) && fCurFrame != NULL) {
 				team_id team = GetTeam(fCurFrame->obj);
 				int32 token = GetToken(fCurFrame->obj);
 				BRow *row = FindRowByTeamToken(fView, team, token);
@@ -648,6 +714,7 @@ public:
 					fView->ScrollTo(row);
 				}
 			}
+			fCurItem = NULL;
 			fCurFrame = NULL;
 			fHRect.Hide();
 			fTrack = false;
@@ -696,6 +763,7 @@ public:
 
 		fToolBar = new TestToolBar("toolBar", B_ITEMS_IN_ROW, &fFrames, fView);
 			fToolBar->AddItem(new IconMenuItem(LoadIcon(resTargetIcon, 16, 16), NULL));
+			fToolBar->AddItem(new IconMenuItem(LoadIcon(resHighlightIcon, 16, 16), NULL));
 
 		BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
 			.Add(fMenuBar)
