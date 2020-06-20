@@ -16,6 +16,8 @@
 #include <IconUtils.h>
 #include <private/interface/ColumnListView.h>
 #include <private/interface/ColumnTypes.h>
+#include <private/app/MessengerPrivate.h>
+#include <private/interface/WindowInfo.h>
 #include <private/shared/AutoDeleter.h>
 
 #include <vector>
@@ -24,6 +26,7 @@
 
 #include "Resources.h"
 #include "HighlightRect.h"
+#include "SuiteEditor.h"
 
 enum {
 	invokeMsg = 1,
@@ -70,17 +73,23 @@ public:
 	std::vector<FrameTree*> frames;
 	BMessenger obj;
 	BRect rect;
+	BPoint offset;
 	bool visible;
 
-	FrameTree(BMessenger obj, BRect rect, bool visible): obj(obj), rect(rect), visible(visible)
+	FrameTree(const BMessenger &obj, BRect rect, bool visible): obj(obj), rect(rect), offset(0, 0), visible(visible)
 	{
+	}
+
+	~FrameTree()
+	{
+		for (std::vector<FrameTree*>::iterator it = frames.begin(); it != frames.end(); ++it)
+			delete *it;
 	}
 
 	void Clear()
 	{
-		for (std::vector<FrameTree*>::iterator it = frames.begin(); it != frames.end(); ++it) {
+		for (std::vector<FrameTree*>::iterator it = frames.begin(); it != frames.end(); ++it)
 			delete *it;
-		}
 		frames.clear();
 	}
 
@@ -102,40 +111,40 @@ public:
 
 	FrameTree *This(BPoint pos)
 	{
-		if (!visible)
+		if (!visible || !rect.Contains(pos))
 			return NULL;
 		for (std::vector<FrameTree*>::reverse_iterator it = frames.rbegin(); it != frames.rend(); ++it) {
 			FrameTree *frame = *it;
 			FrameTree *subFrame = frame->This(pos);
 			if (subFrame != NULL)
 				return subFrame;
-			if (frame->rect.Contains(pos))
-				return frame;
 		}
-		return NULL;
+		return this;
 	}
 
-	FrameTree *ThisTeamToken(team_id team, int32 token)
+	FrameTree *ThisObject(const BMessenger &_obj)
 	{
-		if (GetTeam(obj) == team && GetToken(obj) == token)
+		if (obj == _obj)
 			return this;
 
 		for (std::vector<FrameTree*>::iterator it = frames.begin(); it != frames.end(); ++it) {
 			FrameTree *frame = *it;
-			FrameTree *subFrame = frame->ThisTeamToken(team, token);
+			FrameTree *subFrame = frame->ThisObject(_obj);
 			if (subFrame != NULL)
 				return subFrame;
 		}
 		return NULL;
 	}
 
-	~FrameTree()
-	{
-		for (std::vector<FrameTree*>::iterator it = frames.begin(); it != frames.end(); ++it) {
-			delete *it;
-		}
-	}
+};
 
+
+class HandleRow: public BRow
+{
+public:
+	BMessenger handle;
+
+	HandleRow(const BMessenger &handle): BRow(), handle(handle) {}
 };
 
 
@@ -287,8 +296,6 @@ void ListViews(BColumnListView *listView, FrameTree *frames, BRow *parent, BMess
 		prevViews.insert(((BIntegerField*)row->GetField(idCol))->Value());
 	}
 
-	if (frames != NULL) frames->Clear();
-
 	spec = BMessage(B_COUNT_PROPERTIES);
 	spec.AddSpecifier("View");
 	if (GetInt32(count, wnd, spec) != B_OK)
@@ -308,7 +315,7 @@ void ListViews(BColumnListView *listView, FrameTree *frames, BRow *parent, BMess
 		row = FindIntRow(listView, parent, token);
 
 		if (row == NULL) {
-			row = new BRow();
+			row = new HandleRow(view);
 			listView->AddRow(row, parent);
 		}
 
@@ -337,9 +344,13 @@ void ListViews(BColumnListView *listView, FrameTree *frames, BRow *parent, BMess
 				}
 			}
 			if (res >= B_OK) {
-				frame = new FrameTree(view, rect.OffsetByCopy(frames->rect.LeftTop()), !hidden);
+				frame = new FrameTree(view, rect.OffsetByCopy(frames->rect.LeftTop() + frames->offset), !hidden);
 				frames->Insert(frame);
+			} else {
+				printf("[!] ListViews: reading frame failed\n");
 			}
+		} else {
+			printf("[!] ListViews: frames == NULL\n");
 		}
 
 		ListViews(listView, frame, row, view);
@@ -365,8 +376,6 @@ void ListWindows(BColumnListView *listView, FrameTree *frames, BRow *parent, BMe
 		prevWnds.insert(((BIntegerField*)row->GetField(idCol))->Value());
 	}
 
-	if (frames != NULL) frames->Clear();
-
 	spec = BMessage(B_COUNT_PROPERTIES);
 	spec.AddSpecifier("Window");
 	if (GetInt32(count, app, spec) != B_OK)
@@ -386,7 +395,7 @@ void ListWindows(BColumnListView *listView, FrameTree *frames, BRow *parent, BMe
 		row = FindIntRow(listView, parent, token);
 
 		if (row == NULL) {
-			row = new BRow();
+			row = new HandleRow(wnd);
 			listView->AddRow(row, parent);
 		}
 
@@ -397,29 +406,7 @@ void ListWindows(BColumnListView *listView, FrameTree *frames, BRow *parent, BMe
 		buf = ""; WriteSuites(buf, wnd);
 		row->SetField(new BStringField(buf), suitesCol);
 
-		FrameTree *frame = NULL;
-		if (frames != NULL) {
-			BRect rect;
-			bool hidden;
-			status_t res;
-			{
-				BMessage spec(B_GET_PROPERTY);
-				spec.AddSpecifier("Frame");
-				res = GetRect(rect, wnd, spec);
-			}
-			if (res >= B_OK) {
-				{
-					BMessage spec(B_GET_PROPERTY);
-					spec.AddSpecifier("Hidden");
-					res = GetBool(hidden, wnd, spec);
-				}
-			}
-			if (res >= B_OK) {
-				frame = new FrameTree(wnd, rect, !hidden);
-				frames->Insert(frame);
-			}
-		}
-
+		FrameTree *frame = frames->ThisObject(wnd);
 		ListViews(listView, frame, row, wnd);
 	}
 
@@ -427,6 +414,27 @@ void ListWindows(BColumnListView *listView, FrameTree *frames, BRow *parent, BMe
 		row = FindIntRow(listView, parent, *it);
 		listView->RemoveRow(row);
 		delete row;
+	}
+}
+
+void ListWindowFrames(FrameTree *frames)
+{
+	frames->Clear();
+	int32 wndCnt;
+	int32 *wndList;
+	status_t res = BPrivate::get_window_order(current_workspace(), &wndList, &wndCnt);
+	if (res < B_OK) return;
+	MemoryDeleter wndListDeleter(wndList);
+	for (int32 i = wndCnt - 1; i > 0; i--) {
+		client_window_info *info = get_window_info(wndList[i]);
+		MemoryDeleter infoDeleter(info);
+		BMessenger wnd;
+		BMessenger::Private(wnd).SetTo(info->team, info->client_port, info->client_token);
+		BRect rect(info->window_left, info->window_top, info->window_right, info->window_bottom);
+		rect.InsetBy(-info->border_size, -info->border_size);
+		FrameTree *frame = new FrameTree(wnd, rect, !info->is_mini && info->show_hide_level <= 0);
+		frame->offset = BPoint(info->border_size, info->border_size);
+		frames->Insert(frame);
 	}
 }
 
@@ -443,6 +451,8 @@ void ListApps(BColumnListView *listView, FrameTree *frames) {
 		prevApps.insert(((BIntegerField*)row->GetField(idCol))->Value());
 	}
 
+	ListWindowFrames(frames);
+
 	be_roster->GetAppList(&appList);
 	for (int i = 0; i < appList.CountItems(); i++) {
 		team_id team = (team_id)(intptr_t)appList.ItemAt(i);
@@ -458,7 +468,7 @@ void ListApps(BColumnListView *listView, FrameTree *frames) {
 		row = FindIntRow(listView, NULL, team);
 
 		if (row == NULL) {
-			row = new BRow();
+			row = new HandleRow(app);
 			listView->AddRow(row);
 		}
 
@@ -528,35 +538,6 @@ BRow *FindRowByTeamToken(BColumnListView *view, team_id team, int32 token)
 	BRow *row = FindIntRow(view, NULL, team);
 	if (row == NULL) return NULL;
 	return FindRowByToken(view, row, token);
-}
-
-bool GetTokenForRow(BColumnListView *view, int32 &token, BRow *parent, BRow *target)
-{
-	int32 count;
-	count = view->CountRows(parent);
-	for(int32 i = 0; i < count; i++) {
-		BRow *row = view->RowAt(i, parent);
-		if (row == target) {
-			token = ((BIntegerField*)row->GetField(idCol))->Value();
-			return true;
-		}
-		if (GetTokenForRow(view, token, row, target))
-			return true;
-	}
-	return false;
-}
-
-bool GetTeamTokenForRow(BColumnListView *view, team_id &team, int32 &token, BRow *target)
-{
-	int32 count;
-	count = view->CountRows(NULL);
-	for(int32 i = 0; i < count; i++) {
-		BRow *row = view->RowAt(i, NULL);
-		team = ((BIntegerField*)row->GetField(idCol))->Value();
-		if (GetTokenForRow(view, token, row, target))
-			return true;
-	}
-	return false;
 }
 
 class IconMenuItem: public BMenuItem
@@ -673,13 +654,9 @@ public:
 			else if (fCurItem == highlightItem) {
 				BRow *row = fView->CurrentSelection();
 				if (row != NULL) {
-					team_id team;
-					int32 token;
-					if (GetTeamTokenForRow(fView, team, token, row)) {
-						fCurFrame = fFrames->ThisTeamToken(team, token);
-						if (fCurFrame != NULL)
-							fHRect.Show(fCurFrame->rect);
-					}
+					fCurFrame = fFrames->ThisObject(dynamic_cast<HandleRow*>(row)->handle);
+					if (fCurFrame != NULL)
+						fHRect.Show(fCurFrame->rect);
 				}
 			}
 			return;
@@ -779,7 +756,19 @@ public:
 	void MessageReceived(BMessage* msg)
 	{
 		switch (msg->what) {
-		case invokeMsg:
+		case invokeMsg: {
+			BRow *row = fView->CurrentSelection();
+			if (row != NULL) {
+				FrameTree *frame = fFrames.ThisObject(dynamic_cast<HandleRow*>(row)->handle);
+				if (frame != NULL) {
+					SuiteEditor *wnd = new SuiteEditor(frame->obj);
+					if (wnd->InitCheck() >= B_OK)
+						wnd->Show();
+				}
+			}
+
+			break;
+		}
 		case selectMsg:
 			break;
 		case updateMsg:
