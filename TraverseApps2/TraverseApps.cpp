@@ -44,29 +44,6 @@ enum {
 };
 
 
-port_id GetPort(BMessenger &obj)
-{
-	void *data = (void*)&obj;
-	return *(port_id*)data; //fPort
-}
-
-team_id GetTeam(BMessenger &obj)
-{
-	port_id port = GetPort(obj);
-	port_info info;
-	status_t res = get_port_info(port, &info);
-	if (res < B_OK) return res;
-	return info.team;
-}
-
-int32 GetToken(BMessenger &obj)
-{
-	void *data = (void*)&obj;
-	((port_id*&)data)++; //fPort
-	return *(int32*)data; //fHandlerToken
-}
-
-
 class FrameTree
 {
 public:
@@ -148,7 +125,7 @@ public:
 };
 
 
-BRow *FindIntRow(BColumnListView *view, BRow *parent, int32 val)
+static BRow *FindIntRow(BColumnListView *view, BRow *parent, int32 val)
 {
 	BRow *row;
 	BString name;
@@ -160,7 +137,7 @@ BRow *FindIntRow(BColumnListView *view, BRow *parent, int32 val)
 	return NULL;
 }
 
-status_t GetBool(bool &val, BMessenger &obj, BMessage &spec)
+static status_t GetBool(bool &val, BMessenger &obj, BMessage &spec)
 {
 	status_t res;
 	BMessage reply;
@@ -169,7 +146,7 @@ status_t GetBool(bool &val, BMessenger &obj, BMessage &spec)
 	return res;
 }
 
-status_t GetInt32(int32 &val, BMessenger &obj, BMessage &spec)
+static status_t GetInt32(int32 &val, BMessenger &obj, BMessage &spec)
 {
 	status_t res;
 	BMessage reply;
@@ -178,7 +155,7 @@ status_t GetInt32(int32 &val, BMessenger &obj, BMessage &spec)
 	return res;
 }
 
-status_t GetString(BString &val, BMessenger &obj, BMessage &spec)
+static status_t GetString(BString &val, BMessenger &obj, BMessage &spec)
 {
 	status_t res;
 	BMessage reply;
@@ -187,7 +164,7 @@ status_t GetString(BString &val, BMessenger &obj, BMessage &spec)
 	return res;
 }
 
-status_t GetMessenger(BMessenger &val, BMessenger &obj, BMessage &spec)
+static status_t GetMessenger(BMessenger &val, BMessenger &obj, BMessage &spec)
 {
 	status_t res;
 	BMessage reply;
@@ -196,7 +173,7 @@ status_t GetMessenger(BMessenger &val, BMessenger &obj, BMessage &spec)
 	return res;
 }
 
-status_t GetRect(BRect &val, BMessenger &obj, BMessage &spec)
+static status_t GetRect(BRect &val, BMessenger &obj, BMessage &spec)
 {
 	status_t res;
 	BMessage reply;
@@ -205,7 +182,7 @@ status_t GetRect(BRect &val, BMessenger &obj, BMessage &spec)
 	return res;
 }
 
-void WriteError(BString &dst, status_t res)
+static void WriteError(BString &dst, status_t res)
 {
 	switch (res) {
 	case B_TIMED_OUT: dst += "<TIME OUT>"; break;
@@ -214,7 +191,7 @@ void WriteError(BString &dst, status_t res)
 	};
 }
 
-void WriteStringProp(BString &dst, BMessenger &obj, const char *field)
+static void WriteStringProp(BString &dst, BMessenger &obj, const char *field)
 {
 	BMessage spec;
 	BString str;
@@ -228,40 +205,7 @@ void WriteStringProp(BString &dst, BMessenger &obj, const char *field)
 	}
 }
 
-void WriteBoolProp(BString &dst, BMessenger &obj, const char *field)
-{
-	BMessage spec;
-	bool val;
-	status_t res;
-	spec.what = B_GET_PROPERTY;
-	spec.AddSpecifier(field);
-	if ((res = GetBool(val, obj, spec)) != B_OK) {
-		WriteError(dst, res);
-	} else {
-		if (val)
-			dst += "true";
-		else
-			dst += "false";
-	}
-}
-
-void WriteRectProp(BString &dst, BMessenger &obj, const char *field)
-{
-	BMessage spec;
-	BRect rect;
-	status_t res;
-	spec.what = B_GET_PROPERTY;
-	spec.AddSpecifier(field);
-	if ((res = GetRect(rect, obj, spec)) != B_OK) {
-		WriteError(dst, res);
-	} else {
-		BString buf;
-		buf.SetToFormat("%g, %g, %g, %g", rect.left, rect.top, rect.right, rect.bottom);
-		dst += buf;
-	}
-}
-
-void WriteSuites(BString &dst, BMessenger &obj)
+static void WriteSuites(BString &dst, BMessenger &obj)
 {
 	BMessage spec, reply;
 	type_code type;
@@ -283,7 +227,7 @@ void WriteSuites(BString &dst, BMessenger &obj)
 	}
 }
 
-void ListViews(BColumnListView *listView, FrameTree *frames, BRow *parent, BMessenger &wnd) {
+static void ListViews(BColumnListView *listView, FrameTree *frames, BRow *parent, BMessenger &wnd) {
 	BMessage spec;
 	int32 count;
 	BMessenger view;
@@ -308,7 +252,7 @@ void ListViews(BColumnListView *listView, FrameTree *frames, BRow *parent, BMess
 		if (GetMessenger(view, wnd, spec) != B_OK)
 			continue;
 
-		team_id token = GetToken(view);
+		team_id token = BMessenger::Private(view).Token();
 
 		prevViews.erase(token);
 
@@ -363,7 +307,7 @@ void ListViews(BColumnListView *listView, FrameTree *frames, BRow *parent, BMess
 	}
 }
 
-void ListWindows(BColumnListView *listView, FrameTree *frames, BRow *parent, BMessenger &app) {
+static void ListWindows(BColumnListView *listView, FrameTree *frames, BRow *parent, BMessenger &app) {
 	BMessage spec;
 	int32 count;
 	BMessenger wnd;
@@ -388,7 +332,7 @@ void ListWindows(BColumnListView *listView, FrameTree *frames, BRow *parent, BMe
 		if (GetMessenger(wnd, app, spec) != B_OK)
 			continue;
 
-		team_id token = GetToken(wnd);
+		team_id token = BMessenger::Private(wnd).Token();
 
 		prevWnds.erase(token);
 
@@ -417,7 +361,7 @@ void ListWindows(BColumnListView *listView, FrameTree *frames, BRow *parent, BMe
 	}
 }
 
-void ListWindowFrames(FrameTree *frames)
+static void ListWindowFrames(FrameTree *frames)
 {
 	frames->Clear();
 	int32 wndCnt;
@@ -438,7 +382,7 @@ void ListWindowFrames(FrameTree *frames)
 	}
 }
 
-void ListApps(BColumnListView *listView, FrameTree *frames) {
+static void ListApps(BColumnListView *listView, FrameTree *frames) {
 	BList appList;
 	app_info info;
 	BMessenger app;
@@ -487,7 +431,7 @@ void ListApps(BColumnListView *listView, FrameTree *frames) {
 	}
 }
 
-void ExpandAll(BColumnListView *view, BRow *row)
+static void ExpandAll(BColumnListView *view, BRow *row)
 {
 	int32 count;
 	view->ExpandOrCollapse(row, true);
@@ -497,7 +441,7 @@ void ExpandAll(BColumnListView *view, BRow *row)
 	}
 }
 
-void CollapseAll(BColumnListView *view, BRow *row)
+static void CollapseAll(BColumnListView *view, BRow *row)
 {
 	int32 count;
 	count = view->CountRows(row);
@@ -507,7 +451,7 @@ void CollapseAll(BColumnListView *view, BRow *row)
 	view->ExpandOrCollapse(row, false);
 }
 
-void ExpandRow(BColumnListView *view, BRow *row)
+static void ExpandRow(BColumnListView *view, BRow *row)
 {
 	BRow *parent;
 	bool isVisible;
@@ -518,7 +462,7 @@ void ExpandRow(BColumnListView *view, BRow *row)
 	}
 }
 
-BRow *FindRowByToken(BColumnListView *view, BRow *parent, int32 token)
+static BRow *FindRowByToken(BColumnListView *view, BRow *parent, int32 token)
 {
 	int32 count;
 	count = view->CountRows(parent);
@@ -533,7 +477,7 @@ BRow *FindRowByToken(BColumnListView *view, BRow *parent, int32 token)
 	return NULL;
 }
 
-BRow *FindRowByTeamToken(BColumnListView *view, team_id team, int32 token)
+static BRow *FindRowByTeamToken(BColumnListView *view, team_id team, int32 token)
 {
 	BRow *row = FindIntRow(view, NULL, team);
 	if (row == NULL) return NULL;
@@ -585,7 +529,7 @@ private:
 };
 
 
-BBitmap *LoadIcon(int32 id, int32 width, int32 height)
+static BBitmap *LoadIcon(int32 id, int32 width, int32 height)
 {
 	size_t dataSize;
 	const void* data = BApplication::AppResources()->FindResource(B_VECTOR_ICON_TYPE, id, &dataSize);
@@ -680,9 +624,9 @@ public:
 			BMenuItem *selectItem = ItemAt(0);
 			if (fCurItem != NULL)
 				_ZN9BMenuItem6SelectEb(fCurItem, false);
-			if (fCurItem == ItemAt(0) && fCurFrame != NULL) {
-				team_id team = GetTeam(fCurFrame->obj);
-				int32 token = GetToken(fCurFrame->obj);
+			if (fCurItem == selectItem && fCurFrame != NULL) {
+				team_id team = BMessenger::Private(fCurFrame->obj).Team();
+				int32 token = BMessenger::Private(fCurFrame->obj).Token();
 				BRow *row = FindRowByTeamToken(fView, team, token);
 				if (row != NULL) {
 					ExpandRow(fView, row);
@@ -716,7 +660,6 @@ public:
 		fFrames(BMessenger(), BScreen().Frame(), true)
 		//listUpdater(BMessenger(this), BMessage(updateMsg), 500000)
 	{
-		BRow *row1, *row2;
 		fView = new BColumnListView("view", 0);
 		fView->SetInvocationMessage(new BMessage(invokeMsg));
 		fView->SetSelectionMessage(new BMessage(selectMsg));
@@ -728,7 +671,6 @@ public:
 		ListApps(fView, &fFrames);
 
 		BMenu *menu2;
-		BMenuItem *it;
 
 		fMenuBar = new BMenuBar("menuBar", B_ITEMS_IN_ROW);
 		menu2 = new BMenu("Edit");
