@@ -137,11 +137,26 @@ static BRow *FindIntRow(BColumnListView *view, BRow *parent, int32 val)
 	return NULL;
 }
 
+void DumpMessenger(BMessenger &handle)
+{
+	printf("(team: %d, token: %d)", BMessenger::Private(handle).Team(), BMessenger::Private(handle).Token());
+}
+
+status_t SendScriptingMessage(BMessenger &obj, BMessage &spec, BMessage &reply)
+{
+	status_t res = obj.SendMessage(&spec, &reply, 1000000, 1000000);
+	if (res < B_OK) {
+		printf("[!] can't send message to "); DumpMessenger(obj); printf(", error: %s\n", strerror(res));
+		return res;
+	}
+	return res;
+}
+
 static status_t GetBool(bool &val, BMessenger &obj, BMessage &spec)
 {
 	status_t res;
 	BMessage reply;
-	if ((res = obj.SendMessage(&spec, &reply, 1000000, 1000000)) != B_OK) return res;
+	if ((res = SendScriptingMessage(obj, spec, reply)) != B_OK) return res;
 	if ((res = reply.FindBool("result", &val)) != B_OK) return res;
 	return res;
 }
@@ -150,7 +165,7 @@ static status_t GetInt32(int32 &val, BMessenger &obj, BMessage &spec)
 {
 	status_t res;
 	BMessage reply;
-	if ((res = obj.SendMessage(&spec, &reply, 1000000, 1000000)) != B_OK) return res;
+	if ((res = SendScriptingMessage(obj, spec, reply)) != B_OK) return res;
 	if ((res = reply.FindInt32("result", &val)) != B_OK) return res;
 	return res;
 }
@@ -159,7 +174,7 @@ static status_t GetString(BString &val, BMessenger &obj, BMessage &spec)
 {
 	status_t res;
 	BMessage reply;
-	if ((res = obj.SendMessage(&spec, &reply, 1000000, 1000000)) != B_OK) return res;
+	if ((res = SendScriptingMessage(obj, spec, reply)) != B_OK) return res;
 	if ((res = reply.FindString("result", &val)) != B_OK) return res;
 	return res;
 }
@@ -168,7 +183,7 @@ static status_t GetMessenger(BMessenger &val, BMessenger &obj, BMessage &spec)
 {
 	status_t res;
 	BMessage reply;
-	if ((res = obj.SendMessage(&spec, &reply, 1000000, 1000000)) != B_OK) return res;
+	if ((res = SendScriptingMessage(obj, spec, reply)) != B_OK) return res;
 	if ((res = reply.FindMessenger("result", &val)) != B_OK) return res;
 	return res;
 }
@@ -177,7 +192,7 @@ static status_t GetRect(BRect &val, BMessenger &obj, BMessage &spec)
 {
 	status_t res;
 	BMessage reply;
-	if ((res = obj.SendMessage(&spec, &reply, 1000000, 1000000)) != B_OK) return res;
+	if ((res = SendScriptingMessage(obj, spec, reply)) != B_OK) return res;
 	if ((res = reply.FindRect("result", &val)) != B_OK) return res;
 	return res;
 }
@@ -214,7 +229,7 @@ static void WriteSuites(BString &dst, BMessenger &obj)
 	status_t res;
 	spec = BMessage(B_GET_SUPPORTED_SUITES);
 	if (
-		((res = obj.SendMessage(&spec, &reply, 1000000, 1000000)) != B_OK)
+		((res = SendScriptingMessage(obj, spec, reply)) != B_OK)
 	) {
 		WriteError(dst, res);
 	} else {
@@ -663,10 +678,10 @@ public:
 		fView = new BColumnListView("view", 0);
 		fView->SetInvocationMessage(new BMessage(invokeMsg));
 		fView->SetSelectionMessage(new BMessage(selectMsg));
-		fView->AddColumn(new BStringColumn("Type", 96, 50, 512, B_TRUNCATE_MIDDLE), typeCol);
+		fView->AddColumn(new BStringColumn("Type", 192, 50, 512, B_TRUNCATE_MIDDLE), typeCol);
 		fView->AddColumn(new BStringColumn("Name", 250, 50, 512, B_TRUNCATE_MIDDLE), nameCol);
 		fView->AddColumn(new BIntegerColumn("ID", 64, 32, 128, B_ALIGN_RIGHT), idCol);
-		fView->AddColumn(new BStringColumn("Suites", 128, 50, 512, B_TRUNCATE_MIDDLE), suitesCol);
+		fView->AddColumn(new BStringColumn("Suites", 256, 50, 512, B_TRUNCATE_MIDDLE), suitesCol);
 
 		ListApps(fView, &fFrames);
 

@@ -67,27 +67,11 @@ SuiteEditor::SuiteEditor(BMessenger handle):
 	fHandle(handle),
 	fStatus(B_OK)
 {
-	status_t res = B_OK;
 	BMessage spec(B_GET_SUPPORTED_SUITES);
 	BMessage suites;
 	fStatus = fHandle.SendMessage(&spec, &suites, 1000000, 1000000);
 	if (fStatus < B_OK) return;
 	suites.PrintToStream();
-
-	BTextControl *fTeam, *fPort, *fToken;
-	BMenuField *fMenuField;
-
-	fTeam = new BTextControl("team", "Team:", "0", NULL); fTeam->SetEnabled(false);
-	fPort = new BTextControl("port", "Port:", "0", NULL); fPort->SetEnabled(false);
-	fToken = new BTextControl("token", "Token:", "0", NULL); fToken->SetEnabled(false);
-
-
-	BMenu *menu = new BPopUpMenu("menu");
-	menu->AddItem(new BMenuItem("Item 1", NULL));
-	menu->AddItem(new BMenuItem("Item 2", NULL));
-	menu->AddItem(new BMenuItem("Item 3", NULL));
-	menu->AddItem(new BMenuItem("Item 4", NULL));
-	fMenuField = new BMenuField("menuField", "Menu field:", menu);
 
 	BGroupLayout* suitesLayout;
 
@@ -105,14 +89,7 @@ SuiteEditor::SuiteEditor(BMessenger handle):
 		const property_info *propList = propInfo.Properties();
 		propInfo.PrintToStream();
 
-		BTextControl *fLeftView, *fTopView, *fRightView, *fBottomView;
-
 		BGroupLayout* propsLayout;
-
-		fLeftView = new BTextControl("left", "Left:", "0", NULL);
-		fTopView = new BTextControl("top", "Top:", "0", NULL);
-		fRightView = new BTextControl("right", "Right:", "255", NULL);
-		fBottomView = new BTextControl("bottom", "Bottom:", "255", NULL);
 
 		suitesLayout->AddView(
 			NewLabelBox("suite", suiteName,
