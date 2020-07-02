@@ -152,10 +152,34 @@ void WriteStackTrace()
 		debug_delete_symbol_lookup_context(lookupContext);
 }
 
+status_t DebugThread(void *arg)
+{
+	status_t res;
+	bool run = true;
+	while (run) {
+		int32 code;
+		debug_debugger_message_data message;
+		res = read_port(debuggerPort, &code, &message, sizeof(message));
+		if (res == B_INTERRUPTED) continue;
+		Check(res, "read port failed");
+		// printf("debug msg: %d\n", code);
+		switch (code) {
+		case B_DEBUGGER_MESSAGE_THREAD_DEBUGGED: {
+			void *ip = NULL, *fp = NULL;
+			if (Check(debug_get_instruction_pointer(&debugContext, thread, &ip, &fp), "can't get IP and FP", false) >= B_OK)
+				WriteStackTrace();
+			run = false;
+			break;
+		}
+		}
+	}
+	return B_OK;
+}
+
 int main(int argCnt, char **args)
 {
 	thread_info threadInfo;
-	void *ip = NULL, *fp = NULL;
+	status_t res;
 
 	if (argCnt != 2)
 		FatalError("thread id should be provided\n");
@@ -170,10 +194,9 @@ int main(int argCnt, char **args)
 	Check(init_debug_context(&debugContext, team, nubPort));
 
 	Check(debug_thread(thread));
-	snooze(2000); // avoid "can't get IP and FP (Thread is inappropriate state)"
 
-	if (Check(debug_get_instruction_pointer(&debugContext, thread, &ip, &fp), "can't get IP and FP", false) >= B_OK)
-		WriteStackTrace();
+	thread_id debugThread = spawn_thread(DebugThread, "debug thread", B_NORMAL_PRIORITY, NULL);
+	wait_for_thread(debugThread, &res); Check(res);
 
 	destroy_debug_context(&debugContext);
 	remove_team_debugger(team);
