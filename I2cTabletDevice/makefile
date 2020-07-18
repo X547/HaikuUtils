@@ -107,7 +107,7 @@ SYMBOLS :=
 DEBUGGER :=
 
 #	Specify any additional compiler flags to be used.
-COMPILER_FLAGS =
+COMPILER_FLAGS = -fvisibility=hidden -fno-semantic-interposition
 
 #	Specify any additional linker flags to be used.
 LINKER_FLAGS =
@@ -124,6 +124,8 @@ APP_VERSION :=
 #	binary in ~/add-ons/kernel/drivers/dev/video/usb, so that your driver will
 #	appear at /dev/video/usb when loaded. The default is "misc".
 DRIVER_PATH =
+
+INSTALL_DIR = /boot/home/config/non-packaged/add-ons/input_server/devices
 
 ## Include the Makefile-Engine
 DEVEL_DIRECTORY := \

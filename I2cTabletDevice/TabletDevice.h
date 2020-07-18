@@ -1,8 +1,9 @@
 #ifndef _KEYBOARDDEVICE_H_
 #define _KEYBOARDDEVICE_H_
 
-#include <InputServerDevice.h>
+#include <add-ons/input_server/InputServerDevice.h>
 #include <private/i2c/i2c.h>
+#include <private/shared/AutoDeleter.h>
 
 
 typedef struct i2c_hid_descriptor {
@@ -70,7 +71,7 @@ public:
 private:
 	static int32 DeviceWatcher(void *arg);
 
-	int fDeviceFd;
+	FileDescriptorCloser fDeviceFd;
 	i2c_addr fDeviceAdr;
 	i2c_hid_descriptor fDesc;
 	TabletState fState;
