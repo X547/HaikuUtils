@@ -107,7 +107,7 @@ SYMBOLS :=
 DEBUGGER :=
 
 #	Specify any additional compiler flags to be used.
-COMPILER_FLAGS =
+COMPILER_FLAGS = -fvisibility=hidden -fno-semantic-interposition
 
 #	Specify any additional linker flags to be used.
 LINKER_FLAGS =
@@ -125,7 +125,12 @@ APP_VERSION :=
 #	appear at /dev/video/usb when loaded. The default is "misc".
 DRIVER_PATH =
 
+INSTALL_DIR = /boot/home/config/non-packaged/add-ons/input_server/devices
+
 ## Include the Makefile-Engine
 DEVEL_DIRECTORY := \
 	$(shell findpaths -r "makefile_engine" B_FIND_PATH_DEVELOP_DIRECTORY)
 include $(DEVEL_DIRECTORY)/etc/makefile-engine
+
+uninstall :: default
+	rm "$(INSTALL_DIR)"/$(NAME)

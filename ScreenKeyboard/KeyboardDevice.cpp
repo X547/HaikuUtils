@@ -30,7 +30,7 @@ status_t KeyboardDevice::InitCheck()
 {
 	kbdDev = this;
 	
-	static input_device_ref keyboard = {"Screen keyboard", B_KEYBOARD_DEVICE, (void*)this};
+	static input_device_ref keyboard = {(char*)"Screen keyboard", B_KEYBOARD_DEVICE, (void*)this};
 	static input_device_ref *devices[2] = {&keyboard, NULL};
 	
 	RegisterDevices(devices);
