@@ -233,22 +233,6 @@ static void ListFrames(StackWindow *wnd, BColumnListView *view)
 	destroy_debug_context(&wnd->fDebugContext);
 	remove_team_debugger(wnd->fTeam);
 	delete_port(wnd->fDebuggerPort);
-
-/*
-	int32 cookie = 0;
-	sem_info info;
-	BString str, str2;
-	while (get_next_sem_info(wnd->fId, &cookie, &info) >= B_OK) {
-		BRow *row = new BRow();
-
-		row->SetField(new BIntegerField(info.sem), semIdCol);
-		row->SetField(new BStringField(info.name), semNameCol);
-		row->SetField(new BIntegerField(info.count), semCountCol);
-		row->SetField(new BIntegerField(info.latest_holder), semLatestHolderCol);
-
-		view->AddRow(row);
-	}
-*/
 }
 
 static void NewFramesView(StackWindow *wnd)
