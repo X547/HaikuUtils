@@ -3,12 +3,16 @@
 
 #include <Window.h>
 #include <OS.h>
+#include <MessageRunner.h>
 
+class BTabView;
 class BColumnListView;
 
 class TeamWindow: public BWindow
 {
 private:
+	BMessageRunner fListUpdater;
+	BTabView *fTabView;
 	BColumnListView *fImagesView;
 	BColumnListView *fThreadsView;
 	BColumnListView *fAreasView;

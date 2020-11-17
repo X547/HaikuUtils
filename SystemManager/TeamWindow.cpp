@@ -67,7 +67,8 @@ enum {
 
 
 enum {
-	threadsInvokeMsg = 1,
+	updateMsg = 1,
+	threadsInvokeMsg,
 };
 
 
@@ -114,14 +115,40 @@ static const char *GetFileName(const char *path)
 	return name;
 }
 
+static BRow *FindIntRow(BColumnListView *view, int32 col, BRow *parent, int32 val)
+{
+	BRow *row;
+	BString name;
+	for (int32 i = 0; i < view->CountRows(parent); i++) {
+		row = view->RowAt(i, parent);
+		if (((BIntegerField*)row->GetField(col))->Value() == val)
+			return row;
+	}
+	return NULL;
+}
+
 
 static void ListImages(TeamWindow *wnd, BColumnListView *view)
 {
 	int32 cookie = 0;
 	image_info info;
 	BString str;
+	BRow *row;
+	BList prevRows;
+
+	for (int32 i = 0; i < view->CountRows(); i++) {
+		row = view->RowAt(i);
+		prevRows.AddItem((void*)(addr_t)(((BIntegerField*)row->GetField(imageIdCol))->Value()));
+	}
+
 	while (get_next_image_info(wnd->fId, &cookie, &info) >= B_OK) {
-		BRow *row = new BRow();
+		prevRows.RemoveItem((void*)(addr_t)info.id);
+		row = FindIntRow(view, imageIdCol, NULL, info.id);
+		if (row == NULL) {
+			row = new BRow();
+			view->AddRow(row);
+		}
+
 		row->SetField(new BIntegerField(info.id), imageIdCol);
 		str.SetToFormat("0x%lx", (uintptr_t)info.text);
 		row->SetField(new BStringField(str), imageTextCol);
@@ -129,7 +156,12 @@ static void ListImages(TeamWindow *wnd, BColumnListView *view)
 		row->SetField(new BStringField(str), imageDataCol);
 		row->SetField(new BStringField(GetFileName(info.name)), imageNameCol);
 		row->SetField(new BStringField(info.name), imagePathCol);
-		view->AddRow(row);
+	}
+
+	for (int32 i = 0; i < prevRows.CountItems(); i++) {
+		row = FindIntRow(view, imageIdCol, NULL, (int32)(addr_t)prevRows.ItemAt(i));
+		view->RemoveRow(row);
+		delete row;
 	}
 }
 
@@ -151,8 +183,22 @@ static void ListThreads(TeamWindow *wnd, BColumnListView *view)
 	int32 cookie = 0;
 	thread_info info;
 	BString str;
+	BRow *row;
+	BList prevRows;
+
+	for (int32 i = 0; i < view->CountRows(); i++) {
+		row = view->RowAt(i);
+		prevRows.AddItem((void*)(addr_t)(((BIntegerField*)row->GetField(threadIdCol))->Value()));
+	}
+
 	while (get_next_thread_info(wnd->fId, &cookie, &info) >= B_OK) {
-		BRow *row = new BRow();
+		prevRows.RemoveItem((void*)(addr_t)info.thread);
+		row = FindIntRow(view, threadIdCol, NULL, info.thread);
+		if (row == NULL) {
+			row = new BRow();
+			view->AddRow(row);
+		}
+
 		row->SetField(new BIntegerField(info.thread), threadIdCol);
 		row->SetField(new BStringField(info.name), threadNameCol);
 
@@ -167,7 +213,7 @@ static void ListThreads(TeamWindow *wnd, BColumnListView *view)
 			str.SetToFormat("? (%ld)", info.state);
 		}
 		row->SetField(new BStringField(str), threadStateCol);
-		
+
 		row->SetField(new BIntegerField(info.priority), threadPriorityCol);
 		row->SetField(new BIntegerField(info.sem), threadSemCol);
 		row->SetField(new BIntegerField(info.user_time), threadUserTimeCol);
@@ -176,7 +222,12 @@ static void ListThreads(TeamWindow *wnd, BColumnListView *view)
 		row->SetField(new BStringField(str), threadStackBaseCol);
 		str.SetToFormat("0x%lx", (addr_t)info.stack_end);
 		row->SetField(new BStringField(str), threadStackEndCol);
-		view->AddRow(row);
+	}
+
+	for (int32 i = 0; i < prevRows.CountItems(); i++) {
+		row = FindIntRow(view, threadIdCol, NULL, (int32)(addr_t)prevRows.ItemAt(i));
+		view->RemoveRow(row);
+		delete row;
 	}
 }
 
@@ -203,8 +254,21 @@ static void ListAreas(TeamWindow *wnd, BColumnListView *view)
 	ssize_t cookie = 0;
 	area_info info;
 	BString str, str2;
+	BRow *row;
+	BList prevRows;
+
+	for (int32 i = 0; i < view->CountRows(); i++) {
+		row = view->RowAt(i);
+		prevRows.AddItem((void*)(addr_t)(((BIntegerField*)row->GetField(areaIdCol))->Value()));
+	}
+
 	while (get_next_area_info(wnd->fId, &cookie, &info) >= B_OK) {
-		BRow *row = new BRow();
+		prevRows.RemoveItem((void*)(addr_t)info.area);
+		row = FindIntRow(view, areaIdCol, NULL, info.area);
+		if (row == NULL) {
+			row = new BRow();
+			view->AddRow(row);
+		}
 
 		row->SetField(new BIntegerField(info.area), areaIdCol);
 
@@ -243,8 +307,12 @@ static void ListAreas(TeamWindow *wnd, BColumnListView *view)
 			str.SetToFormat("? (%ld)", info.lock);
 		}
 		row->SetField(new BStringField(str), areaLockCol);
+	}
 
-		view->AddRow(row);
+	for (int32 i = 0; i < prevRows.CountItems(); i++) {
+		row = FindIntRow(view, areaIdCol, NULL, (int32)(addr_t)prevRows.ItemAt(i));
+		view->RemoveRow(row);
+		delete row;
 	}
 }
 
@@ -268,16 +336,33 @@ static void ListPorts(TeamWindow *wnd, BColumnListView *view)
 	int32 cookie = 0;
 	port_info info;
 	BString str, str2;
+	BRow *row;
+	BList prevRows;
+
+	for (int32 i = 0; i < view->CountRows(); i++) {
+		row = view->RowAt(i);
+		prevRows.AddItem((void*)(addr_t)(((BIntegerField*)row->GetField(portIdCol))->Value()));
+	}
+
 	while (get_next_port_info(wnd->fId, &cookie, &info) >= B_OK) {
-		BRow *row = new BRow();
+		prevRows.RemoveItem((void*)(addr_t)info.port);
+		row = FindIntRow(view, portIdCol, NULL, info.port);
+		if (row == NULL) {
+			row = new BRow();
+			view->AddRow(row);
+		}
 
 		row->SetField(new BIntegerField(info.port), portIdCol);
 		row->SetField(new BStringField(info.name), portNameCol);
 		row->SetField(new BIntegerField(info.capacity), portCapacityCol);
 		row->SetField(new BIntegerField(info.queue_count), portQueuedCol);
 		row->SetField(new BIntegerField(info.total_count), portTotalCol);
+	}
 
-		view->AddRow(row);
+	for (int32 i = 0; i < prevRows.CountItems(); i++) {
+		row = FindIntRow(view, portIdCol, NULL, (int32)(addr_t)prevRows.ItemAt(i));
+		view->RemoveRow(row);
+		delete row;
 	}
 }
 
@@ -298,16 +383,32 @@ static void ListSems(TeamWindow *wnd, BColumnListView *view)
 {
 	int32 cookie = 0;
 	sem_info info;
-	BString str, str2;
+	BRow *row;
+	BList prevRows;
+
+	for (int32 i = 0; i < view->CountRows(); i++) {
+		row = view->RowAt(i);
+		prevRows.AddItem((void*)(addr_t)(((BIntegerField*)row->GetField(semIdCol))->Value()));
+	}
+
 	while (get_next_sem_info(wnd->fId, &cookie, &info) >= B_OK) {
-		BRow *row = new BRow();
+		prevRows.RemoveItem((void*)(addr_t)info.sem);
+		row = FindIntRow(view, semIdCol, NULL, info.sem);
+		if (row == NULL) {
+			row = new BRow();
+			view->AddRow(row);
+		}
 
 		row->SetField(new BIntegerField(info.sem), semIdCol);
 		row->SetField(new BStringField(info.name), semNameCol);
 		row->SetField(new BIntegerField(info.count), semCountCol);
 		row->SetField(new BIntegerField(info.latest_holder), semLatestHolderCol);
+	}
 
-		view->AddRow(row);
+	for (int32 i = 0; i < prevRows.CountItems(); i++) {
+		row = FindIntRow(view, semIdCol, NULL, (int32)(addr_t)prevRows.ItemAt(i));
+		view->RemoveRow(row);
+		delete row;
 	}
 }
 
@@ -343,12 +444,12 @@ void OpenTeamWindow(team_id id, BPoint center)
 }
 
 TeamWindow::TeamWindow(team_id id): BWindow(BRect(0, 0, 800, 480), "Team", B_DOCUMENT_WINDOW, B_ASYNCHRONOUS_CONTROLS | B_AUTO_UPDATE_SIZE_LIMITS),
-	fId(id)
+	fId(id),
+	fListUpdater(BMessenger(this), BMessage(updateMsg), 500000)
 {
 	BMenuBar *menuBar;
 	BMenu *menu2;
 	BMenuItem *it;
-	BTabView *tabView;
 	BTab *tab;
 
 	int32 cookie = 0;
@@ -371,20 +472,20 @@ TeamWindow::TeamWindow(team_id id): BWindow(BRect(0, 0, 800, 480), "Team", B_DOC
 		menu2->AddItem(it = new BMenuItem("Quit", new BMessage(B_QUIT_REQUESTED), 'Q')); it->SetTarget(be_app);
 		menuBar->AddItem(menu2);
 
-	tabView = new BTabView("tabView", B_WIDTH_FROM_LABEL);
-	tabView->SetBorder(B_NO_BORDER);
+	fTabView = new BTabView("tabView", B_WIDTH_FROM_LABEL);
+	fTabView->SetBorder(B_NO_BORDER);
 
-	tab = new BTab(); tabView->AddTab(fImagesView = NewImagesView(this), tab);
-	tab = new BTab(); tabView->AddTab(fThreadsView = NewThreadsView(this), tab);
-	tab = new BTab(); tabView->AddTab(fAreasView = NewAreasView(this), tab);
-	tab = new BTab(); tabView->AddTab(fPortsView = NewPortsView(this), tab);
-	tab = new BTab(); tabView->AddTab(fPortsView = NewSemsView(this), tab);
-	tab = new BTab(); tabView->AddTab(new TestView(BRect(0, 0, -1, -1), "Handles", B_FOLLOW_NONE), tab);
+	tab = new BTab(); fTabView->AddTab(fImagesView = NewImagesView(this), tab);
+	tab = new BTab(); fTabView->AddTab(fThreadsView = NewThreadsView(this), tab);
+	tab = new BTab(); fTabView->AddTab(fAreasView = NewAreasView(this), tab);
+	tab = new BTab(); fTabView->AddTab(fPortsView = NewPortsView(this), tab);
+	tab = new BTab(); fTabView->AddTab(fSemsView = NewSemsView(this), tab);
+	tab = new BTab(); fTabView->AddTab(new TestView(BRect(0, 0, -1, -1), "Handles", B_FOLLOW_NONE), tab);
 
 	BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
 		.Add(menuBar)
 		.AddGroup(B_VERTICAL, 0)
-			.Add(tabView)
+			.Add(fTabView)
 			.SetInsets(-1, 0, -1, -1)
 			.End()
 		.End()
@@ -402,6 +503,23 @@ TeamWindow::~TeamWindow()
 void TeamWindow::MessageReceived(BMessage *msg)
 {
 	switch (msg->what) {
+	case updateMsg: {
+		BTab *tab = fTabView->TabAt(fTabView->Selection());
+		if (tab != NULL) {
+			BView *view = tab->View();
+			if (view == fImagesView)
+				ListImages(this, fImagesView);
+			else if (view == fThreadsView)
+				ListThreads(this, fThreadsView);
+			else if (view == fAreasView)
+				ListAreas(this, fAreasView);
+			else if (view == fPortsView)
+				ListPorts(this, fPortsView);
+			else if (view == fSemsView)
+				ListSems(this, fSemsView);
+		}
+		break;
+	}
 	case threadsInvokeMsg: {
 		BRow *row = fThreadsView->CurrentSelection(NULL);
 		if (row != NULL) {

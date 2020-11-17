@@ -215,7 +215,7 @@ static void ListFrames(StackWindow *wnd, BColumnListView *view)
 {
 	thread_info threadInfo;
 	status_t res;
-	
+
 	Check(get_thread_info(wnd->fId, &threadInfo), "thread not found");
 	wnd->fTeam = threadInfo.team;
 
