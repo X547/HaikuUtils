@@ -505,10 +505,16 @@ public:
 				break;
 			}
 			case removeMemberMsg: {
+				bool isEmpty = true;
 				for (int32 i = 0; curGroup->gr_mem[i] != NULL; i++) {
-					if (strcmp(memberName, curGroup->gr_mem[i]) != 0)
+					if (strcmp(memberName, curGroup->gr_mem[i]) != 0) {
+						isEmpty = false;
 						updateGroupMsg.AddString("members", curGroup->gr_mem[i]);
+					}
 				}
+				if (isEmpty)
+					updateGroupMsg.AddString("members", "");
+
 				break;
 			}
 			}
