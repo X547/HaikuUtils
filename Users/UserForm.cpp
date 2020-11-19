@@ -6,6 +6,7 @@
 #include <grp.h>
 
 #include <Window.h>
+#include <Alert.h>
 #include <Messenger.h>
 #include <TextControl.h>
 #include <MenuItem.h>
@@ -91,7 +92,7 @@ public:
 				item->SetMarked(true);
 		}
 
-		BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
+		auto layoutItem = BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
 			.AddGroup(B_VERTICAL, B_USE_SMALL_SPACING)
 				.SetInsets(B_USE_SMALL_SPACING)
 				.Add(CreateTextControlLayoutItem(fUserNameView = new BTextControl("userName", "User name:", "", NULL)))
@@ -99,8 +100,10 @@ public:
 				.Add(CreateMenuFieldLayoutItem(fGroupView = new BMenuField("group", "Group:", menu)))
 				.Add(CreateTextControlLayoutItem(fHomeDirView = new BTextControl("homeDir", "Home directory:", "/boot/home", NULL)))
 				.Add(CreateTextControlLayoutItem(fShellView = new BTextControl("shell", "Shell:", "/bin/sh", NULL)))
+		; if (fUid < 0) {layoutItem
 				.Add(CreateTextControlLayoutItem(fPasswordView = new BTextControl("password", "Password:", "", NULL)))
 				.Add(CreateTextControlLayoutItem(fPasswordRepeatView = new BTextControl("passwordRepeat", "Repeat password:", "", NULL)))
+		;} layoutItem
 				.End()
 			.Add(new BSeparatorView(B_HORIZONTAL))
 			.AddGroup(B_HORIZONTAL, B_USE_SMALL_SPACING)
@@ -112,12 +115,10 @@ public:
 			.End()
 		;
 
-		fPasswordView->TextView()->HideTyping(true);
-		fPasswordRepeatView->TextView()->HideTyping(true);
-
-		// TODO: enable when passwords will be implemented
-		fPasswordView->SetEnabled(false);
-		fPasswordRepeatView->SetEnabled(false);
+		if (fUid < 0) {
+			fPasswordView->TextView()->HideTyping(true);
+			fPasswordRepeatView->TextView()->HideTyping(true);
+		}
 
 		SetDefaultButton(fOkView);
 		fUserNameView->MakeFocus();
@@ -163,6 +164,18 @@ public:
 				int warn = 7;
 
 				gid_t gid = 100;
+
+				if (strcmp(fPasswordView->Text(), fPasswordRepeatView->Text()) != 0) {
+					BAlert *alert = new BAlert("Users", "Passwords don't match.", "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_WARNING_ALERT);
+					alert->Go(NULL);
+					return;
+				}
+				const char *encryptedPassword;
+				if (strcmp(fPasswordRepeatView->Text(), "") == 0)
+					encryptedPassword = fPasswordRepeatView->Text();
+				else
+					encryptedPassword = crypt(fPasswordView->Text(), NULL);
+
 				uid_t uid = 1000;
 				while (getpwuid(uid) != NULL) uid++;
 
@@ -179,7 +192,7 @@ public:
 					|| message.AddString("home", fHomeDirView->Text()) != B_OK
 					|| message.AddString("shell", fShellView->Text()) != B_OK
 					|| message.AddString("real name", fRealNameView->Text()) != B_OK
-					|| message.AddString("shadow password", "!") != B_OK
+					|| message.AddString("shadow password", encryptedPassword) != B_OK
 					|| message.AddInt32("last changed", time(NULL)) != B_OK
 					|| message.AddInt32("min", min) != B_OK
 					|| message.AddInt32("max", max) != B_OK

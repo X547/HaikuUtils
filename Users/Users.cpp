@@ -24,6 +24,7 @@
 
 #include "Resources.h"
 #include "UserForm.h"
+#include "PasswordForm.h"
 #include "UserDB.h"
 
 
@@ -335,7 +336,6 @@ public:
 		BRow *row = fGroupsView->CurrentSelection(NULL);
 		if (row == NULL) return;
 
-
 		fAddMemberMenu->Superitem()->SetEnabled(true);
 		fRemoveMemberMenu->Superitem()->SetEnabled(true);
 
@@ -466,8 +466,18 @@ public:
 			return;
 		}
 		case setPasswordMsg: {
-			BAlert *alert = new BAlert("Users", "Set password feature is not yet implemented.", "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_WARNING_ALERT);
-			alert->Go(NULL);
+			BTab *tab = fTabView->TabAt(fTabView->Selection());
+			if (tab == NULL) return;
+			BView *view = tab->View();
+			if (view == fUsersView) {
+				BRow *row = fUsersView->CurrentSelection(NULL);
+				if (row == NULL) return;
+				int32 uid = ((BIntegerField*)row->GetField(userIdCol))->Value();
+				ShowPasswordForm(uid, BPoint((Frame().left + Frame().right)/2, (Frame().top + Frame().bottom)/2));
+			} else if (view == fGroupsView) {
+				BAlert *alert = new BAlert("Users", "Set group password feature is not yet implemented.", "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_WARNING_ALERT);
+				alert->Go(NULL);
+			}
 			return;
 		}
 		case addMemberMsg:
