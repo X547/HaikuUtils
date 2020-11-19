@@ -33,6 +33,8 @@ enum {
 	removeMsg,
 	editMsg,
 	setPasswordMsg,
+	addMemberMsg,
+	removeMemberMsg,
 };
 
 enum {
@@ -256,6 +258,9 @@ private:
 	BColumnListView *fUsersView;
 	BColumnListView *fGroupsView;
 
+	BMenu *fAddMemberMenu;
+	BMenu *fRemoveMemberMenu;
+
 public:
 	TestWindow(BRect frame): BWindow(frame, "Users", B_DOCUMENT_WINDOW_LOOK, B_NORMAL_WINDOW_FEEL, B_ASYNCHRONOUS_CONTROLS),
 		fListUpdater(BMessenger(this), BMessage(updateMsg), 500000)
@@ -272,6 +277,11 @@ public:
 				.AddItem(new BMenuItem("Remove", new BMessage(removeMsg)))
 				.AddItem(new BMenuItem("Edit", new BMessage(editMsg)))
 				.AddItem(new BMenuItem("Set password", new BMessage(setPasswordMsg)))
+				.AddSeparator()
+				.AddMenu(fAddMemberMenu = new BMenu("Add member"))
+					.End()
+				.AddMenu(fRemoveMemberMenu = new BMenu("Remove member"))
+					.End()
 				.End()
 			.End()
 		;
@@ -304,11 +314,74 @@ public:
 		fUsersView->MakeFocus();
 	}
 
+	void MenusBeginning()
+	{
+		KMessage usersReply, groupsReply;
+		int32 userCnt, groupCnt;
+		passwd **users;
+		group** groups;
+		group *curGroup = NULL;
+		int32 curGroupId;
+
+		fAddMemberMenu->Superitem()->SetEnabled(false);
+		fRemoveMemberMenu->Superitem()->SetEnabled(false);
+		fAddMemberMenu->RemoveItems(0, fAddMemberMenu->CountItems(), true);
+		fRemoveMemberMenu->RemoveItems(0, fRemoveMemberMenu->CountItems(), true);
+
+		BTab *tab = fTabView->TabAt(fTabView->Selection());
+		if (tab == NULL) return;
+		BView *view = tab->View();
+		if (view != fGroupsView) return;
+		BRow *row = fGroupsView->CurrentSelection(NULL);
+		if (row == NULL) return;
+
+
+		fAddMemberMenu->Superitem()->SetEnabled(true);
+		fRemoveMemberMenu->Superitem()->SetEnabled(true);
+
+		if (GetUsers(usersReply, userCnt, users) < B_OK) return;
+		if (GetGroups(groupsReply, groupCnt, groups) < B_OK) return;
+
+		curGroupId = ((BIntegerField*)row->GetField(groupIdCol))->Value();
+
+		{
+			int32 i = 0;
+			while ((i < groupCnt) && !((int32)groups[i]->gr_gid == curGroupId)) i++;
+			if (i < groupCnt)
+				curGroup = groups[i];
+			else
+				return;
+		}
+
+		for (int32 i = 0; i < userCnt; i++) {
+			int j = 0;
+			while ((curGroup->gr_mem[j] != NULL) && !(strcmp(users[i]->pw_name, curGroup->gr_mem[j]) == 0)) j++;
+			if (curGroup->gr_mem[j] == NULL) {
+				BMessage *msg = new BMessage(addMemberMsg);
+				BMenuItem *item;
+				msg->AddString("val", users[i]->pw_name);
+				fAddMemberMenu->AddItem(item = new BMenuItem(users[i]->pw_name, msg));
+			}
+		}
+
+		for (int32 i = 0; curGroup->gr_mem[i] != NULL; i++) {
+			BMessage *msg = new BMessage(removeMemberMsg);
+			BMenuItem *item;
+			msg->AddString("val", curGroup->gr_mem[i]);
+			fRemoveMemberMenu->AddItem(item = new BMenuItem(curGroup->gr_mem[i], msg));
+		}
+	}
+
+	void MenusEnded()
+	{
+	}
+
 	void MessageReceived(BMessage *msg)
 	{
 		switch (msg->what) {
 		case updateMsg: {
 			ListUsers(fUsersView);
+			ListGroups(fGroupsView);
 			return;
 		}
 		case addMsg: {
@@ -389,13 +462,58 @@ public:
 			} else if (view == fGroupsView) {
 				BAlert *alert = new BAlert("Users", "Editing group feature is not yet implemented.", "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_WARNING_ALERT);
 				alert->Go(NULL);
-				return;
 			}
 			return;
 		}
 		case setPasswordMsg: {
 			BAlert *alert = new BAlert("Users", "Set password feature is not yet implemented.", "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_WARNING_ALERT);
 			alert->Go(NULL);
+			return;
+		}
+		case addMemberMsg:
+		case removeMemberMsg: {
+			BTab *tab = fTabView->TabAt(fTabView->Selection());
+			if (tab == NULL) return;
+			BView *view = tab->View();
+			if (view != fGroupsView) return;
+			BRow *row = fGroupsView->CurrentSelection(NULL);
+			if (row == NULL) return;
+			int32 groupId = ((BIntegerField*)row->GetField(groupIdCol))->Value();
+			const char *memberName;
+			if (msg->FindString("val", &memberName) < B_OK) return;
+
+			KMessage groupsReply, updateGroupMsg;
+			int32 groupCnt;
+			group **groups;
+			group *curGroup;
+			if (GetGroups(groupsReply, groupCnt, groups) < B_OK) return;
+			{
+				int32 i = 0;
+				while ((i < groupCnt) && !((int32)groups[i]->gr_gid == groupId)) i++;
+				if (i < groupCnt)
+					curGroup = groups[i];
+				else
+					return;
+			}
+			updateGroupMsg.AddInt32("gid", groupId);
+			switch (msg->what) {
+			case addMemberMsg: {
+				for (int32 i = 0; curGroup->gr_mem[i] != NULL; i++)
+					updateGroupMsg.AddString("members", curGroup->gr_mem[i]);
+
+				updateGroupMsg.AddString("members", memberName);
+				break;
+			}
+			case removeMemberMsg: {
+				for (int32 i = 0; curGroup->gr_mem[i] != NULL; i++) {
+					if (strcmp(memberName, curGroup->gr_mem[i]) != 0)
+						updateGroupMsg.AddString("members", curGroup->gr_mem[i]);
+				}
+				break;
+			}
+			}
+			UpdateGroup(updateGroupMsg);
+			ListGroups(fGroupsView);
 			return;
 		}
 		}
