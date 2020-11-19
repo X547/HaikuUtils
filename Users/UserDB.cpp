@@ -8,7 +8,7 @@
 #include <private/kernel/util/KMessage.h>
 
 
-#define CheckRet(err) {status_t _err = (err); if (_err < B_OK) {debugger(strerror(_err)); return _err;}}
+#define CheckRet(err) {status_t _err = (err); if (_err < B_OK) {/* debugger(strerror(_err)); */ return _err;}}
 
 
 status_t GetUsers(KMessage &reply, int32 &count, passwd**& entries)
