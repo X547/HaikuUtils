@@ -203,18 +203,18 @@ void WriteFourCC(BString &buf, int32 code)
 	char chars[4];
 	int i;
 	memcpy(chars, &code, 4);
-	i = 0; while (
-		(i < 4) && (
+	i = 3; while (
+		(i >= 0) && (
 			((chars[i] >= 'A') && (chars[i] <= 'Z')) ||
 			((chars[i] >= 'a') && (chars[i] <= 'z')) ||
 			((chars[i] >= '0') && (chars[i] <= '9')) ||
 			((chars[i] == '_'))
 		)
-	) i++;
-	if (!(i < 4)) {
-		buf.Append(" = '");
-		buf.Append(chars, 4);
-		buf.Append("'");
+	) i--;
+	if (!(i >= 0)) {
+		buf += " = '";
+		for (i = 3; i >= 0; i--) buf += chars[i];
+		buf += "'";
 	}
 }
 
@@ -417,10 +417,11 @@ TestWindow::TestWindow(BRect frame): BWindow(frame, "", B_DOCUMENT_WINDOW, B_ASY
 	this->rootView->AddChild(this->view, NULL);
 	this->view->SetInvocationMessage(new BMessage(invokeMsg));
 	this->view->SetSelectionMessage(new BMessage(selectMsg));
+	this->view->MakeFocus(true);
 
 	view->AddColumn(new BStringColumn("Name", 250, 50, 500, B_TRUNCATE_MIDDLE), nameCol);
 	view->AddColumn(new BStringColumn("Type", 96, 32, 500, B_TRUNCATE_MIDDLE), typeCol);
-	view->AddColumn(new BStringColumn("Value", 256, 32, 500, B_TRUNCATE_MIDDLE), valCol);
+	view->AddColumn(new BStringColumn("Value", 256 + 128, 32, 500, B_TRUNCATE_MIDDLE), valCol);
 }
 
 bool TestWindow::Load(BEntry &entry)
