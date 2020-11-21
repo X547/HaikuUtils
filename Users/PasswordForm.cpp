@@ -123,10 +123,10 @@ public:
 };
 
 
-void ShowPasswordForm(int32 uid, BPoint center)
+void ShowPasswordForm(int32 uid, BWindow *base)
 {
 	PasswordForm *wnd = new PasswordForm(uid);
-	BRect frame = wnd->Frame();
-	wnd->MoveTo(center.x - frame.Width()/2, center.y - frame.Height()/2);
+	wnd->AddToSubset(base);
+	wnd->CenterIn(base->Frame());
 	wnd->Show();
 }

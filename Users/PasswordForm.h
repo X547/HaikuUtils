@@ -3,9 +3,9 @@
 
 #include <Point.h>
 
-class BMessenger;
+class BWindow;
 
 
-void ShowPasswordForm(int32 uid, BPoint center);
+void ShowPasswordForm(int32 uid, BWindow *base);
 
 #endif	// _PASSWORDFORM_H_

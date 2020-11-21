@@ -3,9 +3,9 @@
 
 #include <Point.h>
 
-class BMessenger;
+class BWindow;
 
 
-void ShowUserForm(int32 uid, BPoint center);
+void ShowUserForm(int32 uid, BWindow *base);
 
 #endif	// _USERFORM_H_

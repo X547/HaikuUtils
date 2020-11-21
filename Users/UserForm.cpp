@@ -71,7 +71,7 @@ private:
 public:
 	UserForm(int32 uid):
 		BWindow(
-			BRect(0, 0, 255, 0), (uid < 0)? "New user": "Edit user", B_TITLED_WINDOW_LOOK, B_MODAL_APP_WINDOW_FEEL,
+			BRect(0, 0, 255, 0), (uid < 0)? "New user": "Edit user", B_TITLED_WINDOW_LOOK, B_MODAL_SUBSET_WINDOW_FEEL,
 			B_NOT_ZOOMABLE | B_NOT_MINIMIZABLE | B_CLOSE_ON_ESCAPE | B_ASYNCHRONOUS_CONTROLS | B_AUTO_UPDATE_SIZE_LIMITS
 		),
 		fUid(uid)
@@ -234,10 +234,10 @@ public:
 };
 
 
-void ShowUserForm(int32 uid, BPoint center)
+void ShowUserForm(int32 uid, BWindow *base)
 {
 	UserForm *wnd = new UserForm(uid);
-	BRect frame = wnd->Frame();
-	wnd->MoveTo(center.x - frame.Width()/2, center.y - frame.Height()/2);
+	wnd->AddToSubset(base);
+	wnd->CenterIn(base->Frame());
 	wnd->Show();
 }

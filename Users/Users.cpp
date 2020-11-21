@@ -263,7 +263,7 @@ private:
 	BMenu *fRemoveMemberMenu;
 
 public:
-	TestWindow(BRect frame): BWindow(frame, "Users", B_DOCUMENT_WINDOW_LOOK, B_NORMAL_WINDOW_FEEL, B_ASYNCHRONOUS_CONTROLS),
+	TestWindow(BRect frame): BWindow(frame, "Users", B_DOCUMENT_WINDOW_LOOK, B_NORMAL_WINDOW_FEEL, B_ASYNCHRONOUS_CONTROLS | B_AUTO_UPDATE_SIZE_LIMITS),
 		fListUpdater(BMessenger(this), BMessage(updateMsg), 500000)
 	{
 		BMenuBar *menuBar = new BMenuBar("menu", B_ITEMS_IN_ROW, true);
@@ -389,7 +389,7 @@ public:
 			if (tab == NULL) return;
 			BView *view = tab->View();
 			if (view == fUsersView) {
-				ShowUserForm(-1, BPoint((Frame().left + Frame().right)/2, (Frame().top + Frame().bottom)/2));
+				ShowUserForm(-1, this);
 			} else if (view == fGroupsView) {
 				BAlert *alert = new BAlert("Users", "Adding new group feature is not yet implemented.", "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_WARNING_ALERT);
 				alert->Go(NULL);
@@ -458,7 +458,7 @@ public:
 				BRow *row = fUsersView->CurrentSelection(NULL);
 				if (row == NULL) return;
 				int32 uid = ((BIntegerField*)row->GetField(userIdCol))->Value();
-				ShowUserForm(uid, BPoint((Frame().left + Frame().right)/2, (Frame().top + Frame().bottom)/2));
+				ShowUserForm(uid, this);
 			} else if (view == fGroupsView) {
 				BAlert *alert = new BAlert("Users", "Editing group feature is not yet implemented.", "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_WARNING_ALERT);
 				alert->Go(NULL);
@@ -473,7 +473,7 @@ public:
 				BRow *row = fUsersView->CurrentSelection(NULL);
 				if (row == NULL) return;
 				int32 uid = ((BIntegerField*)row->GetField(userIdCol))->Value();
-				ShowPasswordForm(uid, BPoint((Frame().left + Frame().right)/2, (Frame().top + Frame().bottom)/2));
+				ShowPasswordForm(uid, this);
 			} else if (view == fGroupsView) {
 				BAlert *alert = new BAlert("Users", "Set group password feature is not yet implemented.", "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_WARNING_ALERT);
 				alert->Go(NULL);
