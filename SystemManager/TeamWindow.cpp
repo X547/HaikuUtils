@@ -7,17 +7,26 @@
 #include <Menu.h>
 #include <MenuBar.h>
 #include <MenuItem.h>
+#include <PopUpMenu.h>
+#include <Box.h>
 #include <LayoutBuilder.h>
 #include <private/interface/ColumnListView.h>
 #include <private/interface/ColumnTypes.h>
 #include <private/shared/AutoLocker.h>
 #include <String.h>
 #include <image.h>
+#include <private/kernel/util/KMessage.h>
+#include <private/system/extended_system_info_defs.h>
+#include <private/libroot/extended_system_info.h>
 #include <drivers/KernelExport.h>
+
+#include <Entry.h>
+#include <Path.h>
 
 #include <map>
 
 #include "StackWindow.h"
+#include "Errors.h"
 
 
 enum {
@@ -65,6 +74,10 @@ enum {
 	semLatestHolderCol,
 };
 
+enum {
+	infoNameCol = 0,
+	infoValueCol,
+};
 
 enum {
 	updateMsg = 1,
@@ -125,6 +138,97 @@ static BRow *FindIntRow(BColumnListView *view, int32 col, BRow *parent, int32 va
 			return row;
 	}
 	return NULL;
+}
+
+
+//#pragma mark Lists
+
+static void ListInfo(TeamWindow *wnd, BColumnListView *view)
+{
+	int32 rowId = 0;
+	int32 int32Val = -1;
+	BString str;
+	const char *strPtr;
+
+	KMessage extInfo;
+
+	if (get_extended_team_info(wnd->fId, B_TEAM_INFO_BASIC, extInfo) >= B_OK) {
+		if (extInfo.FindInt32("id", &int32Val) >= B_OK) {
+			str.SetToFormat("%" B_PRId32, int32Val);
+			view->RowAt(rowId++)->SetField(new BStringField(str), infoValueCol);
+		}
+		if (extInfo.FindString("name", &strPtr) >= B_OK) {
+			view->RowAt(rowId++)->SetField(new BStringField(strPtr), infoValueCol);
+		}
+
+		if (extInfo.FindInt32("process group", &int32Val) >= B_OK) {
+			str.SetToFormat("%" B_PRId32, int32Val);
+			view->RowAt(rowId++)->SetField(new BStringField(str), infoValueCol);
+		}
+
+		if (extInfo.FindInt32("session", &int32Val) >= B_OK) {
+			str.SetToFormat("%" B_PRId32, int32Val);
+			view->RowAt(rowId++)->SetField(new BStringField(str), infoValueCol);
+		}
+
+		if (extInfo.FindInt32("uid", &int32Val) >= B_OK) {
+			str.SetToFormat("%" B_PRId32, int32Val);
+			view->RowAt(rowId++)->SetField(new BStringField(str), infoValueCol);
+		}
+
+		if (extInfo.FindInt32("gid", &int32Val) >= B_OK) {
+			str.SetToFormat("%" B_PRId32, int32Val);
+			view->RowAt(rowId++)->SetField(new BStringField(str), infoValueCol);
+		}
+
+		if (extInfo.FindInt32("euid", &int32Val) >= B_OK) {
+			str.SetToFormat("%" B_PRId32, int32Val);
+			view->RowAt(rowId++)->SetField(new BStringField(str), infoValueCol);
+		}
+
+		if (extInfo.FindInt32("egid", &int32Val) >= B_OK) {
+			str.SetToFormat("%" B_PRId32, int32Val);
+			view->RowAt(rowId++)->SetField(new BStringField(str), infoValueCol);
+		}
+
+		entry_ref ref;
+		if (
+			extInfo.FindInt32("cwd device", &ref.device) >= B_OK &&
+			extInfo.FindInt64("cwd directory", &ref.directory) >= B_OK
+		) {
+			ref.set_name(".");
+			BPath path(&ref);
+			view->RowAt(rowId++)->SetField(new BStringField(path.Path()), infoValueCol);
+		}
+	}
+}
+
+static void NewInfoRow(BColumnListView *view, const char *name)
+{
+	BRow *row = new BRow();
+	row->SetField(new BStringField(name), infoNameCol);
+	view->AddRow(row);
+}
+
+static BColumnListView *NewInfoView(TeamWindow *wnd)
+{
+	BColumnListView *view;
+	view = new BColumnListView("Info", B_NAVIGABLE);
+	view->AddColumn(new BStringColumn("Name", 150, 50, 500, B_TRUNCATE_END), infoNameCol);
+	view->AddColumn(new BStringColumn("Value", 512, 50, 1024, B_TRUNCATE_END), infoValueCol);
+
+	NewInfoRow(view, "ID");
+	NewInfoRow(view, "Name");
+	NewInfoRow(view, "Process group");
+	NewInfoRow(view, "Session");
+	NewInfoRow(view, "User ID");
+	NewInfoRow(view, "Group ID");
+	NewInfoRow(view, "Effective user ID");
+	NewInfoRow(view, "Effective group ID");
+	NewInfoRow(view, "Working directory");
+
+	ListInfo(wnd, view);
+	return view;
 }
 
 
@@ -210,7 +314,7 @@ static void ListThreads(TeamWindow *wnd, BColumnListView *view)
 		case B_THREAD_SUSPENDED: str = "suspended"; break;
 		case B_THREAD_WAITING: str = "waiting"; break;
 		default:
-			str.SetToFormat("? (%ld)", info.state);
+			str.SetToFormat("? (%" B_PRIu32 ")", info.state);
 		}
 		row->SetField(new BStringField(str), threadStateCol);
 
@@ -218,9 +322,9 @@ static void ListThreads(TeamWindow *wnd, BColumnListView *view)
 		row->SetField(new BIntegerField(info.sem), threadSemCol);
 		row->SetField(new BIntegerField(info.user_time), threadUserTimeCol);
 		row->SetField(new BIntegerField(info.kernel_time), threadKernelTimeCol);
-		str.SetToFormat("0x%lx", (addr_t)info.stack_base);
+		str.SetToFormat("0x%" B_PRIxADDR, (addr_t)info.stack_base);
 		row->SetField(new BStringField(str), threadStackBaseCol);
-		str.SetToFormat("0x%lx", (addr_t)info.stack_end);
+		str.SetToFormat("0x%" B_PRIxADDR, (addr_t)info.stack_end);
 		row->SetField(new BStringField(str), threadStackEndCol);
 	}
 
@@ -274,13 +378,13 @@ static void ListAreas(TeamWindow *wnd, BColumnListView *view)
 
 		row->SetField(new BStringField(info.name), areaNameCol);
 
-		str.SetToFormat("0x%lx", (uintptr_t)info.address);
+		str.SetToFormat("0x%" B_PRIxADDR, (addr_t)info.address);
 		row->SetField(new BStringField(str), areaAdrCol);
 
-		str.SetToFormat("0x%lx", info.size);
+		str.SetToFormat("0x%" B_PRIxSIZE, info.size);
 		row->SetField(new BStringField(str), areaSizeCol);
 
-		str.SetToFormat("0x%lx", info.ram_size);
+		str.SetToFormat("0x%" B_PRIx32, info.ram_size);
 		row->SetField(new BStringField(str), areaAllocCol);
 
 		str = "";
@@ -304,7 +408,7 @@ static void ListAreas(TeamWindow *wnd, BColumnListView *view)
 		case B_32_BIT_FULL_LOCK: str = "32 bit full"; break;
 		case B_32_BIT_CONTIGUOUS: str = "32 bit contiguous"; break;
 		default:
-			str.SetToFormat("? (%ld)", info.lock);
+			str.SetToFormat("? (%" B_PRIu32 ")", info.lock);
 		}
 		row->SetField(new BStringField(str), areaLockCol);
 	}
@@ -425,6 +529,8 @@ static BColumnListView *NewSemsView(TeamWindow *wnd)
 }
 
 
+//#pragma mark TeamWindow
+
 std::map<team_id, TeamWindow*> teamWindows;
 BLocker teamWindowsLocker;
 
@@ -448,33 +554,32 @@ TeamWindow::TeamWindow(team_id id): BWindow(BRect(0, 0, 800, 480), "Team", B_DOC
 	fListUpdater(BMessenger(this), BMessage(updateMsg), 500000)
 {
 	BMenuBar *menuBar;
-	BMenu *menu2;
-	BMenuItem *it;
 	BTab *tab;
 
-	int32 cookie = 0;
-	image_info imageInfo;
-	if (get_next_image_info(fId, &cookie, &imageInfo) >= B_OK) {
+	try {
+		int32 cookie = 0;
+		image_info imageInfo;
+		Check(get_next_image_info(fId, &cookie, &imageInfo), "Invalid team id.");
 		BString title;
-		title.SetToFormat("%s (%ld)", GetFileName(imageInfo.name), fId);
+		title.SetToFormat("%s (%" B_PRId32 ")", GetFileName(imageInfo.name), fId);
 		SetTitle(title.String());
+	} catch (StatusError &err) {
+		ShowError(err);
+		PostMessage(B_QUIT_REQUESTED);
 	}
 
 	menuBar = new BMenuBar("menu", B_ITEMS_IN_ROW, true);
-	menu2 = new BMenu("File");
-		menu2->AddItem(new BMenuItem("New", new BMessage('item'), 'N'));
-		menu2->AddItem(new BMenuItem("Open...", new BMessage('item'), 'O'));
-		menu2->AddItem(new BMenuItem("Close", new BMessage(B_QUIT_REQUESTED), 'W'));
-		menu2->AddItem(new BSeparatorItem());
-		menu2->AddItem(new BMenuItem("Save", new BMessage('item'), 'S'));
-		menu2->AddItem(new BMenuItem("Save as...", new BMessage('item'), 'S', B_SHIFT_KEY));
-		menu2->AddItem(new BSeparatorItem());
-		menu2->AddItem(it = new BMenuItem("Quit", new BMessage(B_QUIT_REQUESTED), 'Q')); it->SetTarget(be_app);
-		menuBar->AddItem(menu2);
+	BLayoutBuilder::Menu<>(menuBar)
+		.AddMenu(new BMenu("File"))
+			.AddItem(new BMenuItem("Close", new BMessage(B_QUIT_REQUESTED), 'W'))
+			.End()
+		.End()
+	;
 
 	fTabView = new BTabView("tabView", B_WIDTH_FROM_LABEL);
 	fTabView->SetBorder(B_NO_BORDER);
 
+	tab = new BTab(); fTabView->AddTab(fInfoView = NewInfoView(this), tab);
 	tab = new BTab(); fTabView->AddTab(fImagesView = NewImagesView(this), tab);
 	tab = new BTab(); fTabView->AddTab(fThreadsView = NewThreadsView(this), tab);
 	tab = new BTab(); fTabView->AddTab(fAreasView = NewAreasView(this), tab);
@@ -507,7 +612,9 @@ void TeamWindow::MessageReceived(BMessage *msg)
 		BTab *tab = fTabView->TabAt(fTabView->Selection());
 		if (tab != NULL) {
 			BView *view = tab->View();
-			if (view == fImagesView)
+			if (view == fInfoView)
+				ListInfo(this, fInfoView);
+			else if (view == fImagesView)
 				ListImages(this, fImagesView);
 			else if (view == fThreadsView)
 				ListThreads(this, fThreadsView);

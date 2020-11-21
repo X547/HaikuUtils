@@ -24,6 +24,8 @@
 #include <cxxabi.h>
 #include <map>
 
+#include "Errors.h"
+
 
 enum {
 	frameFpCol = 0,
@@ -32,26 +34,6 @@ enum {
 	frameFunctionCol,
 };
 
-
-static status_t Check(status_t res, const char *msg = NULL, bool fatal = true)
-{
-	if (res < B_OK) {
-		if (fatal)
-			fprintf(stderr, "fatal ");
-		if (msg != NULL)
-			fprintf(stderr, "error: %s (%s)\n", msg, strerror(res));
-		else
-			fprintf(stderr, "error: %s\n", strerror(res));
-		if (fatal) exit(1);
-	}
-	return res;
-}
-
-static void FatalError(const char *msg)
-{
-	printf("Fatal error: %s\n", msg);
-	exit(1);
-}
 
 static void WriteAddress2(BString &str, addr_t adr)
 {
@@ -144,10 +126,10 @@ static void WriteStackTrace(StackWindow *wnd)
 
 	BString imageStr, symbolStr;
 	LookupSymbolAddress(wnd, lookupContext, ip, imageStr, symbolStr);
-	
+
 	BRow *row;
 	BString str;
-	
+
 	row = new BRow();
 	WriteAddress2(str, (addr_t)fp); row->SetField(new BStringField(str), frameFpCol);
 	WriteAddress2(str, (addr_t)ip); row->SetField(new BStringField(str), frameIpCol);
@@ -220,6 +202,7 @@ static void ListFrames(StackWindow *wnd, BColumnListView *view)
 	wnd->fTeam = threadInfo.team;
 
 	wnd->fDebuggerPort = Check(create_port(10, "debugger port"));
+	HandleDeleter<port_id, status_t, delete_port> portDeleter(wnd->fDebuggerPort);
 	wnd->fNubPort = Check(install_team_debugger(wnd->fTeam, wnd->fDebuggerPort), "can't install debugger");
 	Check(init_debug_context(&wnd->fDebugContext, wnd->fTeam, wnd->fNubPort));
 
@@ -232,7 +215,6 @@ static void ListFrames(StackWindow *wnd, BColumnListView *view)
 
 	destroy_debug_context(&wnd->fDebugContext);
 	remove_team_debugger(wnd->fTeam);
-	delete_port(wnd->fDebuggerPort);
 }
 
 static void NewFramesView(StackWindow *wnd)
@@ -270,33 +252,31 @@ StackWindow::StackWindow(thread_id id): BWindow(BRect(0, 0, 800, 480), "Thread",
 	fId(id)
 {
 	BMenuBar *menuBar;
-	BMenu *menu2;
-	BMenuItem *it;
-	BTab *tab;
 
 	BString title;
-	title.SetToFormat("Thread %ld", fId);
+	title.SetToFormat("Thread %" B_PRId32, fId);
 	SetTitle(title.String());
 
 	menuBar = new BMenuBar("menu", B_ITEMS_IN_ROW, true);
-	menu2 = new BMenu("File");
-		menu2->AddItem(new BMenuItem("New", new BMessage('item'), 'N'));
-		menu2->AddItem(new BMenuItem("Open...", new BMessage('item'), 'O'));
-		menu2->AddItem(new BMenuItem("Close", new BMessage(B_QUIT_REQUESTED), 'W'));
-		menu2->AddItem(new BSeparatorItem());
-		menu2->AddItem(new BMenuItem("Save", new BMessage('item'), 'S'));
-		menu2->AddItem(new BMenuItem("Save as...", new BMessage('item'), 'S', B_SHIFT_KEY));
-		menu2->AddItem(new BSeparatorItem());
-		menu2->AddItem(it = new BMenuItem("Quit", new BMessage(B_QUIT_REQUESTED), 'Q')); it->SetTarget(be_app);
-		menuBar->AddItem(menu2);
-	
-	NewFramesView(this);
+	BLayoutBuilder::Menu<>(menuBar)
+		.AddMenu(new BMenu("File"))
+			.AddItem(new BMenuItem("Close", new BMessage(B_QUIT_REQUESTED), 'W'))
+			.End()
+		.End()
+	;
+
+	try {
+		NewFramesView(this);
+	} catch (StatusError &err) {
+		ShowError(err);
+		PostMessage(B_QUIT_REQUESTED);
+	}
 
 	BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
 		.Add(menuBar)
 		.AddGroup(B_VERTICAL, 0)
 			.Add(fView)
-			.SetInsets(-1, 0, -1, -1)
+			.SetInsets(-1)
 			.End()
 		.End()
 	;

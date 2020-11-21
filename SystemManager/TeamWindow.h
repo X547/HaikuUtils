@@ -13,6 +13,7 @@ class TeamWindow: public BWindow
 private:
 	BMessageRunner fListUpdater;
 	BTabView *fTabView;
+	BColumnListView *fInfoView;
 	BColumnListView *fImagesView;
 	BColumnListView *fThreadsView;
 	BColumnListView *fAreasView;
@@ -25,7 +26,7 @@ public:
 
 	TeamWindow(team_id id);
 	~TeamWindow();
-	
+
 	void MessageReceived(BMessage *msg);
 };
 

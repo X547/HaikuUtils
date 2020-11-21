@@ -4,6 +4,7 @@
 #include <Window.h>
 #include <OS.h>
 #include <private/debug/debug_support.h>
+#include <private/shared/AutoDeleter.h>
 
 class BColumnListView;
 

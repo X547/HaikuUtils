@@ -9,3 +9,13 @@ Teams
 	Areas
 	Ports
 	Files
+	Info
+		id
+		name
+		process group
+		session
+		uid
+		gid
+		euid
+		egid
+		cwd

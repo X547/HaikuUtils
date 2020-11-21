@@ -26,10 +26,21 @@
 #include <NodeInfo.h>
 
 #include "TeamWindow.h"
+#include "Errors.h"
 
 enum {
 	invokeMsg = 1,
-	selectMsg = 2,
+	selectMsg,
+	updateMsg,
+
+	setLayoutMsg,
+
+	terminateMsg,
+	suspendMsg,
+	resumeMsg,
+	sendSignalMsg,
+
+	showLocationMsg,
 };
 
 enum {
@@ -42,12 +53,64 @@ enum {
 	pathCol,
 };
 
+enum {
+	statNameCol = 0,
+	statValueCol,
+};
+
+enum ViewLayout {
+	flatLayout = 0,
+	treeLayout = 1,
+	sessionsLayout = 2,
+};
+
+struct SignalRec
+{
+	const char *name;
+	int val;
+};
+
+SignalRec signals[] = {
+	{"SIGHUP", 1},
+	{"SIGINT", 2},
+	{"SIGQUIT", 3},
+	{"SIGILL", 4},
+	{"SIGCHLD", 5},
+	{"SIGABRT", 6},
+	{"SIGPIPE", 7},
+	{"SIGFPE", 8},
+	{"SIGKILL", 9},
+	{"SIGSTOP", 10},
+	{"SIGSEGV", 11},
+	{"SIGCONT", 12},
+	{"SIGTSTP", 13},
+	{"SIGALRM", 14},
+	{"SIGTERM", 15},
+	{"SIGTTIN", 16},
+	{"SIGTTOU", 17},
+	{"SIGUSR1", 18},
+	{"SIGUSR2", 19},
+	{"SIGWINCH", 20},
+	{"SIGKILLTHR", 21},
+	{"SIGTRAP", 22},
+	{"SIGPOLL", 23},
+	{"SIGPROF", 24},
+	{"SIGSYS", 25},
+	{"SIGURG", 26},
+	{"SIGVTALRM", 27},
+	{"SIGXCPU", 28},
+	{"SIGXFSZ", 29},
+	{"SIGBUS", 30},
+	{"SIGRESERVED1", 31},
+	{"SIGRESERVED2", 32},
+};
+
 
 class IconStringField: public BStringField
 {
 private:
 	ObjectDeleter<BBitmap> fIcon;
-	
+
 public:
 	IconStringField(BBitmap *icon, const char *string): BStringField(string), fIcon(icon) {}
 	BBitmap *Icon() {return fIcon.Get();}
@@ -61,25 +124,25 @@ public:
 		float minWidth, float maxWidth, uint32 truncate,
 		alignment align = B_ALIGN_LEFT
 	): BStringColumn(title, width, minWidth, maxWidth, truncate, align) {}
-	
+
 	void DrawField(BField* _field, BRect rect, BView* parent)
 	{
 		IconStringField *field = (IconStringField*)_field;
-		
+
 		parent->PushState();
 		parent->SetDrawingMode(B_OP_ALPHA);
 		parent->DrawBitmap(field->Icon(), rect.LeftTop() + BPoint(4, 0));
 		parent->PopState();
 		rect.left += field->Icon()->Bounds().Width() + 1;
-		
+
 		BStringColumn::DrawField(field, rect, parent);
 	}
-	
+
 	float GetPreferredWidth(BField* field, BView* parent) const
 	{
 		return BStringColumn::GetPreferredWidth(field, parent) + dynamic_cast<IconStringField*>(field)->Icon()->Bounds().Width() + 1;
 	}
-	
+
 	bool AcceptsField(const BField* field) const
 	{
 		return dynamic_cast<const IconStringField*>(field) != NULL;
@@ -122,24 +185,29 @@ static void RemoveRow(BColumnListView *view, BRow *row, ObjectDeleter<RowTree> &
 static void InsertRow(BColumnListView *view, BRow *parent, ObjectDeleter<RowTree> &tree)
 {
 	if (tree.Get() == NULL) return;
-	
+
 	BRow *row = tree->row.Detach();
 	view->AddRow(row, parent);
 	if (parent != NULL)
 		view->ExpandOrCollapse(parent, true);
 	ObjectDeleter<RowTree> list(tree->down.Detach());
 	while (list.Get() != NULL) {
+		ObjectDeleter<RowTree> next(list->next.Detach());
 		InsertRow(view, row, list);
-		RowTree *next = list->next.Detach();
-		list.SetTo(next);
+		list.SetTo(next.Detach());
 	}
+	tree.Unset();
 }
 
 static void SetRowParent(BColumnListView *view, BRow *row, BRow *newParent)
 {
-	ObjectDeleter<RowTree> tree;
-	RemoveRow(view, row, tree);
-	InsertRow(view, newParent, tree);
+	BRow *oldParent;
+	view->FindParent(row, &oldParent, NULL);
+	if (newParent != oldParent) {
+		ObjectDeleter<RowTree> tree;
+		RemoveRow(view, row, tree);
+		InsertRow(view, newParent, tree);
+	}
 }
 
 static BRow *FindIntRow(BColumnListView *view, BRow *parent, int32 val)
@@ -157,20 +225,63 @@ static BRow *FindIntRow(BColumnListView *view, BRow *parent, int32 val)
 	return NULL;
 }
 
-static void ListTeams(BColumnListView *view) {
+static BRow *FindIntRowList(BList &list, int32 val)
+{
+	for (int32 i = 0; i < list.CountItems(); i++) {
+		BRow *row = (BRow*)list.ItemAt(i);
+		if (((BIntegerField*)row->GetField(idCol))->Value() == val)
+			return row;
+	}
+	return NULL;
+}
+
+static void CollectRowList(BList &list, BColumnListView *view, BRow *parent = NULL)
+{
+	for (int32 i = 0; i < view->CountRows(parent); i++) {
+		BRow *row = view->RowAt(i, parent);
+		list.AddItem(row);
+		CollectRowList(list, view, row);
+	}
+}
+
+static void RelayoutTeams(BColumnListView *view, ViewLayout layout)
+{
+	BList list;
+	CollectRowList(list, view);
+
+	switch (layout) {
+	case flatLayout: {
+		for (int32 i = 0; i < list.CountItems(); i++) {
+			BRow *row = (BRow*)list.ItemAt(i);
+			SetRowParent(view, row, NULL);
+		}
+		break;
+	}
+	case treeLayout: {
+		for (int32 i = 0; i < list.CountItems(); i++) {
+			BRow *row = (BRow*)list.ItemAt(i);
+			BRow *parent = FindIntRowList(list, ((BIntegerField*)row->GetField(parentIdCol))->Value());
+			SetRowParent(view, row, parent);
+		}
+		break;
+	}
+	case sessionsLayout: {
+		break;
+	}
+	}
+
+}
+
+static void ListTeams(BColumnListView *view, ViewLayout layout) {
 	status_t status;
 	team_info info;
 	int32 cookie;
 	BRow *row;
 	cookie = 0;
-	view->AddColumn(new IconStringColumn("Name", 256 - 32, 50, 500, B_TRUNCATE_MIDDLE), nameCol);
-	view->AddColumn(new BIntegerColumn("ID", 64, 32, 128, B_ALIGN_RIGHT), idCol);
-	view->AddColumn(new BIntegerColumn("Parent", 64, 32, 128, B_ALIGN_RIGHT), parentIdCol);
-	view->AddColumn(new BIntegerColumn("Session", 64, 32, 128, B_ALIGN_RIGHT), sidCol);
-	view->AddColumn(new BIntegerColumn("Group", 64, 32, 128, B_ALIGN_RIGHT), gidCol);
-	view->AddColumn(new BIntegerColumn("User", 64, 32, 128, B_ALIGN_RIGHT), uidCol);
-	view->AddColumn(new BStringColumn("Path", 512, 50, 1024, B_TRUNCATE_MIDDLE), pathCol);
-	view->SetColumnVisible(parentIdCol, false);
+	BList prevRows;
+
+	CollectRowList(prevRows, view);
+
 	while (get_next_team_info(&cookie, &info) == B_OK) {
 		int32 uid = -1;
 		KMessage extInfo;
@@ -198,21 +309,35 @@ static void ListTeams(BColumnListView *view) {
 			status = genericAppType.GetIcon(icon, B_MINI_ICON);
 		}
 
-		row = new BRow();
+		row = FindIntRowList(prevRows, info.team);
+		if (row == NULL) {
+			row = new BRow();
+			view->AddRow(row);
+		} else {
+			prevRows.RemoveItem(row);
+		}
 		row->SetField(new IconStringField(icon, path.Leaf()), nameCol);
 		row->SetField(new BIntegerField(info.team), idCol);
-		row->SetField(new BIntegerField((info.team == 1)? -1: _kern_process_info(info.team, PARENT_ID)), parentIdCol);
+		row->SetField(new BIntegerField(_kern_process_info(info.team, PARENT_ID)), parentIdCol);
 		row->SetField(new BIntegerField(_kern_process_info(info.team, SESSION_ID)), sidCol);
 		row->SetField(new BIntegerField(_kern_process_info(info.team, GROUP_ID)), gidCol);
 		row->SetField(new BIntegerField(uid), uidCol);
 		row->SetField(new BStringField(imageInfo.name), pathCol);
-		view->AddRow(row);
 	}
-	
-	switch (1) {
-	case 0: // linear
+
+	for (int32 i = 0; i < prevRows.CountItems(); i++) {
+		row = (BRow*)prevRows.ItemAt(i);
+		view->RemoveRow(row);
+		delete row;
+	}
+
+	RelayoutTeams(view, layout);
+
+#if 0
+	switch (treeLayout) {
+	case flatLayout:
 		break;
-	case 1: { // process tree
+	case treeLayout: {
 		int32 count = view->CountRows(), i = 0;
 		while (i < count) {
 			row = view->RowAt(i);
@@ -226,7 +351,7 @@ static void ListTeams(BColumnListView *view) {
 		}
 		break;
 	}
-	case 2: { // sessions and groups
+	case sessionsLayout: {
 		{
 			int32 count = view->CountRows(), i = 0;
 			while (i < count) {
@@ -258,57 +383,213 @@ static void ListTeams(BColumnListView *view) {
 		break;
 	}
 	}
+#endif
 }
 
-static BColumnListView* NewTeamsView(const char *name)
+static BColumnListView* NewTeamsView()
 {
 	BColumnListView *view;
-	view = new BColumnListView(name, B_NAVIGABLE);
+	view = new BColumnListView("Teams", B_NAVIGABLE);
 	view->SetInvocationMessage(new BMessage(invokeMsg));
-	ListTeams(view);
+	view->AddColumn(new IconStringColumn("Name", 256 - 32, 50, 500, B_TRUNCATE_MIDDLE), nameCol);
+	view->AddColumn(new BIntegerColumn("ID", 64, 32, 128, B_ALIGN_RIGHT), idCol);
+	view->AddColumn(new BIntegerColumn("Parent", 64, 32, 128, B_ALIGN_RIGHT), parentIdCol);
+	view->AddColumn(new BIntegerColumn("Session", 64, 32, 128, B_ALIGN_RIGHT), sidCol);
+	view->AddColumn(new BIntegerColumn("Group", 64, 32, 128, B_ALIGN_RIGHT), gidCol);
+	view->AddColumn(new BIntegerColumn("User", 64, 32, 128, B_ALIGN_RIGHT), uidCol);
+	view->AddColumn(new BStringColumn("Path", 512, 50, 1024, B_TRUNCATE_MIDDLE), pathCol);
+	view->SetColumnVisible(parentIdCol, false);
 	return view;
 }
+
+
+static void GetUsedMax(BString &str, uint64 used, uint64 max)
+{
+	int32 ratio = 100;
+	if (max > 0) {
+		ratio = int32(double(used)/double(max)*100.0);
+	}
+	str.SetToFormat("%" B_PRIu64 "/%" B_PRIu64 " (%d%%)", used, max, ratio);
+}
+
+static void ListStats(BColumnListView *view)
+{
+	int32 rowId = 0;
+	BString str;
+
+	system_info info;
+
+	if (get_system_info(&info) >= B_OK) {
+		str.SetToFormat("%" B_PRIdBIGTIME, info.boot_time);
+		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
+
+		str.SetToFormat("%" B_PRIu32, info.cpu_count);
+		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
+
+		GetUsedMax(str, info.used_pages, info.max_pages);
+		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
+
+		str.SetToFormat("%" B_PRIu64, info.cached_pages);
+		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
+
+		str.SetToFormat("%" B_PRIu64, info.block_cache_pages);
+		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
+
+		str.SetToFormat("%" B_PRIu64, info.ignored_pages);
+		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
+
+		str.SetToFormat("%" B_PRIu64, info.needed_memory);
+		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
+
+		str.SetToFormat("%" B_PRIu64, info.free_memory);
+		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
+
+		GetUsedMax(str, info.free_swap_pages, info.max_swap_pages);
+		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
+
+		str.SetToFormat("%" B_PRIu32, info.page_faults);
+		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
+
+		GetUsedMax(str, info.used_sems, info.max_sems);
+		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
+
+		GetUsedMax(str, info.used_ports, info.max_ports);
+		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
+
+		GetUsedMax(str, info.used_threads, info.max_threads);
+		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
+
+		GetUsedMax(str, info.used_teams, info.max_teams);
+		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
+
+		view->RowAt(rowId++)->SetField(new BStringField(info.kernel_name), statValueCol);
+
+		str.SetToFormat("%s %s", info.kernel_build_date, info.kernel_build_time);
+		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
+	}
+}
+
+static void NewInfoRow(BColumnListView *view, const char *name)
+{
+	BRow *row = new BRow();
+	row->SetField(new BStringField(name), statNameCol);
+	view->AddRow(row);
+}
+
+static BColumnListView *NewStatsView()
+{
+	BColumnListView *view;
+	view = new BColumnListView("Stats", B_NAVIGABLE);
+	view->AddColumn(new BStringColumn("Name", 150, 50, 500, B_TRUNCATE_END), statNameCol);
+	view->AddColumn(new BStringColumn("Value", 256, 50, 1024, B_TRUNCATE_END, B_ALIGN_RIGHT), statValueCol);
+
+	NewInfoRow(view, "Boot time");
+	NewInfoRow(view, "CPU count");
+	NewInfoRow(view, "Pages");
+	NewInfoRow(view, "Cached pages");
+	NewInfoRow(view, "Block cache pages");
+	NewInfoRow(view, "Ignored pages");
+	NewInfoRow(view, "Needed memory");
+	NewInfoRow(view, "Free memory");
+	NewInfoRow(view, "Swap pages");
+	NewInfoRow(view, "Page faults");
+	NewInfoRow(view, "Sems");
+	NewInfoRow(view, "Ports");
+	NewInfoRow(view, "Threads");
+	NewInfoRow(view, "Teams");
+	NewInfoRow(view, "Kernel name");
+	NewInfoRow(view, "Kernel build timestamp");
+
+	ListStats(view);
+	return view;
+}
+
 
 class TestWindow: public BWindow
 {
 private:
 	BColumnListView *fTeamsView;
+	BColumnListView *fStatsView;
+	ViewLayout fLayout;
+	BMessageRunner fListUpdater;
 
 public:
-	TestWindow(BRect frame): BWindow(frame, "SystemManager", B_DOCUMENT_WINDOW, B_ASYNCHRONOUS_CONTROLS | B_AUTO_UPDATE_SIZE_LIMITS)
+	TestWindow(BRect frame): BWindow(frame, "SystemManager", B_DOCUMENT_WINDOW, B_ASYNCHRONOUS_CONTROLS | B_AUTO_UPDATE_SIZE_LIMITS),
+		fLayout(treeLayout),
+		fListUpdater(BMessenger(this), BMessage(updateMsg), 500000)
 	{
-		BRect r;
-		BView *rootView;
 		BMenuBar *menuBar;
-		BMenu *menu2;
-		BMenuItem *it;
+		BMenu *signalMenu;
 		BTabView *tabView;
 		BTab *tab;
 
-		r = Bounds();
-
 		menuBar = new BMenuBar("menu", B_ITEMS_IN_ROW, true);
-		menu2 = new BMenu("File");
-			menu2->AddItem(new BMenuItem("New", new BMessage('item'), 'N'));
-			menu2->AddItem(new BMenuItem("Open...", new BMessage('item'), 'O'));
-			menu2->AddItem(new BMenuItem("Close", new BMessage(B_QUIT_REQUESTED), 'W'));
-			menu2->AddItem(new BSeparatorItem());
-			menu2->AddItem(new BMenuItem("Save", new BMessage('item'), 'S'));
-			menu2->AddItem(new BMenuItem("Save as...", new BMessage('item'), 'S', B_SHIFT_KEY));
-			menu2->AddItem(new BSeparatorItem());
-			menu2->AddItem(it = new BMenuItem("Quit", new BMessage(B_QUIT_REQUESTED), 'Q')); it->SetTarget(be_app);
-			menuBar->AddItem(menu2);
+		BLayoutBuilder::Menu<>(menuBar)
+/*
+			.AddMenu(new BMenu("File"))
+				.AddItem(new BMenuItem("New", new BMessage('item'), 'N'))
+				.AddItem(new BMenuItem("Open...", new BMessage('item'), 'O'))
+				.AddItem(new BMenuItem("Close", new BMessage(B_QUIT_REQUESTED), 'W'))
+				.AddSeparator()
+				.AddItem(new BMenuItem("Save", new BMessage('item'), 'S'))
+				.AddItem(new BMenuItem("Save as...", new BMessage('item'), 'S', B_SHIFT_KEY))
+				.AddSeparator()
+				.AddItem(new BMenuItem("Quit", new BMessage(B_QUIT_REQUESTED), 'Q'))
+				.End()
+*/
+			.AddMenu(new BMenu("View"))
+				.AddMenu(new BMenu("Layout"))
+					.AddItem(new BMenuItem("Flat", []() {
+						BMessage *msg = new BMessage(setLayoutMsg);
+						msg->SetInt32("val", flatLayout);
+						return msg;
+					}()))
+					.AddItem(new BMenuItem("Tree", []() {
+						BMessage *msg = new BMessage(setLayoutMsg);
+						msg->SetInt32("val", treeLayout);
+						return msg;
+					}()))
+					.AddItem(new BMenuItem("Sessions and groups", []() {
+						BMessage *msg = new BMessage(setLayoutMsg);
+						msg->SetInt32("val", sessionsLayout);
+						return msg;
+					}()))
+					.End()
+				.End()
+			.AddMenu(new BMenu("Action"))
+/*
+				.AddItem(new BMenuItem("Update", new BMessage(updateMsg), 'R'))
+				.AddSeparator()
+*/
+				.AddItem(new BMenuItem("Terminate", new BMessage(terminateMsg)))
+				.AddItem(new BMenuItem("Suspend", new BMessage(suspendMsg)))
+				.AddItem(new BMenuItem("Resume", new BMessage(resumeMsg)))
+				.AddMenu(signalMenu = new BMenu("Send signal"))
+					.End()
+				.AddSeparator()
+				.AddItem(new BMenuItem("Show location", new BMessage(showLocationMsg)))
+				.End()
+			.End()
+		;
+
+		for (size_t i = 0; i < sizeof(signals)/sizeof(signals[0]); i++) {
+			BMessage *msg = new BMessage(sendSignalMsg);
+			msg->AddInt32("val", signals[i].val);
+			signalMenu->AddItem(new BMenuItem(signals[i].name, msg));
+		}
 
 		tabView = new BTabView("tab_view", B_WIDTH_FROM_LABEL);
 		tabView->SetBorder(B_NO_BORDER);
 
 		//tab = new BTab(); tabView->AddTab(NewTeamsView("Apps"), tab);
-		tab = new BTab(); tabView->AddTab(fTeamsView = NewTeamsView("Teams"), tab);
+		tab = new BTab(); tabView->AddTab(fTeamsView = NewTeamsView(), tab);
 		//tab = new BTab(); tabView->AddTab(new TestView(BRect(0, 0, -1, -1), "Services", B_FOLLOW_NONE), tab);
 		//tab = new BTab(); tabView->AddTab(new TestView(BRect(0, 0, -1, -1), "Sockets", B_FOLLOW_NONE), tab);
+		tab = new BTab(); tabView->AddTab(fStatsView = NewStatsView(), tab);
+
+		ListTeams(fTeamsView, fLayout);
 
 		BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
-			//.SetInsets(B_USE_DEFAULT_SPACING)
 			.Add(menuBar)
 			.AddGroup(B_VERTICAL, 0)
 				.Add(tabView)
@@ -318,23 +599,95 @@ public:
 		;
 	}
 
-	void MessageReceived(BMessage *msg)
+	team_id SelectedTeam()
 	{
-		switch (msg->what) {
-		case invokeMsg: {
-			BRow *row = fTeamsView->CurrentSelection(NULL);
-			if (row != NULL) {
-				OpenTeamWindow(((BIntegerField*)row->GetField(idCol))->Value(),
-					BPoint((Frame().left + Frame().right)/2, (Frame().top + Frame().bottom)/2)
-				);
-			}
-			break;
-		}
-		default:
-			BWindow::MessageReceived(msg);
-		}
+		BRow *row = fTeamsView->CurrentSelection(NULL);
+		if (row == NULL) return -1;
+		return ((BIntegerField*)row->GetField(idCol))->Value();
 	}
 
+	void MessageReceived(BMessage *msg)
+	{
+		try {
+			switch (msg->what) {
+			case invokeMsg: {
+				team_id team = SelectedTeam();
+				if (team >= B_OK) {
+					OpenTeamWindow(team,
+						BPoint((Frame().left + Frame().right)/2, (Frame().top + Frame().bottom)/2)
+					);
+				}
+				break;
+			}
+			case updateMsg: {
+				ListTeams(fTeamsView, fLayout);
+				ListStats(fStatsView);
+				break;
+			}
+			case setLayoutMsg: {
+				int32 layout;
+				if (msg->FindInt32("val", &layout) >= B_OK) {
+					fLayout = (ViewLayout)layout;
+					RelayoutTeams(fTeamsView, fLayout);
+				}
+				break;
+			}
+			case terminateMsg: {
+				team_id team = SelectedTeam();
+				if (team >= B_OK)
+					Check(kill_team(team), "Can't terminate team.");
+				break;
+			}
+			case suspendMsg: {
+				team_id team = SelectedTeam();
+				if (team >= B_OK)
+					CheckErrno(kill(team, SIGSTOP), "Can't suspend team.");
+				break;
+			}
+			case resumeMsg: {
+				team_id team = SelectedTeam();
+				if (team >= B_OK)
+					CheckErrno(kill(team, SIGCONT), "Can't resume team.");
+				break;
+			}
+			case sendSignalMsg: {
+				int32 signal;
+				if (msg->FindInt32("val", &signal) >= B_OK) {
+					team_id team = SelectedTeam();
+					if (team >= B_OK)
+						CheckErrno(kill(team, signal), "Can't send signal.");
+				}
+				break;
+			}
+			case showLocationMsg: {
+				BRow *row = fTeamsView->CurrentSelection(NULL);
+				if (row != NULL) {
+					const char *path = ((BStringField*)row->GetField(pathCol))->String();
+
+					BEntry entry(path);
+					node_ref node;
+					entry.GetNodeRef(&node);
+
+					BEntry parent;
+					entry.GetParent(&parent);
+					entry_ref parentRef;
+					parent.GetRef(&parentRef);
+
+					BMessage message(B_REFS_RECEIVED);
+					message.AddRef("refs", &parentRef);
+					message.AddData("nodeRefToSelect", B_RAW_TYPE, &node, sizeof(node_ref));
+
+					BMessenger("application/x-vnd.Be-TRAK").SendMessage(&message);
+				}
+				break;
+			}
+			default:
+				BWindow::MessageReceived(msg);
+			}
+		} catch (StatusError &err) {
+			ShowError(err);
+		}
+	}
 };
 
 class TestApplication: public BApplication
@@ -345,10 +698,9 @@ public:
 	}
 
 	void ReadyToRun() {
-		BRect rect(0, 0, 640, 480);
-		rect.OffsetTo(64, 64);
-		BWindow *wnd = new TestWindow(rect);
+		BWindow *wnd = new TestWindow(BRect(0, 0, 640, 480));
 		wnd->SetFlags(wnd->Flags() | B_QUIT_ON_WINDOW_CLOSE);
+		wnd->CenterOnScreen();
 		wnd->Show();
 	}
 };
