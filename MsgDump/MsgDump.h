@@ -25,11 +25,11 @@ struct Operation
 	int8 *data;
 	ssize_t size;
 	BMessage msg;
-	
+
 	Operation() {}
 	Operation(BString &path, Kind kind, const int8 *data, ssize_t size): path(path), kind(kind), size(size) {
 		if (size <= 0) {
-			this->data == NULL;
+			this->data = NULL;
 		} else {
 			this->data = new int8[size];
 			memcpy(this->data, data, size);
@@ -50,12 +50,11 @@ struct MessageLoc
 class EditWindow: public BWindow
 {
 private:
-	TestWindow *base;
-	BView *rootView;
-	BTextControl *nameView, *typeView, *valueView;
-	
+	TestWindow *fBase;
+	BTextControl *fNameView, *fTypeView, *fValueView;
+
 public:
-	EditWindow(TestWindow *base, BRect frame);
+	EditWindow(TestWindow *base);
 	void SetTo(BRow *row);
 	void Quit();
 };
@@ -63,17 +62,16 @@ public:
 class TestWindow: public BWindow
 {
 private:
-	BView *rootView;
-	BMenuBar *menu;
-	BTextControl *pathView;
-	BColumnListView *view;
-	EditWindow *editWnd;
-	BMessage message;
-	
-	BObjectList<Operation> undoStack, redoStack;
-	
+	BMenuBar *fMenuBar;
+	BTextControl *fPathView;
+	BColumnListView *fView;
+	EditWindow *fEditWnd;
+	BMessage fMessage;
+
+	BObjectList<Operation> fUndoStack, fRedoStack;
+
 	friend class EditWindow;
-	
+
 public:
 	TestWindow(BRect frame);
 	bool Load(BEntry &entry);
