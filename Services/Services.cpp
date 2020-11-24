@@ -80,7 +80,6 @@ void ListServices(BColumnListView *view) {
 	BMessage info;
 	BString strVal, path;
 	bool boolVal;
-	int32 intVal;
 	team_id team;
 
 	for (int32 i = 0; i < view->CountRows(); i++) {
@@ -243,8 +242,6 @@ public:
 		fListUpdater(BMessenger(this), BMessage(updateMsg), 500000)
 	{
 		BMenuBar *menubar, *toolbar;
-		BMenu *menu;
-		BMenuItem *it;
 
 		BLayoutBuilder::Menu<>(menubar = new BMenuBar("menu", B_ITEMS_IN_ROW, true))
 			.AddMenu(new BMenu("Action"))
