@@ -237,6 +237,7 @@ class ServicesWindow: public BWindow
 private:
 	BColumnListView *fView;
 	BMessageRunner fListUpdater;
+
 public:
 	ServicesWindow(BRect frame): BWindow(frame, "Services", B_DOCUMENT_WINDOW, B_ASYNCHRONOUS_CONTROLS | B_AUTO_UPDATE_SIZE_LIMITS),
 		fListUpdater(BMessenger(this), BMessage(updateMsg), 500000)
@@ -245,17 +246,21 @@ public:
 		BMenu *menu;
 		BMenuItem *it;
 
-		menubar = new BMenuBar("menu", B_ITEMS_IN_ROW, true);
-		menu = new BMenu("Action");
-			menu->AddItem(new BMenuItem("Start", new BMessage(startMsg)));
-			menu->AddItem(new BMenuItem("Stop", new BMessage(stopMsg)));
-			menu->AddItem(new BMenuItem("Restart", new BMessage(restartMsg)));
-			menubar->AddItem(menu);
+		BLayoutBuilder::Menu<>(menubar = new BMenuBar("menu", B_ITEMS_IN_ROW, true))
+			.AddMenu(new BMenu("Action"))
+				.AddItem(new BMenuItem("Start", new BMessage(startMsg)))
+				.AddItem(new BMenuItem("Stop", new BMessage(stopMsg)))
+				.AddItem(new BMenuItem("Restart", new BMessage(restartMsg)))
+				.End()
+			.End()
+		;
 
-		toolbar = new BMenuBar("toolbar", B_ITEMS_IN_ROW, true);
-		toolbar->AddItem(new IconMenuItem(LoadIcon(resStartIcon, 16, 16), new BMessage(startMsg)));
-		toolbar->AddItem(new IconMenuItem(LoadIcon(resStopIcon, 16, 16), new BMessage(stopMsg)));
-		toolbar->AddItem(new IconMenuItem(LoadIcon(resRestartIcon, 16, 16), new BMessage(restartMsg)));
+		BLayoutBuilder::Menu<>(toolbar = new BMenuBar("toolbar", B_ITEMS_IN_ROW, true))
+			.AddItem(new IconMenuItem(LoadIcon(resStartIcon, 16, 16), new BMessage(startMsg)))
+			.AddItem(new IconMenuItem(LoadIcon(resStopIcon, 16, 16), new BMessage(stopMsg)))
+			.AddItem(new IconMenuItem(LoadIcon(resRestartIcon, 16, 16), new BMessage(restartMsg)))
+			.End()
+		;
 
 		fView = new BColumnListView("view", 0);
 		fView->SetInvocationMessage(new BMessage(invokeMsg));
@@ -268,7 +273,8 @@ public:
 			.AddGroup(B_HORIZONTAL)
 				.Add(fView)
 				.SetInsets(-1)
-			.End();
+			.End()
+		;
 
 		SetKeyMenuBar(menubar);
 	}
@@ -313,10 +319,9 @@ public:
 
 	void ReadyToRun()
 	{
-		BRect rect(0, 0, 640, 480);
-		rect.OffsetBy(64, 64);
-		BWindow *wnd = new ServicesWindow(rect);
+		BWindow *wnd = new ServicesWindow(BRect(0, 0, 640, 480));
 		wnd->SetFlags(wnd->Flags() | B_QUIT_ON_WINDOW_CLOSE);
+		wnd->CenterOnScreen();
 		wnd->Show();
 	}
 };
