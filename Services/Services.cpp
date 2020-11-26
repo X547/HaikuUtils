@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <errno.h>
 #include <Application.h>
 #include <Window.h>
 #include <View.h>
@@ -102,7 +101,7 @@ public:
 };
 
 
-BRow *FindStringRow(BColumnListView *view, BRow *parent, const char *str)
+static BRow *FindStringRow(BColumnListView *view, BRow *parent, const char *str)
 {
 	BRow *row;
 	BString name;
@@ -200,7 +199,7 @@ static void ListJobs(BColumnListView *view, BRow *parent, const char *target, BS
 	}
 }
 
-void ListServices(BColumnListView *view) {
+static void ListServices(BColumnListView *view) {
 	BLaunchRoster roster;
 	BRow *row;
 	BStringList names, jobs;
@@ -253,7 +252,7 @@ void ListServices(BColumnListView *view) {
 	}
 }
 
-void InitList(BColumnListView *view) {
+static void InitList(BColumnListView *view) {
 	view->AddColumn(new IconStringColumn("Name", 256, 50, 512, B_TRUNCATE_MIDDLE), nameCol);
 	view->AddColumn(new BStringColumn("Enabled", 64, 32, 128, B_TRUNCATE_MIDDLE), enabledCol);
 	view->AddColumn(new BStringColumn("Running", 64, 32, 128, B_TRUNCATE_MIDDLE), runningCol);
@@ -272,16 +271,9 @@ public:
 	{
 	}
 
-	~IconMenuItem()
-	{
-		if (fBitmap != NULL) {
-			delete fBitmap; fBitmap = NULL;
-		}
-	}
-
 	void GetContentSize(float* width, float* height)
 	{
-		if (fBitmap == NULL) {
+		if (fBitmap.Get() == NULL) {
 			*width = 0;
 			*height = 0;
 			return;
@@ -292,39 +284,37 @@ public:
 
 	void DrawContent()
 	{
-		if (fBitmap == NULL)
+		if (fBitmap.Get() == NULL)
 			return;
 
 		BRect frame = Frame();
 		BPoint center = BPoint((frame.left + frame.right)/2, (frame.top + frame.bottom)/2);
 		Menu()->PushState();
 		Menu()->SetDrawingMode(B_OP_ALPHA);
-		Menu()->DrawBitmap(fBitmap, center - BPoint(fBitmap->Bounds().Width()/2, fBitmap->Bounds().Height()/2));
+		Menu()->DrawBitmap(fBitmap.Get(), center - BPoint(fBitmap->Bounds().Width()/2, fBitmap->Bounds().Height()/2));
 		Menu()->PopState();
 	}
 
 private:
-	BBitmap *fBitmap;
+	ObjectDeleter<BBitmap> fBitmap;
 };
 
 
-BBitmap *LoadIcon(int32 id, int32 width, int32 height)
+static BBitmap *LoadIcon(int32 id, int32 width, int32 height)
 {
 	size_t dataSize;
 	const void* data = BApplication::AppResources()->FindResource(B_VECTOR_ICON_TYPE, id, &dataSize);
 
 	if (data == NULL) return NULL;
 
-	BBitmap *bitmap = new BBitmap(BRect(0, 0, width - 1, height - 1), B_RGBA32);
+	ObjectDeleter<BBitmap> bitmap(new BBitmap(BRect(0, 0, width - 1, height - 1), B_RGBA32));
 
-	if (bitmap == NULL) return NULL;
+	if (bitmap.Get() == NULL) return NULL;
 
-	if (BIconUtils::GetVectorIcon((const uint8*)data, dataSize, bitmap) != B_OK) {
-		delete bitmap;
+	if (BIconUtils::GetVectorIcon((const uint8*)data, dataSize, bitmap.Get()) != B_OK)
 		return NULL;
-	}
 
-	return bitmap;
+	return bitmap.Detach();
 }
 
 
@@ -398,9 +388,9 @@ public:
 				case stopMsg: if (isTarget) roster.StopTarget(name); else roster.Stop(name); break;
 				case restartMsg:
 					if (isTarget) {
-						roster.Stop(name); roster.Start(name);
-					} else {
 						roster.StopTarget(name); roster.Target(name);
+					} else {
+						roster.Stop(name); roster.Start(name);
 					}
 					break;
 			}
