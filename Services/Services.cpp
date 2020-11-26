@@ -182,11 +182,18 @@ static void ListJobs(BColumnListView *view, BRow *parent, const char *target, BS
 			row->SetField(new BStringField(boolVal? "yes": "no"), runningCol);
 		else
 			row->SetField(new BStringField("-"), runningCol);
-		if (info.FindString("launch", &strVal) == B_OK)
-			row->SetField(new BStringField(strVal), launchCol);
-		else {
-			row->SetField(new BStringField("-"), launchCol);
+
+		const char *arg;
+		strVal = "";
+		for (int32 j = 0; info.FindString("launch", j, &arg) >= B_OK; j++) {
+			if (j > 0) strVal += " ";
+			size_t k = 0; while (arg[k] != '\0' && !(arg[k] == ' ')) k++;
+			bool needQuotes = arg[k] != '\0';
+			if (needQuotes) strVal += '"';
+			strVal += arg;
+			if (needQuotes) strVal += '"';
 		}
+		row->SetField(new BStringField(strVal), launchCol);
 		if (info.FindInt32("team", &team) != B_OK)
 			team = -1;
 		row->SetField(new BIntegerField(team), pidCol);
@@ -256,7 +263,7 @@ static void InitList(BColumnListView *view) {
 	view->AddColumn(new IconStringColumn("Name", 256, 50, 512, B_TRUNCATE_MIDDLE), nameCol);
 	view->AddColumn(new BStringColumn("Enabled", 64, 32, 128, B_TRUNCATE_MIDDLE), enabledCol);
 	view->AddColumn(new BStringColumn("Running", 64, 32, 128, B_TRUNCATE_MIDDLE), runningCol);
-	view->AddColumn(new BStringColumn("Launch", 256, 32, 512, B_TRUNCATE_MIDDLE), launchCol);
+	view->AddColumn(new BStringColumn("Launch", 256, 32, 4096, B_TRUNCATE_MIDDLE), launchCol);
 	view->AddColumn(new BIntegerColumn("PID", 64, 32, 128, B_ALIGN_LEFT), pidCol);
 
 	ListServices(view);
