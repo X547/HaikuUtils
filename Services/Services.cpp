@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <errno.h>
 #include <Application.h>
 #include <Window.h>
 #include <View.h>
@@ -12,6 +13,7 @@
 #include <private/app/LaunchRoster.h>
 #include <private/interface/ColumnListView.h>
 #include <private/interface/ColumnTypes.h>
+#include <private/shared/AutoDeleter.h>
 
 #include <Resources.h>
 #include <IconUtils.h>
@@ -33,9 +35,7 @@ enum {
 };
 
 enum {
-	iconCol,
 	nameCol,
-	targetCol,
 	enabledCol,
 	runningCol,
 	launchCol,
@@ -58,12 +58,56 @@ public:
 };
 
 
-BRow *FindStringRow(BColumnListView *view, const char *str)
+class IconStringField: public BStringField
+{
+private:
+	ObjectDeleter<BBitmap> fIcon;
+
+public:
+	IconStringField(BBitmap *icon, const char *string): BStringField(string), fIcon(icon) {}
+	BBitmap *Icon() {return fIcon.Get();}
+};
+
+class IconStringColumn: public BStringColumn
+{
+public:
+	IconStringColumn(
+		const char* title, float width,
+		float minWidth, float maxWidth, uint32 truncate,
+		alignment align = B_ALIGN_LEFT
+	): BStringColumn(title, width, minWidth, maxWidth, truncate, align) {}
+
+	void DrawField(BField* _field, BRect rect, BView* parent)
+	{
+		IconStringField *field = (IconStringField*)_field;
+
+		parent->PushState();
+		parent->SetDrawingMode(B_OP_ALPHA);
+		parent->DrawBitmap(field->Icon(), rect.LeftTop() + BPoint(4, 0));
+		parent->PopState();
+		rect.left += field->Icon()->Bounds().Width() + 1;
+
+		BStringColumn::DrawField(field, rect, parent);
+	}
+
+	float GetPreferredWidth(BField* field, BView* parent) const
+	{
+		return BStringColumn::GetPreferredWidth(field, parent) + dynamic_cast<IconStringField*>(field)->Icon()->Bounds().Width() + 1;
+	}
+
+	bool AcceptsField(const BField* field) const
+	{
+		return dynamic_cast<const IconStringField*>(field) != NULL;
+	}
+};
+
+
+BRow *FindStringRow(BColumnListView *view, BRow *parent, const char *str)
 {
 	BRow *row;
 	BString name;
-	for (int32 i = 0; i < view->CountRows(); i++) {
-		row = view->RowAt(i);
+	for (int32 i = 0; i < view->CountRows(parent); i++) {
+		row = view->RowAt(i, parent);
 		name = ((BStringField*)row->GetField(nameCol))->String();
 		if (name == BString(str))
 			return row;
@@ -71,40 +115,48 @@ BRow *FindStringRow(BColumnListView *view, const char *str)
 	return NULL;
 }
 
-void ListServices(BColumnListView *view) {
+static void ListJobs(BColumnListView *view, BRow *parent, const char *target, BStringList &jobs)
+{
 	BLaunchRoster roster;
 	BRow *row;
-	BStringList jobs;
 	BStringList prevNames;
-	BString name;
 	BMessage info;
-	BString strVal, path;
 	bool boolVal;
+	BString strVal;
 	team_id team;
+	status_t status;
 
-	for (int32 i = 0; i < view->CountRows(); i++) {
-		row = view->RowAt(i);
+	for (int32 i = 0; i < view->CountRows(parent); i++) {
+		row = view->RowAt(i, parent);
 		prevNames.Add(((BStringField*)row->GetField(nameCol))->String());
 	}
 
-	status_t status = roster.GetJobs(NULL, jobs);
-
 	for (int32 i = 0; i < jobs.CountStrings(); i++) {
-		name = jobs.StringAt(i).String();
+		const char *name = jobs.StringAt(i).String();
 		prevNames.Remove(name);
 		if ((status = roster.GetJobInfo(name, info)) != B_OK) {
-			printf("%s: can't get info (%d)\n", name.String(), status);
+			printf("%s: can't get info (%d)\n", name, status);
+			continue;
 		}
 
-		row = FindStringRow(view, name);
+		const char *curTarget;
+		if (info.FindString("target", &curTarget) < B_OK) curTarget = "";
+
+		if (!(
+			((target == NULL) && (curTarget == NULL)) ||
+			((target != NULL) && (curTarget != NULL) && (strcmp(target, curTarget) == 0))
+		)) continue;
+
+		row = FindStringRow(view, parent, name);
 
 		if (row == NULL) {
 			row = new BRow();
-			view->AddRow(row);
+			view->AddRow(row, parent);
 		}
 
 		BBitmap* icon = new BBitmap(BRect(0, 0, B_MINI_ICON - 1, B_MINI_ICON - 1), B_RGBA32);
 
+		const char *path;
 		BEntry entry;
 		entry_ref ref;
 
@@ -122,13 +174,7 @@ void ListServices(BColumnListView *view) {
 			status = genericAppType.GetIcon(icon, B_MINI_ICON);
 		}
 
-		row->SetField(new BitmapField(icon), iconCol);
-
-		row->SetField(new BStringField(name), nameCol);
-		if (info.FindString("target", &strVal) == B_OK)
-			row->SetField(new BStringField(strVal), targetCol);
-		else
-			row->SetField(new BStringField("-"), targetCol);
+		row->SetField(new IconStringField(icon, name), nameCol);
 		if (info.FindBool("enabled", &boolVal) == B_OK)
 			row->SetField(new BStringField(boolVal? "yes": "no"), enabledCol);
 		else
@@ -148,16 +194,67 @@ void ListServices(BColumnListView *view) {
 	}
 
 	for (int32 i = 0; i < prevNames.CountStrings(); i++) {
-		row = FindStringRow(view, prevNames.StringAt(i));
+		row = FindStringRow(view, parent, prevNames.StringAt(i));
+		view->RemoveRow(row);
+		delete row;
+	}
+}
+
+void ListServices(BColumnListView *view) {
+	BLaunchRoster roster;
+	BRow *row;
+	BStringList names, jobs;
+	BStringList prevNames, prevJobs;
+	BString name;
+	BMessage info;
+	BString strVal, path;
+	status_t status;
+
+	for (int32 i = 0; i < view->CountRows(); i++) {
+		row = view->RowAt(i);
+		prevNames.Add(((BStringField*)row->GetField(nameCol))->String());
+	}
+
+	status = roster.GetJobs(NULL, jobs);
+
+	status = roster.GetTargets(names);
+	names.Add("<no target>", 0);
+
+	for (int32 i = 0; i < names.CountStrings(); i++) {
+		name = names.StringAt(i).String();
+		prevNames.Remove(name);
+
+		row = FindStringRow(view, NULL, name);
+
+		if (row == NULL) {
+			row = new BRow();
+			view->AddRow(row);
+			view->ExpandOrCollapse(row, true);
+		}
+
+		BBitmap* icon = new BBitmap(BRect(0, 0, B_MINI_ICON - 1, B_MINI_ICON - 1), B_RGBA32);
+		BMimeType genericAppType(B_APP_MIME_TYPE);
+		status = genericAppType.GetIcon(icon, B_MINI_ICON);
+
+		row->SetField(new IconStringField(icon, name), nameCol);
+/*
+		row->SetField(new BStringField("-"), enabledCol);
+		row->SetField(new BStringField("-"), runningCol);
+		row->SetField(new BStringField("-"), launchCol);
+		row->SetField(new BIntegerField(-1), pidCol);
+*/
+		ListJobs(view, row, (i == 0)? "": name, jobs);
+	}
+
+	for (int32 i = 0; i < prevNames.CountStrings(); i++) {
+		row = FindStringRow(view, NULL, prevNames.StringAt(i));
 		view->RemoveRow(row);
 		delete row;
 	}
 }
 
 void InitList(BColumnListView *view) {
-	view->AddColumn(new BBitmapColumn("Icon", 16, 16, 16, B_ALIGN_CENTER), iconCol);
-	view->AddColumn(new BStringColumn("Name", 192, 50, 512, B_TRUNCATE_MIDDLE), nameCol);
-	view->AddColumn(new BStringColumn("Target", 96, 50, 128, B_TRUNCATE_MIDDLE), targetCol);
+	view->AddColumn(new IconStringColumn("Name", 256, 50, 512, B_TRUNCATE_MIDDLE), nameCol);
 	view->AddColumn(new BStringColumn("Enabled", 64, 32, 128, B_TRUNCATE_MIDDLE), enabledCol);
 	view->AddColumn(new BStringColumn("Running", 64, 32, 128, B_TRUNCATE_MIDDLE), runningCol);
 	view->AddColumn(new BStringColumn("Launch", 256, 32, 512, B_TRUNCATE_MIDDLE), launchCol);
@@ -289,15 +386,23 @@ public:
 		case stopMsg:
 		case restartMsg: {
 			BLaunchRoster roster;
-			BRow *row;
+			BRow *row, *parent;
 			BString name;
 			row = fView->CurrentSelection(NULL);
 			if (row == NULL) {return;}
 			name = ((BStringField*)row->GetField(nameCol))->String();
+			fView->FindParent(row, &parent, NULL);
+			bool isTarget = parent == NULL;
 			switch (msg->what) {
-				case startMsg: roster.Start(name); break;
-				case stopMsg: roster.Stop(name); break;
-				case restartMsg: roster.Stop(name); roster.Start(name); break;
+				case startMsg: if (isTarget) roster.Target(name); else roster.Start(name); break;
+				case stopMsg: if (isTarget) roster.StopTarget(name); else roster.Stop(name); break;
+				case restartMsg:
+					if (isTarget) {
+						roster.Stop(name); roster.Start(name);
+					} else {
+						roster.StopTarget(name); roster.Target(name);
+					}
+					break;
 			}
 			break;
 		}
@@ -316,7 +421,7 @@ public:
 
 	void ReadyToRun()
 	{
-		BWindow *wnd = new ServicesWindow(BRect(0, 0, 640, 480));
+		BWindow *wnd = new ServicesWindow(BRect(0, 0, 512 + 256, 480));
 		wnd->SetFlags(wnd->Flags() | B_QUIT_ON_WINDOW_CLOSE);
 		wnd->CenterOnScreen();
 		wnd->Show();
