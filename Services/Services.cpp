@@ -35,10 +35,12 @@ enum {
 
 enum {
 	nameCol,
+	kindCol,
 	enabledCol,
 	runningCol,
 	launchCol,
-	pidCol
+	pidCol,
+	requiresCol
 };
 
 
@@ -162,7 +164,7 @@ static void ListJobs(BColumnListView *view, BRow *parent, const char *target, BS
 		status = info.FindString("launch", &path);
 
 		if (status == B_OK) {
-			entry.SetTo(path);
+			entry.SetTo(path, true);
 			status = entry.GetRef(&ref);
 		}
 
@@ -174,6 +176,10 @@ static void ListJobs(BColumnListView *view, BRow *parent, const char *target, BS
 		}
 
 		row->SetField(new IconStringField(icon, name), nameCol);
+		if (info.FindBool("service", &boolVal) == B_OK)
+			row->SetField(new BStringField(boolVal? "service": "job"), kindCol);
+		else
+			row->SetField(new BStringField("-"), kindCol);
 		if (info.FindBool("enabled", &boolVal) == B_OK)
 			row->SetField(new BStringField(boolVal? "yes": "no"), enabledCol);
 		else
@@ -197,6 +203,13 @@ static void ListJobs(BColumnListView *view, BRow *parent, const char *target, BS
 		if (info.FindInt32("team", &team) != B_OK)
 			team = -1;
 		row->SetField(new BIntegerField(team), pidCol);
+
+		strVal = "";
+		for (int32 j = 0; info.FindString("requires", j, &arg) >= B_OK; j++) {
+			if (j > 0) strVal += ", ";
+			strVal += arg;
+		}
+		row->SetField(new BStringField(strVal), requiresCol);
 	}
 
 	for (int32 i = 0; i < prevNames.CountStrings(); i++) {
@@ -243,6 +256,7 @@ static void ListServices(BColumnListView *view) {
 		status = genericAppType.GetIcon(icon, B_MINI_ICON);
 
 		row->SetField(new IconStringField(icon, name), nameCol);
+		row->SetField(new BStringField("target"), kindCol);
 /*
 		row->SetField(new BStringField("-"), enabledCol);
 		row->SetField(new BStringField("-"), runningCol);
@@ -261,10 +275,12 @@ static void ListServices(BColumnListView *view) {
 
 static void InitList(BColumnListView *view) {
 	view->AddColumn(new IconStringColumn("Name", 256, 50, 512, B_TRUNCATE_MIDDLE), nameCol);
+	view->AddColumn(new BStringColumn("Kind", 64, 50, 512, B_TRUNCATE_MIDDLE), kindCol);
 	view->AddColumn(new BStringColumn("Enabled", 64, 32, 128, B_TRUNCATE_MIDDLE), enabledCol);
 	view->AddColumn(new BStringColumn("Running", 64, 32, 128, B_TRUNCATE_MIDDLE), runningCol);
 	view->AddColumn(new BStringColumn("Launch", 256, 32, 4096, B_TRUNCATE_MIDDLE), launchCol);
 	view->AddColumn(new BIntegerColumn("PID", 64, 32, 128, B_ALIGN_LEFT), pidCol);
+	view->AddColumn(new BStringColumn("Requires", 256, 32, 4096, B_TRUNCATE_MIDDLE), requiresCol);
 
 	ListServices(view);
 }
