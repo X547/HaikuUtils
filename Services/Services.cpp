@@ -30,7 +30,8 @@ enum {
 
 	startMsg,
 	stopMsg,
-	restartMsg
+	restartMsg,
+	enableMsg
 };
 
 enum {
@@ -274,7 +275,7 @@ static void ListServices(BColumnListView *view) {
 }
 
 static void InitList(BColumnListView *view) {
-	view->AddColumn(new IconStringColumn("Name", 256, 50, 512, B_TRUNCATE_MIDDLE), nameCol);
+	view->AddColumn(new IconStringColumn("Name", 256 - 32, 50, 512, B_TRUNCATE_MIDDLE), nameCol);
 	view->AddColumn(new BStringColumn("Kind", 64, 50, 512, B_TRUNCATE_MIDDLE), kindCol);
 	view->AddColumn(new BStringColumn("Enabled", 64, 32, 128, B_TRUNCATE_MIDDLE), enabledCol);
 	view->AddColumn(new BStringColumn("Running", 64, 32, 128, B_TRUNCATE_MIDDLE), runningCol);
@@ -345,6 +346,7 @@ class ServicesWindow: public BWindow
 {
 private:
 	BColumnListView *fView;
+	BMenuItem *fEnabledItem;
 	BMessageRunner fListUpdater;
 
 public:
@@ -358,6 +360,8 @@ public:
 				.AddItem(new BMenuItem("Start", new BMessage(startMsg)))
 				.AddItem(new BMenuItem("Stop", new BMessage(stopMsg)))
 				.AddItem(new BMenuItem("Restart", new BMessage(restartMsg)))
+				.AddSeparator()
+				.AddItem(fEnabledItem = new BMenuItem("Enabled", new BMessage(enableMsg)))
 				.End()
 			.End()
 		;
@@ -384,6 +388,29 @@ public:
 		;
 
 		SetKeyMenuBar(menubar);
+	}
+
+	void MenusBeginning()
+	{
+		fEnabledItem->SetEnabled(false);
+		fEnabledItem->SetMarked(false);
+
+		BRow *row, *parent;
+		row = fView->CurrentSelection(NULL);
+		if (row == NULL) {return;}
+		const char *name = ((BStringField*)row->GetField(nameCol))->String();
+		fView->FindParent(row, &parent, NULL);
+		bool isTarget = parent == NULL;
+		if (isTarget) return;
+
+		BLaunchRoster roster;
+		BMessage info;
+		bool isEnabled;
+		if (roster.GetJobInfo(name, info) < B_OK) return;
+		if (info.FindBool("enabled", &isEnabled) < B_OK) return;
+
+		fEnabledItem->SetEnabled(true);
+		fEnabledItem->SetMarked(isEnabled);
 	}
 
 	void MessageReceived(BMessage* msg)
@@ -417,6 +444,19 @@ public:
 					}
 					break;
 			}
+			break;
+		}
+		case enableMsg: {
+			BLaunchRoster roster;
+			BRow *row, *parent;
+			const char *name;
+			row = fView->CurrentSelection(NULL);
+			if (row == NULL) {return;}
+			name = ((BStringField*)row->GetField(nameCol))->String();
+			fView->FindParent(row, &parent, NULL);
+			bool isTarget = parent == NULL;
+			if (isTarget) return;
+			roster.SetEnabled(name, !fEnabledItem->IsMarked());
 			break;
 		}
 		default:
