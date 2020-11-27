@@ -24,8 +24,10 @@
 
 #include "Resources.h"
 #include "UserForm.h"
+#include "GroupForm.h"
 #include "PasswordForm.h"
 #include "UserDB.h"
+#include "UIUtils.h"
 
 
 enum {
@@ -123,6 +125,7 @@ static BColumnListView *NewUsersView()
 	view->AddColumn(new BStringColumn("Home directory", 150, 50, 500, B_TRUNCATE_END), userDirCol);
 	view->AddColumn(new BStringColumn("Shell", 150, 50, 500, B_TRUNCATE_END), userShellCol);
 	view->AddColumn(new BStringColumn("Real name", 150, 50, 500, B_TRUNCATE_END), userGecosCol);
+	view->SetColumnVisible(userPasswdCol, false);
 	ListUsers(view);
 	return view;
 }
@@ -181,73 +184,9 @@ static BColumnListView *NewGroupsView()
 	view->AddColumn(new BIntegerColumn("ID", 64, 32, 128, B_ALIGN_RIGHT), groupIdCol);
 	view->AddColumn(new BStringColumn("passwd", 48, 50, 500, B_TRUNCATE_END), groupPasswdCol);
 	view->AddColumn(new BStringColumn("Members", 128, 50, 500, B_TRUNCATE_END), groupMembersCol);
+	view->SetColumnVisible(groupPasswdCol, false);
 	ListGroups(view);
 	return view;
-}
-
-
-class IconMenuItem: public BMenuItem
-{
-public:
-	IconMenuItem(BBitmap *bitmap, BMessage* message, char shortcut = 0, uint32 modifiers = 0):
-		BMenuItem("", message, shortcut, modifiers),
-		fBitmap(bitmap)
-	{
-	}
-
-	~IconMenuItem()
-	{
-		if (fBitmap != NULL) {
-			delete fBitmap; fBitmap = NULL;
-		}
-	}
-
-	void GetContentSize(float* width, float* height)
-	{
-		if (fBitmap == NULL) {
-			*width = 0;
-			*height = 0;
-			return;
-		}
-		*width = fBitmap->Bounds().Width() + 1;
-		*height = fBitmap->Bounds().Height() + 1;
-	};
-
-	void DrawContent()
-	{
-		if (fBitmap == NULL)
-			return;
-
-		BRect frame = Frame();
-		BPoint center = BPoint((frame.left + frame.right)/2, (frame.top + frame.bottom)/2);
-		Menu()->PushState();
-		Menu()->SetDrawingMode(B_OP_ALPHA);
-		Menu()->DrawBitmap(fBitmap, center - BPoint(fBitmap->Bounds().Width()/2, fBitmap->Bounds().Height()/2));
-		Menu()->PopState();
-	}
-
-private:
-	BBitmap *fBitmap;
-};
-
-
-BBitmap *LoadIcon(int32 id, int32 width, int32 height)
-{
-	size_t dataSize;
-	const void* data = BApplication::AppResources()->FindResource(B_VECTOR_ICON_TYPE, id, &dataSize);
-
-	if (data == NULL) return NULL;
-
-	BBitmap *bitmap = new BBitmap(BRect(0, 0, width - 1, height - 1), B_RGBA32);
-
-	if (bitmap == NULL) return NULL;
-
-	if (BIconUtils::GetVectorIcon((const uint8*)data, dataSize, bitmap) != B_OK) {
-		delete bitmap;
-		return NULL;
-	}
-
-	return bitmap;
 }
 
 
@@ -391,9 +330,7 @@ public:
 			if (view == fUsersView) {
 				ShowUserForm(-1, this);
 			} else if (view == fGroupsView) {
-				BAlert *alert = new BAlert("Users", "Adding new group feature is not yet implemented.", "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_WARNING_ALERT);
-				alert->Go(NULL);
-				return;
+				ShowGroupForm(-1, this);
 			}
 			return;
 		}
@@ -460,8 +397,10 @@ public:
 				int32 uid = ((BIntegerField*)row->GetField(userIdCol))->Value();
 				ShowUserForm(uid, this);
 			} else if (view == fGroupsView) {
-				BAlert *alert = new BAlert("Users", "Editing group feature is not yet implemented.", "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_WARNING_ALERT);
-				alert->Go(NULL);
+				BRow *row = fGroupsView->CurrentSelection(NULL);
+				if (row == NULL) return;
+				int32 gid = ((BIntegerField*)row->GetField(groupIdCol))->Value();
+				ShowGroupForm(gid, this);
 			}
 			return;
 		}
@@ -555,7 +494,8 @@ public:
 	}
 
 	void ReadyToRun() {
-		fWnd = new TestWindow(BRect(0, 0, 512 + 256, 256).OffsetByCopy(64, 64));
+		fWnd = new TestWindow(BRect(0, 0, 512 + 256, 256));
+		fWnd->CenterOnScreen();
 		fWnd->Show();
 	}
 };

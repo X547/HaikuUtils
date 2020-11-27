@@ -31,7 +31,7 @@ APP_MIME_SIG =
 #	means this Makefile will not work correctly if two source files with the
 #	same name (source.c or source.cpp) are included from different directories.
 #	Also note that spaces in folder names do not work well with this Makefile.
-SRCS = Users.cpp UserForm.cpp PasswordForm.cpp UserDB.cpp
+SRCS = Users.cpp UserForm.cpp GroupForm.cpp PasswordForm.cpp UserDB.cpp UIUtils.cpp
 
 #	Specify the resource definition files to use. Full or relative paths can be
 #	used.
@@ -104,7 +104,7 @@ SYMBOLS :=
 
 #	Includes debug information, which allows the binary to be debugged easily.
 #	If set to "TRUE", debug info will be created.
-DEBUGGER :=
+DEBUGGER := TRUE
 
 #	Specify any additional compiler flags to be used.
 COMPILER_FLAGS =
