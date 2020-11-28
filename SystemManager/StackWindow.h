@@ -13,6 +13,7 @@ class StackWindow: public BWindow
 public:
 	BColumnListView *fView;
 
+
 	thread_id fId;
 	team_id fTeam;
 	port_id fDebuggerPort, fNubPort;

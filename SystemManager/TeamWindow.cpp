@@ -304,7 +304,7 @@ static void ListThreads(TeamWindow *wnd, BColumnListView *view)
 		case B_THREAD_SUSPENDED: str = "suspended"; break;
 		case B_THREAD_WAITING: str = "waiting"; break;
 		default:
-			str.SetToFormat("? (%" B_PRIu32 ")", info.state);
+			str.SetToFormat("? (%d)", info.state);
 		}
 		row->SetField(new BStringField(str), threadStateCol);
 

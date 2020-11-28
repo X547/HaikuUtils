@@ -18,7 +18,7 @@ void ShowError(const StatusError &err)
 		buf.SetToFormat("%s\n\n", err.msg);
 		msg += buf;
 	}
-	buf.SetToFormat("Error code: 0x%08x (%s).", err.res, strerror(err.res));
+	buf.SetToFormat("Error code: 0x%08" B_PRIx32 " (%s).", err.res, strerror(err.res));
 	msg += buf;
 
 	BAlert *alert = new BAlert("Error", msg, "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_STOP_ALERT);

@@ -414,7 +414,7 @@ static void GetUsedMax(BString &str, uint64 used, uint64 max)
 	if (max > 0) {
 		ratio = int32(double(used)/double(max)*100.0);
 	}
-	str.SetToFormat("%" B_PRIu64 "/%" B_PRIu64 " (%d%%)", used, max, ratio);
+	str.SetToFormat("%" B_PRIu64 "/%" B_PRIu64 " (% " B_PRId32 " %%)", used, max, ratio);
 }
 
 static void ListStats(BColumnListView *view)
