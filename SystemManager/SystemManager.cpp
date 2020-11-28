@@ -9,6 +9,7 @@
 #include <private/system/syscalls.h>
 #include <Application.h>
 #include <Window.h>
+#include <Alert.h>
 #include <View.h>
 #include <TabView.h>
 #include <Rect.h>
@@ -420,6 +421,7 @@ static void ListStats(BColumnListView *view)
 	system_info info;
 
 	if (get_system_info(&info) >= B_OK) {
+		// TODO: convert to readable date-time format
 		str.SetToFormat("%" B_PRIdBIGTIME, info.boot_time);
 		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
 
@@ -493,7 +495,7 @@ static BColumnListView *NewStatsView()
 	NewInfoRow(view, "Free memory");
 	NewInfoRow(view, "Swap pages");
 	NewInfoRow(view, "Page faults");
-	NewInfoRow(view, "Sems");
+	NewInfoRow(view, "Semaphores");
 	NewInfoRow(view, "Ports");
 	NewInfoRow(view, "Threads");
 	NewInfoRow(view, "Teams");
@@ -561,7 +563,7 @@ public:
 				.AddItem(new BMenuItem("Update", new BMessage(updateMsg), 'R'))
 				.AddSeparator()
 */
-				.AddItem(new BMenuItem("Terminate", new BMessage(terminateMsg)))
+				.AddItem(new BMenuItem("Terminate", new BMessage(terminateMsg), 'T'))
 				.AddItem(new BMenuItem("Suspend", new BMessage(suspendMsg)))
 				.AddItem(new BMenuItem("Resume", new BMessage(resumeMsg)))
 				.AddMenu(signalMenu = new BMenu("Send signal"))
@@ -599,10 +601,11 @@ public:
 		;
 	}
 
-	team_id SelectedTeam()
+	team_id SelectedTeam(const char **name = NULL)
 	{
 		BRow *row = fTeamsView->CurrentSelection(NULL);
 		if (row == NULL) return -1;
+		if (name != NULL) *name = ((IconStringField*)row->GetField(nameCol))->String();
 		return ((BIntegerField*)row->GetField(idCol))->Value();
 	}
 
@@ -633,7 +636,28 @@ public:
 				break;
 			}
 			case terminateMsg: {
-				team_id team = SelectedTeam();
+				team_id team;
+				int32 which;
+				BInvoker *invoker = NULL;
+				if (msg->FindInt32("which", &which) < B_OK) {
+					const char *name;
+					team = SelectedTeam(&name);
+					if (team < B_OK) return;
+					msg->AddInt32("team", team);
+					BString str;
+					str.SetToFormat("Are you sure you want to terminate team \"%s\" (%" B_PRId32 ")?", name, team);
+					BAlert *alert = new BAlert("SystemManager", str, "No", "Yes", NULL, B_WIDTH_AS_USUAL, B_WARNING_ALERT);
+					invoker = new BInvoker(new BMessage(*msg), this);
+					invoker->Message()->SetPointer("invoker", invoker);
+					alert->Go(invoker);
+					return;
+				} else {
+					if (msg->FindPointer("invoker", &(void*&)invoker) >= B_OK) {
+						delete invoker; invoker = NULL;
+					}
+					if (which != 1) return;
+					if (msg->FindInt32("team", &team) < B_OK) return;
+				}
 				if (team >= B_OK)
 					Check(kill_team(team), "Can't terminate team.");
 				break;
