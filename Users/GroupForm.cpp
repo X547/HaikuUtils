@@ -26,6 +26,10 @@
 #include "UIUtils.h"
 #include "Resources.h"
 
+
+#define CheckRetVoid(err) {status_t _err = (err); if (_err < B_OK) return;}
+
+
 enum {
 	okMsg = 1,
 	groupMsg,
@@ -45,17 +49,6 @@ static BLayoutItem *CreateTextControlLayoutItem(BTextControl *view)
 				.End()
 			.Add(view->CreateTextViewLayoutItem())
 			.End();
-	return layout;
-}
-
-static BLayoutItem *CreateMenuFieldLayoutItem(BMenuField *view)
-{
-	BGroupLayout *layout;
-	BLayoutBuilder::Group<>(B_HORIZONTAL, 0)
-		.GetLayout(&layout)
-		.Add(view->CreateLabelLayoutItem())
-		.Add(view->CreateMenuBarLayoutItem())
-		.End();
 	return layout;
 }
 
@@ -193,23 +186,22 @@ public:
 				while (getgrgid(gid) != NULL) gid++;
 
 				KMessage message;
-				if (message.AddInt32("gid", gid) != B_OK
-					|| message.AddString("name", fGroupNameView->Text()) != B_OK
-					|| message.AddString("password", "x") != B_OK
-					|| message.AddBool("add group", true) != B_OK
-				) return;
+				CheckRetVoid(message.AddInt32("gid", gid));
+				CheckRetVoid(message.AddString("name", fGroupNameView->Text()));
+				CheckRetVoid(message.AddString("password", "x"));
+				CheckRetVoid(message.AddBool("add group", true));
 				for (int32 i = 0; i < fMembers->CountItems(); i++) {
-					message.AddString("members", dynamic_cast<BStringItem*>(fMembers->ItemAt(i))->Text());
+					CheckRetVoid(message.AddString("members", dynamic_cast<BStringItem*>(fMembers->ItemAt(i))->Text()));
 				}
 				UpdateGroup(message);
 			} else {
 				KMessage message;
-				if (message.AddInt32("gid", fGid) != B_OK) return;
+				CheckRetVoid(message.AddInt32("gid", fGid));
 				if (fMembers->CountItems() == 0) {
-					message.AddString("members", "");
+					CheckRetVoid(message.AddString("members", ""));
 				} else {
 					for (int32 i = 0; i < fMembers->CountItems(); i++) {
-						message.AddString("members", dynamic_cast<BStringItem*>(fMembers->ItemAt(i))->Text());
+						CheckRetVoid(message.AddString("members", dynamic_cast<BStringItem*>(fMembers->ItemAt(i))->Text()));
 					}
 				}
 				UpdateGroup(message);

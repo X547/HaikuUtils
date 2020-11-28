@@ -20,6 +20,10 @@
 #include <private/kernel/util/KMessage.h>
 #include "UserDB.h"
 
+
+#define CheckRetVoid(err) {status_t _err = (err); if (_err < B_OK) return;}
+
+
 enum {
 	okMsg = 1,
 	groupMsg,
@@ -181,27 +185,26 @@ public:
 
 				BMenuItem *item = fGroupView->Menu()->FindMarked();
 				if (item != NULL) {
-					item->Message()->FindInt32("val", &(int32&)gid);
+					item->Message()->FindInt32("val", (int32*)&gid);
 				}
 
 				KMessage message;
-				if (message.AddInt32("uid", uid) != B_OK
-					|| message.AddInt32("gid", gid) != B_OK
-					|| message.AddString("name", fUserNameView->Text()) != B_OK
-					|| message.AddString("password", "x") != B_OK
-					|| message.AddString("home", fHomeDirView->Text()) != B_OK
-					|| message.AddString("shell", fShellView->Text()) != B_OK
-					|| message.AddString("real name", fRealNameView->Text()) != B_OK
-					|| message.AddString("shadow password", encryptedPassword) != B_OK
-					|| message.AddInt32("last changed", time(NULL)) != B_OK
-					|| message.AddInt32("min", min) != B_OK
-					|| message.AddInt32("max", max) != B_OK
-					|| message.AddInt32("warn", warn) != B_OK
-					|| message.AddInt32("inactive", inactive) != B_OK
-					|| message.AddInt32("expiration", expiration) != B_OK
-					|| message.AddInt32("flags", 0) != B_OK
-					|| message.AddBool("add user", true) != B_OK
-				) return;
+				CheckRetVoid(message.AddInt32("uid", uid));
+				CheckRetVoid(message.AddInt32("gid", gid));
+				CheckRetVoid(message.AddString("name", fUserNameView->Text()));
+				CheckRetVoid(message.AddString("password", "x"));
+				CheckRetVoid(message.AddString("home", fHomeDirView->Text()));
+				CheckRetVoid(message.AddString("shell", fShellView->Text()));
+				CheckRetVoid(message.AddString("real name", fRealNameView->Text()));
+				CheckRetVoid(message.AddString("shadow password", encryptedPassword));
+				CheckRetVoid(message.AddInt32("last changed", time(NULL)));
+				CheckRetVoid(message.AddInt32("min", min));
+				CheckRetVoid(message.AddInt32("max", max));
+				CheckRetVoid(message.AddInt32("warn", warn));
+				CheckRetVoid(message.AddInt32("inactive", inactive));
+				CheckRetVoid(message.AddInt32("expiration", expiration));
+				CheckRetVoid(message.AddInt32("flags", 0));
+				CheckRetVoid(message.AddBool("add user", true));
 				UpdateUser(message);
 			} else {
 				int32 gid = -1;
@@ -211,14 +214,13 @@ public:
 					item->Message()->FindInt32("val", &gid);
 				}
 				KMessage message;
-				if (message.AddInt32("uid", fUid) != B_OK
-					|| !(gid < 0 || message.AddInt32("gid", gid) >= B_OK)
-					|| message.AddString("name", fUserNameView->Text()) != B_OK
-					|| message.AddString("home", fHomeDirView->Text()) != B_OK
-					|| message.AddString("shell", fShellView->Text()) != B_OK
-					|| message.AddString("real name", fRealNameView->Text()) != B_OK
-					|| message.AddInt32("last changed", time(NULL)) != B_OK
-				) return;
+				CheckRetVoid(message.AddInt32("uid", fUid));
+				if (gid >= 0) CheckRetVoid(message.AddInt32("gid", gid));
+				CheckRetVoid(message.AddString("name", fUserNameView->Text()));
+				CheckRetVoid(message.AddString("home", fHomeDirView->Text()));
+				CheckRetVoid(message.AddString("shell", fShellView->Text()));
+				CheckRetVoid(message.AddString("real name", fRealNameView->Text()));
+				CheckRetVoid(message.AddInt32("last changed", time(NULL)));
 				UpdateUser(message);
 			}
 			PostMessage(B_QUIT_REQUESTED);
