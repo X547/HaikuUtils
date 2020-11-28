@@ -44,7 +44,6 @@ void GetTeamString(BString &str, team_id team)
 
 void GetThreadString(BString &str, thread_id thread)
 {
-	const char *name = NULL;
 	thread_info info;
 	if (
 		thread != 0 &&
@@ -57,7 +56,6 @@ void GetThreadString(BString &str, thread_id thread)
 
 void GetSemString(BString &str, sem_id sem)
 {
-	const char *name = NULL;
 	sem_info info;
 	if (
 		sem >= B_OK &&

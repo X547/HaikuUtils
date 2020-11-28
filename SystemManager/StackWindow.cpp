@@ -122,7 +122,7 @@ static void WriteStackTrace(StackWindow *wnd)
 	error = debug_get_instruction_pointer(&wnd->fDebugContext, wnd->fId, &ip, &fp);
 
 	debug_symbol_lookup_context *lookupContext = NULL;
-	Check(debug_create_symbol_lookup_context(wnd->fTeam, -1, &lookupContext), "can't create symbol lookup context");
+	Check(debug_create_symbol_lookup_context(wnd->fTeam, -1, &lookupContext), "can't create symbol lookup context", false);
 
 	BString imageStr, symbolStr;
 	LookupSymbolAddress(wnd, lookupContext, ip, imageStr, symbolStr);
@@ -169,25 +169,24 @@ static status_t DebugThread(void *arg)
 	StackWindow *wnd = (StackWindow*)arg;
 	status_t res;
 	bool run = true;
-	while (run) {
-		int32 code;
-		debug_debugger_message_data message;
-		res = read_port(wnd->fDebuggerPort, &code, &message, sizeof(message));
-		if (res == B_INTERRUPTED) continue;
-		Check(res, "read port failed");
-		// printf("debug msg: %d\n", code);
-		switch (code) {
-		case B_DEBUGGER_MESSAGE_THREAD_DEBUGGED: {
-			void *ip = NULL, *fp = NULL;
-			if (Check(debug_get_instruction_pointer(&wnd->fDebugContext, wnd->fId, &ip, &fp), "can't get IP and FP", false) >= B_OK) {
-				wnd->Lock();
-				WriteStackTrace(wnd);
-				wnd->Unlock();
+	try {
+		while (run) {
+			int32 code;
+			debug_debugger_message_data message;
+			res = read_port(wnd->fDebuggerPort, &code, &message, sizeof(message));
+			if (res == B_INTERRUPTED) continue;
+			Check(res, "read port failed");
+			// printf("debug msg: %d\n", code);
+			switch (code) {
+			case B_DEBUGGER_MESSAGE_THREAD_DEBUGGED: {
+				run = false;
+				break;
 			}
-			run = false;
-			break;
+			}
 		}
-		}
+	} catch (StatusError &err) {
+		ShowError(err);
+		return err.res;
 	}
 	return B_OK;
 }
@@ -203,18 +202,19 @@ static void ListFrames(StackWindow *wnd, BColumnListView *view)
 
 	wnd->fDebuggerPort = Check(create_port(10, "debugger port"));
 	HandleDeleter<port_id, status_t, delete_port> portDeleter(wnd->fDebuggerPort);
+
 	wnd->fNubPort = Check(install_team_debugger(wnd->fTeam, wnd->fDebuggerPort), "can't install debugger");
+	HandleDeleter<team_id, status_t, remove_team_debugger> teamDebuggerDeleter(wnd->fTeam);
+
 	Check(init_debug_context(&wnd->fDebugContext, wnd->fTeam, wnd->fNubPort));
+	CObjectDeleter<debug_context> debugContextDeleter(&wnd->fDebugContext, destroy_debug_context);
 
 	Check(debug_thread(wnd->fId));
 
 	thread_id debugThread = spawn_thread(DebugThread, "debug thread", B_NORMAL_PRIORITY, wnd);
-	wnd->Unlock();
 	wait_for_thread(debugThread, &res); Check(res);
-	wnd->Lock();
 
-	destroy_debug_context(&wnd->fDebugContext);
-	remove_team_debugger(wnd->fTeam);
+	WriteStackTrace(wnd);
 }
 
 static void NewFramesView(StackWindow *wnd)
