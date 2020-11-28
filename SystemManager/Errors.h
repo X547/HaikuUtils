@@ -31,4 +31,9 @@ static inline status_t CheckErrno(status_t res, const char *msg = NULL, bool fat
 	return res;
 }
 
+#define CheckRet(err) {status_t _err = (err); if (_err < B_OK) return _err;}
+
+#define CheckRetVoid(err) {status_t _err = (err); if (_err < B_OK) return;}
+
+
 #endif	// _ERRORS_H_

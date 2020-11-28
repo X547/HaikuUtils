@@ -27,6 +27,7 @@
 
 #include "StackWindow.h"
 #include "Errors.h"
+#include "Utils.h"
 
 
 enum {
@@ -149,6 +150,7 @@ static void ListInfo(TeamWindow *wnd, BColumnListView *view)
 	int32 int32Val = -1;
 	BString str;
 	const char *strPtr;
+	int32 uid = -1, gid = -1;
 
 	KMessage extInfo;
 
@@ -171,25 +173,15 @@ static void ListInfo(TeamWindow *wnd, BColumnListView *view)
 			view->RowAt(rowId++)->SetField(new BStringField(str), infoValueCol);
 		}
 
-		if (extInfo.FindInt32("uid", &int32Val) >= B_OK) {
-			str.SetToFormat("%" B_PRId32, int32Val);
-			view->RowAt(rowId++)->SetField(new BStringField(str), infoValueCol);
-		}
+		if (extInfo.FindInt32("uid", &uid) < B_OK) uid = -1;
+		if (extInfo.FindInt32("gid", &gid) < B_OK) gid = -1;
+		GetUserGroupString(str, uid, gid, true);
+		view->RowAt(rowId++)->SetField(new BStringField(str), infoValueCol);
 
-		if (extInfo.FindInt32("gid", &int32Val) >= B_OK) {
-			str.SetToFormat("%" B_PRId32, int32Val);
-			view->RowAt(rowId++)->SetField(new BStringField(str), infoValueCol);
-		}
-
-		if (extInfo.FindInt32("euid", &int32Val) >= B_OK) {
-			str.SetToFormat("%" B_PRId32, int32Val);
-			view->RowAt(rowId++)->SetField(new BStringField(str), infoValueCol);
-		}
-
-		if (extInfo.FindInt32("egid", &int32Val) >= B_OK) {
-			str.SetToFormat("%" B_PRId32, int32Val);
-			view->RowAt(rowId++)->SetField(new BStringField(str), infoValueCol);
-		}
+		if (extInfo.FindInt32("euid", &uid) < B_OK) uid = -1;
+		if (extInfo.FindInt32("egid", &gid) < B_OK) gid = -1;
+		GetUserGroupString(str, uid, gid, true);
+		view->RowAt(rowId++)->SetField(new BStringField(str), infoValueCol);
 
 		entry_ref ref;
 		if (
@@ -221,10 +213,8 @@ static BColumnListView *NewInfoView(TeamWindow *wnd)
 	NewInfoRow(view, "Name");
 	NewInfoRow(view, "Process group");
 	NewInfoRow(view, "Session");
-	NewInfoRow(view, "User ID");
-	NewInfoRow(view, "Group ID");
-	NewInfoRow(view, "Effective user ID");
-	NewInfoRow(view, "Effective group ID");
+	NewInfoRow(view, "User");
+	NewInfoRow(view, "Effective user");
 	NewInfoRow(view, "Working directory");
 
 	ListInfo(wnd, view);
@@ -319,7 +309,8 @@ static void ListThreads(TeamWindow *wnd, BColumnListView *view)
 		row->SetField(new BStringField(str), threadStateCol);
 
 		row->SetField(new BIntegerField(info.priority), threadPriorityCol);
-		row->SetField(new BIntegerField(info.sem), threadSemCol);
+		GetSemString(str, info.sem);
+		row->SetField(new BStringField(str), threadSemCol);
 		row->SetField(new BIntegerField(info.user_time), threadUserTimeCol);
 		row->SetField(new BIntegerField(info.kernel_time), threadKernelTimeCol);
 		str.SetToFormat("0x%" B_PRIxADDR, (addr_t)info.stack_base);
@@ -343,7 +334,7 @@ static BColumnListView *NewThreadsView(TeamWindow *wnd)
 	view->AddColumn(new BStringColumn("Name", 150, 50, 500, B_TRUNCATE_END), threadNameCol);
 	view->AddColumn(new BStringColumn("State", 150, 50, 500, B_TRUNCATE_END), threadStateCol);
 	view->AddColumn(new BIntegerColumn("Priority", 96, 32, 128, B_ALIGN_RIGHT), threadPriorityCol);
-	view->AddColumn(new BIntegerColumn("Sem", 96, 32, 128, B_ALIGN_RIGHT), threadSemCol);
+	view->AddColumn(new BStringColumn("Sem", 96, 32, 512, B_TRUNCATE_END), threadSemCol);
 	view->AddColumn(new BIntegerColumn("User time", 96, 32, 128, B_ALIGN_RIGHT), threadUserTimeCol);
 	view->AddColumn(new BIntegerColumn("Kernel time", 96, 32, 128, B_ALIGN_RIGHT), threadKernelTimeCol);
 	view->AddColumn(new BStringColumn("Stack base", 128, 50, 500, B_TRUNCATE_END, B_ALIGN_RIGHT), threadStackBaseCol);
@@ -489,6 +480,7 @@ static void ListSems(TeamWindow *wnd, BColumnListView *view)
 	sem_info info;
 	BRow *row;
 	BList prevRows;
+	BString str;
 
 	for (int32 i = 0; i < view->CountRows(); i++) {
 		row = view->RowAt(i);
@@ -506,7 +498,8 @@ static void ListSems(TeamWindow *wnd, BColumnListView *view)
 		row->SetField(new BIntegerField(info.sem), semIdCol);
 		row->SetField(new BStringField(info.name), semNameCol);
 		row->SetField(new BIntegerField(info.count), semCountCol);
-		row->SetField(new BIntegerField(info.latest_holder), semLatestHolderCol);
+		GetThreadString(str, info.latest_holder);
+		row->SetField(new BStringField(str), semLatestHolderCol);
 	}
 
 	for (int32 i = 0; i < prevRows.CountItems(); i++) {
@@ -523,7 +516,7 @@ static BColumnListView *NewSemsView(TeamWindow *wnd)
 	view->AddColumn(new BIntegerColumn("ID", 64, 32, 128, B_ALIGN_RIGHT), semIdCol);
 	view->AddColumn(new BStringColumn("Name", 150, 50, 500, B_TRUNCATE_END), semNameCol);
 	view->AddColumn(new BIntegerColumn("Count", 64, 32, 128, B_ALIGN_RIGHT), semCountCol);
-	view->AddColumn(new BIntegerColumn("Latest holder", 96, 32, 128, B_ALIGN_RIGHT), semLatestHolderCol);
+	view->AddColumn(new BStringColumn("Latest holder", 96, 32, 1024, B_TRUNCATE_END), semLatestHolderCol);
 	ListSems(wnd, view);
 	return view;
 }

@@ -28,6 +28,7 @@
 
 #include "TeamWindow.h"
 #include "Errors.h"
+#include "Utils.h"
 
 enum {
 	invokeMsg = 1,
@@ -280,14 +281,16 @@ static void ListTeams(BColumnListView *view, ViewLayout layout) {
 	BRow *row;
 	cookie = 0;
 	BList prevRows;
+	BString str;
 
 	CollectRowList(prevRows, view);
 
 	while (get_next_team_info(&cookie, &info) == B_OK) {
-		int32 uid = -1;
+		int32 uid = -1, gid = -1;
 		KMessage extInfo;
 		if (get_extended_team_info(info.team, B_TEAM_INFO_BASIC, extInfo) >= B_OK) {
 			if (extInfo.FindInt32("uid", &uid) < B_OK) uid = -1;
+			if (extInfo.FindInt32("gid", &gid) < B_OK) gid = -1;
 		}
 
 		int32 imageCookie = 0;
@@ -322,7 +325,8 @@ static void ListTeams(BColumnListView *view, ViewLayout layout) {
 		row->SetField(new BIntegerField(_kern_process_info(info.team, PARENT_ID)), parentIdCol);
 		row->SetField(new BIntegerField(_kern_process_info(info.team, SESSION_ID)), sidCol);
 		row->SetField(new BIntegerField(_kern_process_info(info.team, GROUP_ID)), gidCol);
-		row->SetField(new BIntegerField(uid), uidCol);
+		GetUserGroupString(str, uid, gid);
+		row->SetField(new BStringField(str), uidCol);
 		row->SetField(new BStringField(imageInfo.name), pathCol);
 	}
 
@@ -397,7 +401,7 @@ static BColumnListView* NewTeamsView()
 	view->AddColumn(new BIntegerColumn("Parent", 64, 32, 128, B_ALIGN_RIGHT), parentIdCol);
 	view->AddColumn(new BIntegerColumn("Session", 64, 32, 128, B_ALIGN_RIGHT), sidCol);
 	view->AddColumn(new BIntegerColumn("Group", 64, 32, 128, B_ALIGN_RIGHT), gidCol);
-	view->AddColumn(new BIntegerColumn("User", 64, 32, 128, B_ALIGN_RIGHT), uidCol);
+	view->AddColumn(new BStringColumn("User", 64 + 16, 32, 128, B_TRUNCATE_END), uidCol);
 	view->AddColumn(new BStringColumn("Path", 512, 50, 1024, B_TRUNCATE_MIDDLE), pathCol);
 	view->SetColumnVisible(parentIdCol, false);
 	return view;
@@ -620,12 +624,12 @@ public:
 						BPoint((Frame().left + Frame().right)/2, (Frame().top + Frame().bottom)/2)
 					);
 				}
-				break;
+				return;
 			}
 			case updateMsg: {
 				ListTeams(fTeamsView, fLayout);
 				ListStats(fStatsView);
-				break;
+				return;
 			}
 			case setLayoutMsg: {
 				int32 layout;
@@ -633,7 +637,7 @@ public:
 					fLayout = (ViewLayout)layout;
 					RelayoutTeams(fTeamsView, fLayout);
 				}
-				break;
+				return;
 			}
 			case terminateMsg: {
 				team_id team;
@@ -643,7 +647,7 @@ public:
 					const char *name;
 					team = SelectedTeam(&name);
 					if (team < B_OK) return;
-					msg->AddInt32("team", team);
+					Check(msg->AddInt32("team", team));
 					BString str;
 					str.SetToFormat("Are you sure you want to terminate team \"%s\" (%" B_PRId32 ")?", name, team);
 					BAlert *alert = new BAlert("SystemManager", str, "No", "Yes", NULL, B_WIDTH_AS_USUAL, B_WARNING_ALERT);
@@ -656,23 +660,23 @@ public:
 						delete invoker; invoker = NULL;
 					}
 					if (which != 1) return;
-					if (msg->FindInt32("team", &team) < B_OK) return;
+					CheckRetVoid(msg->FindInt32("team", &team));
 				}
 				if (team >= B_OK)
 					Check(kill_team(team), "Can't terminate team.");
-				break;
+				return;
 			}
 			case suspendMsg: {
 				team_id team = SelectedTeam();
 				if (team >= B_OK)
 					CheckErrno(kill(team, SIGSTOP), "Can't suspend team.");
-				break;
+				return;
 			}
 			case resumeMsg: {
 				team_id team = SelectedTeam();
 				if (team >= B_OK)
 					CheckErrno(kill(team, SIGCONT), "Can't resume team.");
-				break;
+				return;
 			}
 			case sendSignalMsg: {
 				int32 signal;
@@ -681,7 +685,7 @@ public:
 					if (team >= B_OK)
 						CheckErrno(kill(team, signal), "Can't send signal.");
 				}
-				break;
+				return;
 			}
 			case showLocationMsg: {
 				BRow *row = fTeamsView->CurrentSelection(NULL);
@@ -703,14 +707,13 @@ public:
 
 					BMessenger("application/x-vnd.Be-TRAK").SendMessage(&message);
 				}
-				break;
+				return;
 			}
-			default:
-				BWindow::MessageReceived(msg);
 			}
 		} catch (StatusError &err) {
 			ShowError(err);
 		}
+		BWindow::MessageReceived(msg);
 	}
 };
 
