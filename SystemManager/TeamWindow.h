@@ -19,7 +19,7 @@ private:
 	BColumnListView *fAreasView;
 	BColumnListView *fPortsView;
 	BColumnListView *fSemsView;
-	BColumnListView *fHandlesView;
+	BColumnListView *fFilesView;
 
 public:
 	team_id fId;

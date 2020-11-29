@@ -19,6 +19,9 @@
 #include <private/system/extended_system_info_defs.h>
 #include <private/libroot/extended_system_info.h>
 #include <drivers/KernelExport.h>
+#include <fs_info.h>
+#include <private/system/syscalls.h>
+#include <private/system/vfs_defs.h>
 
 #include <Entry.h>
 #include <Path.h>
@@ -74,6 +77,17 @@ enum {
 	semNameCol,
 	semCountCol,
 	semLatestHolderCol,
+};
+
+enum {
+	fileNameCol,
+	fileIdCol,
+	fileModeCol,
+	fileDevCol,
+	fileNodeCol,
+	fileDevNameCol,
+	fileVolNameCol,
+	fileFsNameCol
 };
 
 enum {
@@ -512,6 +526,72 @@ static BColumnListView *NewSemsView(TeamWindow *wnd)
 	return view;
 }
 
+static void ListFiles(TeamWindow *wnd, BColumnListView *view)
+{
+	uint32 cookie = 0;
+	fd_info info;
+	fs_info fsInfo;
+	BRow *row;
+	BList prevRows;
+	BString buf;
+	char path[B_OS_NAME_LENGTH];
+
+	for (int32 i = 0; i < view->CountRows(); i++) {
+		row = view->RowAt(i);
+		prevRows.AddItem((void*)(addr_t)(((BIntegerField*)row->GetField(fileIdCol))->Value()));
+	}
+
+	while (_kern_get_next_fd_info(wnd->fId, &cookie, &info, sizeof(fd_info)) >= B_OK) {
+		prevRows.RemoveItem((void*)(addr_t)info.number);
+		row = FindIntRow(view, fileIdCol, NULL, info.number);
+		if (row == NULL) {
+			row = new BRow();
+			view->AddRow(row);
+		}
+
+		if (_kern_entry_ref_to_path(info.device, info.node, NULL, path, B_OS_NAME_LENGTH) == B_OK)
+			row->SetField(new BStringField(path), fileNameCol);
+		else
+			row->SetField(new BStringField("?"), fileNameCol);
+
+		row->SetField(new BIntegerField(info.number), fileIdCol);
+
+		if ((info.open_mode & O_RWMASK) == O_RDONLY) {buf = "R";}
+		if ((info.open_mode & O_RWMASK) == O_WRONLY) {buf = "W";}
+		if ((info.open_mode & O_RWMASK) == O_RDWR  ) {buf = "RW";}
+		row->SetField(new BStringField(buf), fileModeCol);
+		row->SetField(new BIntegerField(info.device), fileDevCol);
+		row->SetField(new BIntegerField(info.node), fileNodeCol);
+
+		fs_stat_dev(info.device, &fsInfo);
+		row->SetField(new BStringField(fsInfo.device_name), fileDevNameCol);
+		row->SetField(new BStringField(fsInfo.volume_name), fileVolNameCol);
+		row->SetField(new BStringField(fsInfo.fsh_name), fileFsNameCol);
+	}
+
+	for (int32 i = 0; i < prevRows.CountItems(); i++) {
+		row = FindIntRow(view, fileIdCol, NULL, (int32)(addr_t)prevRows.ItemAt(i));
+		view->RemoveRow(row);
+		delete row;
+	}
+}
+
+static BColumnListView *NewFilesView(TeamWindow *wnd)
+{
+	BColumnListView *view;
+	view = new BColumnListView("Files", B_NAVIGABLE);
+	view->AddColumn(new BStringColumn("Name", 250, 50, 512, B_TRUNCATE_MIDDLE), fileNameCol);
+	view->AddColumn(new BIntegerColumn("ID", 64, 32, 128, B_ALIGN_RIGHT), fileIdCol);
+	view->AddColumn(new BStringColumn("Mode", 48, 32, 128, B_TRUNCATE_MIDDLE, B_ALIGN_LEFT), fileModeCol);
+	view->AddColumn(new BIntegerColumn("Dev", 64, 32, 128, B_ALIGN_RIGHT), fileDevCol);
+	view->AddColumn(new BIntegerColumn("Node", 64, 32, 128, B_ALIGN_RIGHT), fileNodeCol);
+	view->AddColumn(new BStringColumn("Device", 96, 32, 512, B_TRUNCATE_MIDDLE, B_ALIGN_LEFT), fileDevNameCol);
+	view->AddColumn(new BStringColumn("Volume", 96, 32, 512, B_TRUNCATE_MIDDLE, B_ALIGN_LEFT), fileVolNameCol);
+	view->AddColumn(new BStringColumn("FS", 96, 32, 512, B_TRUNCATE_MIDDLE, B_ALIGN_LEFT), fileFsNameCol);
+	ListFiles(wnd, view);
+	return view;
+}
+
 
 //#pragma mark TeamWindow
 
@@ -569,7 +649,7 @@ TeamWindow::TeamWindow(team_id id): BWindow(BRect(0, 0, 800, 480), "Team", B_DOC
 	tab = new BTab(); fTabView->AddTab(fAreasView = NewAreasView(this), tab);
 	tab = new BTab(); fTabView->AddTab(fPortsView = NewPortsView(this), tab);
 	tab = new BTab(); fTabView->AddTab(fSemsView = NewSemsView(this), tab);
-	tab = new BTab(); fTabView->AddTab(new TestView(BRect(0, 0, -1, -1), "Handles", B_FOLLOW_NONE), tab);
+	tab = new BTab(); fTabView->AddTab(fFilesView = NewFilesView(this), tab);
 
 	BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
 		.Add(menuBar)
@@ -608,6 +688,8 @@ void TeamWindow::MessageReceived(BMessage *msg)
 				ListPorts(this, fPortsView);
 			else if (view == fSemsView)
 				ListSems(this, fSemsView);
+			else if (view == fFilesView)
+				ListFiles(this, fFilesView);
 		}
 		break;
 	}
