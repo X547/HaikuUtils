@@ -127,8 +127,8 @@ static void WriteStackTrace(StackWindow *wnd)
 	BString str;
 
 	row = new BRow();
-	row->SetField(new BIntegerField((addr_t)fp), frameFpCol);
-	row->SetField(new BIntegerField((addr_t)ip), frameIpCol);
+	row->SetField(new Int64Field((addr_t)fp), frameFpCol);
+	row->SetField(new Int64Field((addr_t)ip), frameIpCol);
 	row->SetField(new BStringField(imageStr), frameImageCol);
 	row->SetField(new BStringField(symbolStr), frameFunctionCol);
 	wnd->fView->AddRow(row);
@@ -146,8 +146,8 @@ static void WriteStackTrace(StackWindow *wnd)
 		LookupSymbolAddress(wnd, lookupContext, ip, imageStr, symbolStr);
 
 		row = new BRow();
-		row->SetField(new BIntegerField((addr_t)fp), frameFpCol);
-		row->SetField(new BIntegerField((addr_t)ip), frameIpCol);
+		row->SetField(new Int64Field((addr_t)fp), frameFpCol);
+		row->SetField(new Int64Field((addr_t)ip), frameIpCol);
 		row->SetField(new BStringField(imageStr), frameImageCol);
 		row->SetField(new BStringField(symbolStr), frameFunctionCol);
 		wnd->fView->AddRow(row);

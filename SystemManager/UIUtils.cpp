@@ -48,13 +48,13 @@ HexIntegerColumn::HexIntegerColumn(
 
 void HexIntegerColumn::DrawField(BField *field, BRect rect, BView* parent)
 {
-	char formatted[256];
 	float width = rect.Width() - (2 * 8);
 	BString string;
 
-	sprintf(formatted, "0x%x", (int)((BIntegerField*)field)->Value());
-
-	string = formatted;
+	if (dynamic_cast<Int64Field*>(field) != NULL)
+		string.SetToFormat("0x%" B_PRIx64, ((Int64Field*)field)->Value());
+	else
+		string.SetToFormat("0x%x", (int)((BIntegerField*)field)->Value());
 
 	BFont oldFont;
 	parent->GetFont(&oldFont);
@@ -66,5 +66,30 @@ void HexIntegerColumn::DrawField(BField *field, BRect rect, BView* parent)
 
 int HexIntegerColumn::CompareFields(BField *field1, BField *field2)
 {
-	return (((BIntegerField*)field1)->Value() - ((BIntegerField*)field2)->Value());
+	if (dynamic_cast<Int64Field*>(field1) != NULL) {
+		if (((Int64Field*)field1)->Value() == ((Int64Field*)field2)->Value())
+			return 0;
+		else if (((Int64Field*)field1)->Value() > ((Int64Field*)field2)->Value())
+			return 1;
+		else
+			return -1;
+	} else
+		return (((BIntegerField*)field1)->Value() - ((BIntegerField*)field2)->Value());
+}
+
+
+Int64Field::Int64Field(int64 value): fValue(value)
+{
+}
+
+
+void Int64Field::SetValue(int64 value)
+{
+	fValue = value;
+}
+
+
+int64 Int64Field::Value()
+{
+	return fValue;
 }

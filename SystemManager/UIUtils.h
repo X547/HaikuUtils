@@ -44,5 +44,16 @@ public:
 	int CompareFields(BField *field1, BField *field2);
 };
 
+class Int64Field: public BField
+{
+public:
+	Int64Field(int64 value);
+	void SetValue(int64 value);
+	int64 Value();
+
+private:
+	int64 fValue;
+};
+
 
 #endif	// _UIUTILS_H_

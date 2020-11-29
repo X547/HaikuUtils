@@ -246,8 +246,8 @@ static void ListImages(TeamWindow *wnd, BColumnListView *view)
 		}
 
 		row->SetField(new BIntegerField(info.id), imageIdCol);
-		row->SetField(new BIntegerField((uintptr_t)info.text), imageTextCol);
-		row->SetField(new BIntegerField((uintptr_t)info.data), imageDataCol);
+		row->SetField(new Int64Field((uintptr_t)info.text), imageTextCol);
+		row->SetField(new Int64Field((uintptr_t)info.data), imageDataCol);
 		row->SetField(new BStringField(GetFileName(info.name)), imageNameCol);
 		row->SetField(new BStringField(info.name), imagePathCol);
 	}
@@ -313,8 +313,8 @@ static void ListThreads(TeamWindow *wnd, BColumnListView *view)
 		row->SetField(new BStringField(str), threadSemCol);
 		row->SetField(new BIntegerField(info.user_time), threadUserTimeCol);
 		row->SetField(new BIntegerField(info.kernel_time), threadKernelTimeCol);
-		row->SetField(new BIntegerField((addr_t)info.stack_base), threadStackBaseCol);
-		row->SetField(new BIntegerField((addr_t)info.stack_end), threadStackEndCol);
+		row->SetField(new Int64Field((addr_t)info.stack_base), threadStackBaseCol);
+		row->SetField(new Int64Field((addr_t)info.stack_end), threadStackEndCol);
 	}
 
 	for (int32 i = 0; i < prevRows.CountItems(); i++) {
@@ -365,9 +365,9 @@ static void ListAreas(TeamWindow *wnd, BColumnListView *view)
 
 		row->SetField(new BIntegerField(info.area), areaIdCol);
 		row->SetField(new BStringField(info.name), areaNameCol);
-		row->SetField(new BIntegerField((addr_t)info.address), areaAdrCol);
-		row->SetField(new BIntegerField(info.size), areaSizeCol);
-		row->SetField(new BIntegerField(info.ram_size), areaAllocCol);
+		row->SetField(new Int64Field((addr_t)info.address), areaAdrCol);
+		row->SetField(new Int64Field(info.size), areaSizeCol);
+		row->SetField(new Int64Field(info.ram_size), areaAllocCol);
 
 		str = "";
 		if (B_READ_AREA & info.protection) str += "R";
