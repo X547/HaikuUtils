@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <time.h>
 
 #include <OS.h>
 #include <image.h>
@@ -376,7 +377,7 @@ static BColumnListView* NewTeamsView()
 	view->AddColumn(new BIntegerColumn("Parent", 64, 32, 128, B_ALIGN_RIGHT), parentIdCol);
 	view->AddColumn(new BIntegerColumn("Session", 64, 32, 128, B_ALIGN_RIGHT), sidCol);
 	view->AddColumn(new BIntegerColumn("Group", 64, 32, 128, B_ALIGN_RIGHT), gidCol);
-	view->AddColumn(new BStringColumn("Mem", 64 + 16, 32, 256, B_TRUNCATE_END), memSizeCol);
+	view->AddColumn(new BStringColumn("Mapped", 64 + 16, 32, 256, B_TRUNCATE_END), memSizeCol);
 	view->AddColumn(new BStringColumn("Alloc", 64 + 16, 32, 256, B_TRUNCATE_END), memAllocCol);
 	view->AddColumn(new BStringColumn("User", 64 + 16, 32, 128, B_TRUNCATE_END), userCol);
 	view->AddColumn(new BStringColumn("Path", 512, 50, 1024, B_TRUNCATE_MIDDLE), pathCol);
@@ -393,8 +394,9 @@ static void ListStats(BColumnListView *view)
 	system_info info;
 
 	if (get_system_info(&info) >= B_OK) {
-		// TODO: convert to readable date-time format
-		str.SetToFormat("%" B_PRIdBIGTIME, info.boot_time);
+		time_t unixTime = info.boot_time/1000000;
+		struct tm *tm = localtime(&unixTime);
+		str.SetToFormat("%04d.%02d.%02d %02d:%02d:%02d.%06d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, (int)(info.boot_time%1000000));
 		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
 
 		str.SetToFormat("%" B_PRIu32, info.cpu_count);
