@@ -101,41 +101,6 @@ enum {
 };
 
 
-class TestView: public BView
-{
-public:
-	TestView(BRect frame, const char *name, uint32 resizingMode):
-		BView(
-			frame, name, resizingMode,
-			B_FULL_UPDATE_ON_RESIZE | B_WILL_DRAW | B_SUBPIXEL_PRECISE| B_FRAME_EVENTS
-		)
-	{
-		this->SetViewColor(B_TRANSPARENT_COLOR);
-	}
-
-	BSize MinSize()
-	{
-		return BSize(3, 3);
-	}
-
-	void Draw(BRect dirty)
-	{
-		BRect rect(BPoint(0, 0), this->Frame().Size());
-		rect.left += 1; rect.top += 1;
-		this->PushState();
-		this->SetHighColor(0x44, 0x44, 0x44);
-		this->SetLowColor(0xff - 0x44, 0xff - 0x44, 0xff - 0x44);
-		this->FillRect(rect, B_SOLID_LOW);
-		this->SetPenSize(2);
-		this->StrokeRect(rect, B_SOLID_HIGH);
-		this->SetPenSize(1);
-		this->StrokeLine(rect.LeftTop(), rect.RightBottom());
-		this->StrokeLine(rect.RightTop(), rect.LeftBottom());
-		this->PopState();
-	}
-};
-
-
 static const char *GetFileName(const char *path)
 {
 	const char *name = path;
