@@ -5,6 +5,10 @@
 
 class BString;
 
+void GetSizeString(BString &str, uint64 size);
+void GetUsedMax(BString &str, uint64 used, uint64 max);
+void GetUsedMaxSize(BString &str, uint64 used, uint64 max);
+
 void GetUserGroupString(BString &str, int32 uid, int32 gid, bool showId = false);
 void GetTeamString(BString &str, team_id team);
 void GetThreadString(BString &str, thread_id thread);

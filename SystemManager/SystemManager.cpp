@@ -408,15 +408,6 @@ static BColumnListView* NewTeamsView()
 }
 
 
-static void GetUsedMax(BString &str, uint64 used, uint64 max)
-{
-	int32 ratio = 100;
-	if (max > 0) {
-		ratio = int32(double(used)/double(max)*100.0);
-	}
-	str.SetToFormat("%" B_PRIu64 "/%" B_PRIu64 " (% " B_PRId32 " %%)", used, max, ratio);
-}
-
 static void ListStats(BColumnListView *view)
 {
 	int32 rowId = 0;
@@ -432,23 +423,23 @@ static void ListStats(BColumnListView *view)
 		str.SetToFormat("%" B_PRIu32, info.cpu_count);
 		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
 
-		GetUsedMax(str, info.used_pages, info.max_pages);
+		GetUsedMaxSize(str, info.used_pages * B_PAGE_SIZE, info.max_pages * B_PAGE_SIZE);
 		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
 
-		str.SetToFormat("%" B_PRIu64, info.cached_pages);
+		GetSizeString(str, info.cached_pages * B_PAGE_SIZE);
 		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
 
-		str.SetToFormat("%" B_PRIu64, info.block_cache_pages);
+		GetSizeString(str, info.block_cache_pages * B_PAGE_SIZE);
 		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
 
-		str.SetToFormat("%" B_PRIu64, info.ignored_pages);
+		GetSizeString(str, info.ignored_pages * B_PAGE_SIZE);
 		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
 
-		str.SetToFormat("%" B_PRIu64, info.needed_memory);
+		GetSizeString(str, info.needed_memory);
 		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
 
 		uint64 totalMemory = info.max_pages * B_PAGE_SIZE;
-		GetUsedMax(str, totalMemory - info.free_memory, totalMemory);
+		GetUsedMaxSize(str, totalMemory - info.free_memory, totalMemory);
 		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
 
 		GetUsedMax(str, info.free_swap_pages, info.max_swap_pages);
