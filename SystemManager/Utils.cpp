@@ -16,7 +16,7 @@ void GetSizeString(BString &str, uint64 size)
 	const char* prefixes[] = {"", "K", "M", "G", "T"};
 	int pow = 0;
 	int fracSize = 0;
-	while ((size >= 1024) && (pow < sizeof(prefixes)/sizeof(prefixes[0]))) {
+	while ((size >= 1024) && (pow < sizeof(prefixes)/sizeof(prefixes[0]) - 1)) {
 		fracSize = size*100/1024%100;
 		size /= 1024;
 		pow++;
