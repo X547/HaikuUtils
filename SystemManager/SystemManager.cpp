@@ -447,7 +447,8 @@ static void ListStats(BColumnListView *view)
 		str.SetToFormat("%" B_PRIu64, info.needed_memory);
 		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
 
-		str.SetToFormat("%" B_PRIu64, info.free_memory);
+		uint64 totalMemory = info.max_pages * B_PAGE_SIZE;
+		GetUsedMax(str, totalMemory - info.free_memory, totalMemory);
 		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
 
 		GetUsedMax(str, info.free_swap_pages, info.max_swap_pages);
@@ -496,7 +497,7 @@ static BColumnListView *NewStatsView()
 	NewInfoRow(view, "Block cache pages");
 	NewInfoRow(view, "Ignored pages");
 	NewInfoRow(view, "Needed memory");
-	NewInfoRow(view, "Free memory");
+	NewInfoRow(view, "Memory");
 	NewInfoRow(view, "Swap pages");
 	NewInfoRow(view, "Page faults");
 	NewInfoRow(view, "Semaphores");
