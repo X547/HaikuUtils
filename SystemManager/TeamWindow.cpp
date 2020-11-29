@@ -28,6 +28,7 @@
 #include "StackWindow.h"
 #include "Errors.h"
 #include "Utils.h"
+#include "UIUtils.h"
 
 
 enum {
@@ -119,6 +120,7 @@ public:
 		this->PopState();
 	}
 };
+
 
 static const char *GetFileName(const char *path)
 {
@@ -244,10 +246,8 @@ static void ListImages(TeamWindow *wnd, BColumnListView *view)
 		}
 
 		row->SetField(new BIntegerField(info.id), imageIdCol);
-		str.SetToFormat("0x%lx", (uintptr_t)info.text);
-		row->SetField(new BStringField(str), imageTextCol);
-		str.SetToFormat("0x%lx", (uintptr_t)info.data);
-		row->SetField(new BStringField(str), imageDataCol);
+		row->SetField(new BIntegerField((uintptr_t)info.text), imageTextCol);
+		row->SetField(new BIntegerField((uintptr_t)info.data), imageDataCol);
 		row->SetField(new BStringField(GetFileName(info.name)), imageNameCol);
 		row->SetField(new BStringField(info.name), imagePathCol);
 	}
@@ -264,8 +264,8 @@ static BColumnListView *NewImagesView(TeamWindow *wnd)
 	BColumnListView *view;
 	view = new BColumnListView("Images", B_NAVIGABLE);
 	view->AddColumn(new BIntegerColumn("ID", 64, 32, 128, B_ALIGN_RIGHT), imageIdCol);
-	view->AddColumn(new BStringColumn("Text", 128, 50, 500, B_TRUNCATE_END, B_ALIGN_RIGHT), imageTextCol);
-	view->AddColumn(new BStringColumn("Data", 128, 50, 500, B_TRUNCATE_END, B_ALIGN_RIGHT), imageDataCol);
+	view->AddColumn(new HexIntegerColumn("Text", 128, 50, 500, B_ALIGN_RIGHT), imageTextCol);
+	view->AddColumn(new HexIntegerColumn("Data", 128, 50, 500, B_ALIGN_RIGHT), imageDataCol);
 	view->AddColumn(new BStringColumn("Name", 150, 50, 500, B_TRUNCATE_END), imageNameCol);
 	view->AddColumn(new BStringColumn("Path", 500, 50, 1000, B_TRUNCATE_MIDDLE), imagePathCol);
 	ListImages(wnd, view);
@@ -313,10 +313,8 @@ static void ListThreads(TeamWindow *wnd, BColumnListView *view)
 		row->SetField(new BStringField(str), threadSemCol);
 		row->SetField(new BIntegerField(info.user_time), threadUserTimeCol);
 		row->SetField(new BIntegerField(info.kernel_time), threadKernelTimeCol);
-		str.SetToFormat("0x%" B_PRIxADDR, (addr_t)info.stack_base);
-		row->SetField(new BStringField(str), threadStackBaseCol);
-		str.SetToFormat("0x%" B_PRIxADDR, (addr_t)info.stack_end);
-		row->SetField(new BStringField(str), threadStackEndCol);
+		row->SetField(new BIntegerField((addr_t)info.stack_base), threadStackBaseCol);
+		row->SetField(new BIntegerField((addr_t)info.stack_end), threadStackEndCol);
 	}
 
 	for (int32 i = 0; i < prevRows.CountItems(); i++) {
@@ -337,8 +335,8 @@ static BColumnListView *NewThreadsView(TeamWindow *wnd)
 	view->AddColumn(new BStringColumn("Sem", 96, 32, 512, B_TRUNCATE_END), threadSemCol);
 	view->AddColumn(new BIntegerColumn("User time", 96, 32, 128, B_ALIGN_RIGHT), threadUserTimeCol);
 	view->AddColumn(new BIntegerColumn("Kernel time", 96, 32, 128, B_ALIGN_RIGHT), threadKernelTimeCol);
-	view->AddColumn(new BStringColumn("Stack base", 128, 50, 500, B_TRUNCATE_END, B_ALIGN_RIGHT), threadStackBaseCol);
-	view->AddColumn(new BStringColumn("Stack end", 128, 50, 500, B_TRUNCATE_END, B_ALIGN_RIGHT), threadStackEndCol);
+	view->AddColumn(new HexIntegerColumn("Stack base", 128, 50, 500, B_ALIGN_RIGHT), threadStackBaseCol);
+	view->AddColumn(new HexIntegerColumn("Stack end", 128, 50, 500, B_ALIGN_RIGHT), threadStackEndCol);
 	view->SetInvocationMessage(new BMessage(threadsInvokeMsg));
 	ListThreads(wnd, view);
 	return view;
@@ -366,17 +364,10 @@ static void ListAreas(TeamWindow *wnd, BColumnListView *view)
 		}
 
 		row->SetField(new BIntegerField(info.area), areaIdCol);
-
 		row->SetField(new BStringField(info.name), areaNameCol);
-
-		str.SetToFormat("0x%" B_PRIxADDR, (addr_t)info.address);
-		row->SetField(new BStringField(str), areaAdrCol);
-
-		str.SetToFormat("0x%" B_PRIxSIZE, info.size);
-		row->SetField(new BStringField(str), areaSizeCol);
-
-		str.SetToFormat("0x%" B_PRIx32, info.ram_size);
-		row->SetField(new BStringField(str), areaAllocCol);
+		row->SetField(new BIntegerField((addr_t)info.address), areaAdrCol);
+		row->SetField(new BIntegerField(info.size), areaSizeCol);
+		row->SetField(new BIntegerField(info.ram_size), areaAllocCol);
 
 		str = "";
 		if (B_READ_AREA & info.protection) str += "R";
@@ -417,9 +408,9 @@ static BColumnListView *NewAreasView(TeamWindow *wnd)
 	view = new BColumnListView("Areas", B_NAVIGABLE);
 	view->AddColumn(new BIntegerColumn("ID", 64, 32, 128, B_ALIGN_RIGHT), areaIdCol);
 	view->AddColumn(new BStringColumn("Name", 150, 50, 500, B_TRUNCATE_END), areaNameCol);
-	view->AddColumn(new BStringColumn("Address", 128, 50, 500, B_TRUNCATE_END, B_ALIGN_RIGHT), areaAdrCol);
-	view->AddColumn(new BStringColumn("Size", 128, 50, 500, B_TRUNCATE_END, B_ALIGN_RIGHT), areaSizeCol);
-	view->AddColumn(new BStringColumn("Alloc", 128, 50, 500, B_TRUNCATE_END, B_ALIGN_RIGHT), areaAllocCol);
+	view->AddColumn(new HexIntegerColumn("Address", 128, 50, 500, B_ALIGN_RIGHT), areaAdrCol);
+	view->AddColumn(new HexIntegerColumn("Size", 128, 50, 500, B_ALIGN_RIGHT), areaSizeCol);
+	view->AddColumn(new HexIntegerColumn("Alloc", 128, 50, 500, B_ALIGN_RIGHT), areaAllocCol);
 	view->AddColumn(new BStringColumn("Prot", 64, 50, 500, B_TRUNCATE_END, B_ALIGN_RIGHT), areaProtCol);
 	view->AddColumn(new BStringColumn("lock", 64, 50, 500, B_TRUNCATE_END, B_ALIGN_RIGHT), areaLockCol);
 	ListAreas(wnd, view);

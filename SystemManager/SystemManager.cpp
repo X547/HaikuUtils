@@ -29,6 +29,7 @@
 #include "TeamWindow.h"
 #include "Errors.h"
 #include "Utils.h"
+#include "UIUtils.h"
 
 enum {
 	invokeMsg = 1,
@@ -51,7 +52,9 @@ enum {
 	parentIdCol,
 	sidCol,
 	gidCol,
-	uidCol,
+	memSizeCol,
+	memAllocCol,
+	userCol,
 	pathCol,
 };
 
@@ -105,50 +108,6 @@ SignalRec signals[] = {
 	{"SIGBUS", 30},
 	{"SIGRESERVED1", 31},
 	{"SIGRESERVED2", 32},
-};
-
-
-class IconStringField: public BStringField
-{
-private:
-	ObjectDeleter<BBitmap> fIcon;
-
-public:
-	IconStringField(BBitmap *icon, const char *string): BStringField(string), fIcon(icon) {}
-	BBitmap *Icon() {return fIcon.Get();}
-};
-
-class IconStringColumn: public BStringColumn
-{
-public:
-	IconStringColumn(
-		const char* title, float width,
-		float minWidth, float maxWidth, uint32 truncate,
-		alignment align = B_ALIGN_LEFT
-	): BStringColumn(title, width, minWidth, maxWidth, truncate, align) {}
-
-	void DrawField(BField* _field, BRect rect, BView* parent)
-	{
-		IconStringField *field = (IconStringField*)_field;
-
-		parent->PushState();
-		parent->SetDrawingMode(B_OP_ALPHA);
-		parent->DrawBitmap(field->Icon(), rect.LeftTop() + BPoint(4, 0));
-		parent->PopState();
-		rect.left += field->Icon()->Bounds().Width() + 1;
-
-		BStringColumn::DrawField(field, rect, parent);
-	}
-
-	float GetPreferredWidth(BField* field, BView* parent) const
-	{
-		return BStringColumn::GetPreferredWidth(field, parent) + dynamic_cast<IconStringField*>(field)->Icon()->Bounds().Width() + 1;
-	}
-
-	bool AcceptsField(const BField* field) const
-	{
-		return dynamic_cast<const IconStringField*>(field) != NULL;
-	}
 };
 
 
@@ -274,6 +233,18 @@ static void RelayoutTeams(BColumnListView *view, ViewLayout layout)
 
 }
 
+static void GetTeamMemory(size_t &size, size_t &alloc, team_id team)
+{
+	area_info info;
+	ssize_t cookie = 0;
+
+	size = 0; alloc = 0;
+	while (get_next_area_info(team, &cookie, &info) >= B_OK) {
+		size += info.size;
+		alloc += info.ram_size;
+	}
+}
+
 static void ListTeams(BColumnListView *view, ViewLayout layout) {
 	status_t status;
 	team_info info;
@@ -325,8 +296,12 @@ static void ListTeams(BColumnListView *view, ViewLayout layout) {
 		row->SetField(new BIntegerField(_kern_process_info(info.team, PARENT_ID)), parentIdCol);
 		row->SetField(new BIntegerField(_kern_process_info(info.team, SESSION_ID)), sidCol);
 		row->SetField(new BIntegerField(_kern_process_info(info.team, GROUP_ID)), gidCol);
+		size_t memSize, memAlloc;
+		GetTeamMemory(memSize, memAlloc, info.team);
+		GetSizeString(str, memSize); row->SetField(new BStringField(str), memSizeCol);
+		GetSizeString(str, memAlloc); row->SetField(new BStringField(str), memAllocCol);
 		GetUserGroupString(str, uid, gid);
-		row->SetField(new BStringField(str), uidCol);
+		row->SetField(new BStringField(str), userCol);
 		row->SetField(new BStringField(imageInfo.name), pathCol);
 	}
 
@@ -401,7 +376,9 @@ static BColumnListView* NewTeamsView()
 	view->AddColumn(new BIntegerColumn("Parent", 64, 32, 128, B_ALIGN_RIGHT), parentIdCol);
 	view->AddColumn(new BIntegerColumn("Session", 64, 32, 128, B_ALIGN_RIGHT), sidCol);
 	view->AddColumn(new BIntegerColumn("Group", 64, 32, 128, B_ALIGN_RIGHT), gidCol);
-	view->AddColumn(new BStringColumn("User", 64 + 16, 32, 128, B_TRUNCATE_END), uidCol);
+	view->AddColumn(new BStringColumn("Mem", 64 + 16, 32, 256, B_TRUNCATE_END), memSizeCol);
+	view->AddColumn(new BStringColumn("Alloc", 64 + 16, 32, 256, B_TRUNCATE_END), memAllocCol);
+	view->AddColumn(new BStringColumn("User", 64 + 16, 32, 128, B_TRUNCATE_END), userCol);
 	view->AddColumn(new BStringColumn("Path", 512, 50, 1024, B_TRUNCATE_MIDDLE), pathCol);
 	view->SetColumnVisible(parentIdCol, false);
 	return view;

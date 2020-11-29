@@ -25,6 +25,7 @@
 #include <map>
 
 #include "Errors.h"
+#include "UIUtils.h"
 
 
 enum {
@@ -34,11 +35,6 @@ enum {
 	frameFunctionCol,
 };
 
-
-static void WriteAddress2(BString &str, addr_t adr)
-{
-	str.SetToFormat("0x%lX", adr);
-}
 
 static char *CppDemangle(const char *abiName)
 {
@@ -131,8 +127,8 @@ static void WriteStackTrace(StackWindow *wnd)
 	BString str;
 
 	row = new BRow();
-	WriteAddress2(str, (addr_t)fp); row->SetField(new BStringField(str), frameFpCol);
-	WriteAddress2(str, (addr_t)ip); row->SetField(new BStringField(str), frameIpCol);
+	row->SetField(new BIntegerField((addr_t)fp), frameFpCol);
+	row->SetField(new BIntegerField((addr_t)ip), frameIpCol);
 	row->SetField(new BStringField(imageStr), frameImageCol);
 	row->SetField(new BStringField(symbolStr), frameFunctionCol);
 	wnd->fView->AddRow(row);
@@ -150,8 +146,8 @@ static void WriteStackTrace(StackWindow *wnd)
 		LookupSymbolAddress(wnd, lookupContext, ip, imageStr, symbolStr);
 
 		row = new BRow();
-		WriteAddress2(str, (addr_t)fp); row->SetField(new BStringField(str), frameFpCol);
-		WriteAddress2(str, (addr_t)ip); row->SetField(new BStringField(str), frameIpCol);
+		row->SetField(new BIntegerField((addr_t)fp), frameFpCol);
+		row->SetField(new BIntegerField((addr_t)ip), frameIpCol);
 		row->SetField(new BStringField(imageStr), frameImageCol);
 		row->SetField(new BStringField(symbolStr), frameFunctionCol);
 		wnd->fView->AddRow(row);
@@ -221,8 +217,8 @@ static void NewFramesView(StackWindow *wnd)
 {
 	BColumnListView *view;
 	view = new BColumnListView("Frames", B_NAVIGABLE);
-	view->AddColumn(new BStringColumn("FP", 128, 50, 500, B_TRUNCATE_END, B_ALIGN_RIGHT), frameFpCol);
-	view->AddColumn(new BStringColumn("IP", 128, 50, 500, B_TRUNCATE_END, B_ALIGN_RIGHT), frameIpCol);
+	view->AddColumn(new HexIntegerColumn("FP", 128, 50, 500, B_ALIGN_RIGHT), frameFpCol);
+	view->AddColumn(new HexIntegerColumn("IP", 128, 50, 500, B_ALIGN_RIGHT), frameIpCol);
 	view->AddColumn(new BStringColumn("Image", 150, 50, 500, B_TRUNCATE_END), frameImageCol);
 	view->AddColumn(new BStringColumn("Function", 512, 50, 1024, B_TRUNCATE_END), frameFunctionCol);
 	wnd->fView = view;
