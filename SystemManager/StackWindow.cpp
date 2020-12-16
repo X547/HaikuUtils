@@ -203,7 +203,7 @@ static void ListFrames(StackWindow *wnd, BColumnListView *view)
 	HandleDeleter<team_id, status_t, remove_team_debugger> teamDebuggerDeleter(wnd->fTeam);
 
 	Check(init_debug_context(&wnd->fDebugContext, wnd->fTeam, wnd->fNubPort));
-	CObjectDeleter<debug_context> debugContextDeleter(&wnd->fDebugContext, destroy_debug_context);
+	CObjectDeleter<debug_context, void, destroy_debug_context> debugContextDeleter(&wnd->fDebugContext);
 
 	Check(debug_thread(wnd->fId));
 
