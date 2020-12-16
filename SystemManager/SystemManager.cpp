@@ -239,6 +239,7 @@ static void GetTeamMemory(size_t &size, size_t &alloc, team_id team)
 	area_info info;
 	ssize_t cookie = 0;
 
+	// TODO: limit max enumerated area count to prevent freezes
 	size = 0; alloc = 0;
 	while (get_next_area_info(team, &cookie, &info) >= B_OK) {
 		size += info.size;
@@ -421,7 +422,7 @@ static void ListStats(BColumnListView *view)
 		GetUsedMaxSize(str, totalMemory - info.free_memory, totalMemory);
 		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
 
-		GetUsedMax(str, info.free_swap_pages, info.max_swap_pages);
+		GetUsedMaxSize(str, (info.max_swap_pages - info.free_swap_pages) * B_PAGE_SIZE, info.max_swap_pages * B_PAGE_SIZE);
 		view->RowAt(rowId++)->SetField(new BStringField(str), statValueCol);
 
 		str.SetToFormat("%" B_PRIu32, info.page_faults);
@@ -485,6 +486,7 @@ static BColumnListView *NewStatsView()
 class TestWindow: public BWindow
 {
 private:
+	BTabView *fTabView;
 	BColumnListView *fTeamsView;
 	BColumnListView *fStatsView;
 	ViewLayout fLayout;
@@ -497,7 +499,6 @@ public:
 	{
 		BMenuBar *menuBar;
 		BMenu *signalMenu;
-		BTabView *tabView;
 		BTab *tab;
 
 		menuBar = new BMenuBar("menu", B_ITEMS_IN_ROW, true);
@@ -555,21 +556,21 @@ public:
 			signalMenu->AddItem(new BMenuItem(signals[i].name, msg));
 		}
 
-		tabView = new BTabView("tab_view", B_WIDTH_FROM_LABEL);
-		tabView->SetBorder(B_NO_BORDER);
+		fTabView = new BTabView("tab_view", B_WIDTH_FROM_LABEL);
+		fTabView->SetBorder(B_NO_BORDER);
 
-		//tab = new BTab(); tabView->AddTab(NewTeamsView("Apps"), tab);
-		tab = new BTab(); tabView->AddTab(fTeamsView = NewTeamsView(), tab);
-		//tab = new BTab(); tabView->AddTab(new TestView(BRect(0, 0, -1, -1), "Services", B_FOLLOW_NONE), tab);
-		//tab = new BTab(); tabView->AddTab(new TestView(BRect(0, 0, -1, -1), "Sockets", B_FOLLOW_NONE), tab);
-		tab = new BTab(); tabView->AddTab(fStatsView = NewStatsView(), tab);
+		//tab = new BTab(); fTabView->AddTab(NewTeamsView("Apps"), tab);
+		tab = new BTab(); fTabView->AddTab(fTeamsView = NewTeamsView(), tab);
+		//tab = new BTab(); fTabView->AddTab(new TestView(BRect(0, 0, -1, -1), "Services", B_FOLLOW_NONE), tab);
+		//tab = new BTab(); fTabView->AddTab(new TestView(BRect(0, 0, -1, -1), "Sockets", B_FOLLOW_NONE), tab);
+		tab = new BTab(); fTabView->AddTab(fStatsView = NewStatsView(), tab);
 
 		ListTeams(fTeamsView, fLayout);
 
 		BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
 			.Add(menuBar)
 			.AddGroup(B_VERTICAL, 0)
-				.Add(tabView)
+				.Add(fTabView)
 				.SetInsets(-1, 0, -1, -1)
 				.End()
 			.End()
@@ -598,8 +599,14 @@ public:
 				return;
 			}
 			case updateMsg: {
-				ListTeams(fTeamsView, fLayout);
-				ListStats(fStatsView);
+				BTab *tab = fTabView->TabAt(fTabView->Selection());
+				if (tab != NULL) {
+					BView *view = tab->View();
+					if (view == fTeamsView)
+						ListTeams(fTeamsView, fLayout);
+					else if (view == fStatsView)
+						ListStats(fStatsView);
+				}
 				return;
 			}
 			case setLayoutMsg: {
