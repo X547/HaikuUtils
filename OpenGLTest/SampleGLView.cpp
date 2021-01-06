@@ -47,22 +47,63 @@ void SampleGLView::FrameResized(float newWidth, float newHeight) {
 	Render();
 }
 
+extern "C" void glWindowPos2f(GLfloat x, GLfloat y);
+
+static void CopyFlipY(BBitmap &dst, BBitmap &src)
+{
+	int32 h = dst.Bounds().Height() + 1;
+	int32 stride = dst.BytesPerRow();
+	uint8 *dstBits = (uint8*)dst.Bits();
+	uint8 *srcBits = (uint8*)src.Bits() + stride*(h - 1);
+	for (int32 y = 0; y < h; y++) {
+		memcpy(dstBits, srcBits, stride);
+		dstBits += stride;
+		srcBits -= stride;
+	}
+}
+
+static void WriteBitmap(BGLView *view, const BBitmap &bmp, BPoint pos)
+{
+	glDisable(GL_BLEND);
+	glWindowPos2f(pos.x, (view->Bounds().Height() + 1.0) - pos.y);
+	glPixelZoom(1.0, -1.0);
+	glDrawPixels((int32)bmp.Bounds().Width() + 1, (int32)bmp.Bounds().Height() + 1, GL_RGBA, GL_UNSIGNED_BYTE, bmp.Bits());
+}
+
+static void ReadBitmap(BGLView *view, BBitmap &bmp, BPoint pos)
+{
+	BBitmap buf(bmp.Bounds(), 0, bmp.ColorSpace(), bmp.BytesPerRow());
+	CopyFlipY(buf, bmp);
+	glReadPixels(pos.x, (int32)view->Bounds().Height() + 1 - pos.y - ((int32)bmp.Bounds().Height() + 1), (int32)bmp.Bounds().Width() + 1, (int32)bmp.Bounds().Height() + 1, GL_RGBA, GL_UNSIGNED_BYTE, buf.Bits());
+	CopyFlipY(bmp, buf);
+}
+
 void SampleGLView::KeyDown(const char* bytes, int32 numBytes)
 {
-	if ((numBytes == 1) && (bytes[0] == B_SPACE)) {
-		BRect rect = this->Bounds().OffsetToCopy(B_ORIGIN);
-		//rect = BRect(0, 0, 3, 3);
+	if ((numBytes == 1) && (bytes[0] == 'q')) {
+		printf("Draw bitmap\n");
+		int32 w = 64, h = 64;
+		BRect rect(0, 0, w - 1, h - 1);
 		BBitmap *bmp = new BBitmap(rect, B_RGB32);
 		int8 *bits = (int8*)bmp->Bits();
 		int32 stride = bmp->BytesPerRow();
-		for (int32 y = 0; y <= (int32)rect.Height(); y++)
-			for (int32 x = 0; x <= (int32)rect.Width(); x++)
-				*(int32*)(bits + y*stride + x*4) = 0xff000000 + x%0x100 + y%0x100*0x100;
-		CopyPixelsIn(bmp, B_ORIGIN);
-		//Invalidate();
+		for (int32 y = 0; y < h; y++)
+			for (int32 x = 0; x < w; x++)
+				*(int32*)(bits + y*stride + x*4) = 0xff000000 + (x*0xff/w)%0x100 + ((y*0xff/h)%0x100)*0x100;
+		LockGL();
+		gDraw();
+		BPoint pos;
+		GetMouse(&pos, NULL);
+		ReadBitmap(this, *bmp, pos);
+		WriteBitmap(this, *bmp, B_ORIGIN);
 		SwapBuffers();
+		UnlockGL();
 		delete bmp;
 	}
+/*
+		CopyPixelsOut(B_ORIGIN, bmp);
+		CopyPixelsIn(bmp, B_ORIGIN);
+*/
 }
 
 void SampleGLView::ErrorCallback(GLenum whichError) {
@@ -75,9 +116,6 @@ void SampleGLView::gInit(void) {
 	printf("GL_RENDERER: %s\n", glGetString(GL_RENDERER));
 	printf("GL_VERSION: %s\n", glGetString(GL_VERSION));
 	printf("GL_SHADING_LANGUAGE_VERSION: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
-	glClearColor(0.5, 0.5, 0.5, 0.0);
-	glLineStipple(1, 0xF0E0);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	use_stipple_mode = GL_FALSE;
 	use_smooth_mode = GL_TRUE;
 	linesize = 2;
@@ -86,16 +124,20 @@ void SampleGLView::gInit(void) {
 
 void SampleGLView::gDraw(void) {
 	GLint i;
-	
+
+	glClearColor(0.5, 0.5, 0.5, 0.0);
+	glLineStipple(1, 0xF0E0);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
 	glClear(GL_COLOR_BUFFER_BIT);
 	glLineWidth(linesize);
-	
+
 	if (use_stipple_mode) {
 		glEnable(GL_LINE_STIPPLE);
 	} else {
 		glDisable(GL_LINE_STIPPLE);
 	}
-	
+
 	if (use_smooth_mode) {
 		glEnable(GL_LINE_SMOOTH);
 		glEnable(GL_BLEND);
@@ -103,17 +145,17 @@ void SampleGLView::gDraw(void) {
 		glDisable(GL_LINE_SMOOTH);
 		glDisable(GL_BLEND);
 	}
-	
+
 	glPushMatrix();
-	
-	for (i = 0; i < 360; i += 5) {
+
+	for (i = 0; i < 360/6; i += 5) {
 		glRotatef(5.0, 0,0,1);     // Rotate right 5 degrees
 		glColor3f(1.0, 1.0, 0.0);  // Set color for line
 		glBegin(GL_LINE_STRIP);    // And create the line
 		glVertex3fv(pntA);
 		glVertex3fv(pntB);
 		glEnd();
-		
+
 		glPointSize(pointsize);    // Set size for point
 		glColor3f(0.0, 1.0, 0.0);  // Set color for point
 		glBegin(GL_POINTS);
@@ -121,7 +163,7 @@ void SampleGLView::gDraw(void) {
 		glVertex3fv(pntB);         // Draw point at other end
 		glEnd();
 	}
-	
+
 	glPopMatrix();                // Done with matrix
 }
 

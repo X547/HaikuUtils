@@ -18,9 +18,9 @@ SampleGLWindow *SampleGLApp::NewWindow()
 	if (Lock()) {
 		// Set type to the appropriate value for the
 		// sample program you're working with.
-		
-		type = BGL_RGB|BGL_DOUBLE;
-		
+
+		type = BGL_RGB/*|BGL_DOUBLE*/;
+
 		windowRect.Set(0, 0, 255, 255);
 		wnd = new SampleGLWindow(windowRect, type);
 		BScreen screen(wnd);
