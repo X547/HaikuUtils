@@ -323,6 +323,14 @@ static void WriteScriptingResult(BColumnListView *view, BRow *upRow, const BMess
 	upRow->SetField(new BStringField("<no \"result\" field>"), valueCol);
 }
 
+void AppendSpecifiers(BMessage &msg, const BMessage &src)
+{
+	BMessage spec;
+	for (int32 i = 0; src.FindMessage("specifiers", i, &spec) >= B_OK; i++) {
+		msg.AddSpecifier(&spec);
+	}
+}
+
 static void ListObjects(BColumnListView *listView, BRow *parent, const BMessenger &obj, const char *propName)
 {
 	printf("ListObjects(%s)\n", propName);
@@ -372,7 +380,6 @@ static void ListProps(BColumnListView *listView, BRow *parent, const BMessenger 
 	BMessage spec;
 	BRow *row;
 
-	const char *suiteName;
 	for (auto it = propList.props.begin(); it != propList.props.end(); it++) {
 		const BString &name = (*it).first;
 		const Property &prop = (*it).second;
@@ -409,10 +416,10 @@ static void ListProps(BColumnListView *listView, BRow *parent, const BMessenger 
 			BMessage reply;
 			res = SendScriptingMessage(obj, spec, reply);
 			if (res >= B_OK) WriteScriptingResult(listView, row, reply);
-		}
-		if (HasPropertyCommand(prop.specifiers, B_INDEX_SPECIFIER)) {
-			printf("has B_INDEX_SPECIFIER\n");
-			ListObjects(listView, row, obj, name);
+			if (HasPropertyCommand(prop.specifiers, B_INDEX_SPECIFIER)) {
+				printf("has B_INDEX_SPECIFIER\n");
+				ListObjects(listView, row, obj, name);
+			}
 		}
 	}
 }
@@ -442,11 +449,108 @@ static void ListSuites(BColumnListView *listView, BRow *parent, const BMessenger
 }
 
 
+int32 indent = 0;
+
+void Indent()
+{
+	for (int32 i = 0; i < indent; i++)
+		printf("\t");
+}
+
+static void TraverseObject(const BMessenger &obj, const BMessage &path);
+
+static void TraverseObjects(const BMessenger &obj, const BMessage &path, const char *prop)
+{
+	status_t res = B_OK;
+	BMessage spec;
+	int32 count;
+	spec = BMessage(B_COUNT_PROPERTIES);
+	spec.AddSpecifier(prop);
+	AppendSpecifiers(spec, path);
+	res = GetInt32(count, obj, spec);
+	if (res < B_OK) {
+		Indent(); printf("error: %s\n", strerror(res));
+		return;
+	}
+	for (int32 i = 0; i < count; i++) {
+		Indent(); printf("%d\n", i);
+		indent++;
+		spec = BMessage();
+		spec.AddSpecifier(prop, i);
+		AppendSpecifiers(spec, path);
+		TraverseObject(obj, spec);
+		indent--;
+	}
+}
+
+static void TraverseProps(const BMessenger &obj, const BMessage &path, const PropertyList &propList) {
+	BString buf;
+	BMessage spec;
+
+	for (auto it = propList.props.begin(); it != propList.props.end(); it++) {
+		const BString &name = (*it).first;
+		const Property &prop = (*it).second;
+
+		Indent(); printf("%s", name.String());
+
+		if (HasPropertyCommand(prop.commands, B_GET_PROPERTY)) {
+			spec = BMessage(B_GET_PROPERTY);
+			spec.AddSpecifier(name);
+			AppendSpecifiers(spec, path);
+			int32 int32val;
+			bool boolVal;
+			BString strVal;
+			if (GetInt32(int32val, obj, spec) >= B_OK) {
+				printf(": %d", int32val);
+			} else if (GetBool(boolVal, obj, spec) >= B_OK) {
+				printf(": %s", boolVal? "true": "false");
+			} else if (GetString(strVal, obj, spec) >= B_OK) {
+				printf(": \"%s\"", strVal.String());
+			}
+		}
+		printf("\n");
+
+		if (HasPropertyCommand(prop.commands, B_COUNT_PROPERTIES) && HasPropertyCommand(prop.specifiers, B_INDEX_SPECIFIER)) {
+			indent++;
+			TraverseObjects(obj, path, name);
+			indent--;
+		}
+	}
+}
+
+static void TraverseObject(const BMessenger &obj, const BMessage &path)
+{
+	status_t res;
+	BMessage spec = path;
+	BMessage suites;
+	spec.what = B_GET_SUPPORTED_SUITES;
+	res = SendScriptingMessage(obj, spec, suites);
+	if (res < B_OK) return;
+	const char *suiteName;
+
+	for (int32 i = 0; suites.FindString("suites", i, &suiteName) >= B_OK; i++) {
+		BPropertyInfo propInfo;
+		res = suites.FindFlat("messages", i, &propInfo);
+		if (res < B_OK) continue;
+		PropertyList propList(propInfo.Properties());
+
+		Indent(); printf("Suite \"%s\"\n", suiteName);
+		indent++;
+		TraverseProps(obj, path, propList);
+		indent--;
+	}
+}
+
 SuiteEditor::SuiteEditor(BMessenger handle):
 	BWindow(BRect(0, 0, 640, 480), "Suite Editor", B_TITLED_WINDOW, B_AUTO_UPDATE_SIZE_LIMITS),
 	fHandle(handle),
 	fStatus(B_OK)
 {
+/*
+	TraverseObject(fHandle, BMessage());
+	fStatus = B_ERROR;
+	return;
+*/
 	BMessage spec(B_GET_SUPPORTED_SUITES);
 	BMessage suites;
 	fStatus = fHandle.SendMessage(&spec, &suites, 1000000, 1000000);

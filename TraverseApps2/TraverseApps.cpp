@@ -644,10 +644,9 @@ public:
 
 	void ReadyToRun()
 	{
-		BRect rect(0, 0, 832, 480);
-		rect.OffsetBy(64, 64);
-		BWindow *wnd = new TestWindow(rect);
+		BWindow *wnd = new TestWindow(BRect(0, 0, 832, 480));
 		wnd->SetFlags(wnd->Flags() | B_QUIT_ON_WINDOW_CLOSE);
+		wnd->CenterOnScreen();
 		wnd->Show();
 	}
 };
