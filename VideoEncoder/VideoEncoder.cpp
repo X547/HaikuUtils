@@ -30,7 +30,7 @@ int main()
 	mFormat.u.raw_video.display.line_width = width;
 	mFormat.u.raw_video.display.line_count = height;
 	mFormat.u.raw_video.last_active = mFormat.u.raw_video.display.line_count - 1;
-	mFormat.u.raw_video.display.format = B_RGB32;
+	mFormat.u.raw_video.display.format = B_YUV422;
 	mFormat.u.raw_video.display.bytes_per_row = width*4;
 	mFormat.u.raw_video.interlace = 1;
 	mFormat.u.raw_video.field_rate = 30;
@@ -49,10 +49,10 @@ int main()
 
 	cookie = 0;
 	while (get_next_encoder(&cookie, &mff, &mFormat, &outFormat, &codec) == B_OK) {
-		if (BString(codec.short_name) == "mpeg4") {
+		//if (BString(codec.short_name) == "mpeg4") {
 			printf("encoder: %s, %s\n", codec.pretty_name, codec.short_name);
-			break;
-		}
+		//	break;
+		//}
 	}
 
 	ObjectDeleter<BMediaFile> mediaFile(new BMediaFile(&file, &mff));
