@@ -136,9 +136,6 @@ public:
 				return;
 			}
 
-			// Name of existing user can't be changed.
-			fUserNameView->SetEnabled(false);
-
 			if (userData.FindString("name", &strPtr) >= B_OK) {fUserNameView->SetText(strPtr);}
 			if (userData.FindString("real name", &strPtr) >= B_OK) {fRealNameView->SetText(strPtr);}
 			if (userData.FindInt32("gid", &int32Val) >= B_OK) {
@@ -205,7 +202,7 @@ public:
 				CheckRetVoid(message.AddInt32("expiration", expiration));
 				CheckRetVoid(message.AddInt32("flags", 0));
 				CheckRetVoid(message.AddBool("add user", true));
-				UpdateUser(message);
+				CheckRetVoid(UpdateUser(message));
 			} else {
 				int32 gid = -1;
 
@@ -221,7 +218,7 @@ public:
 				CheckRetVoid(message.AddString("shell", fShellView->Text()));
 				CheckRetVoid(message.AddString("real name", fRealNameView->Text()));
 				CheckRetVoid(message.AddInt32("last changed", time(NULL)));
-				UpdateUser(message);
+				CheckRetVoid(UpdateUser(message));
 			}
 			PostMessage(B_QUIT_REQUESTED);
 			return;

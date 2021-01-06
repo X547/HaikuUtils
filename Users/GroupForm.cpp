@@ -165,7 +165,6 @@ public:
 			if (GetGroup(groupInfo, fGid, NULL) >= B_OK) {
 				const char *name;
 				if (groupInfo.FindString("name", &name) >= B_OK) {
-					fGroupNameView->SetEnabled(false);
 					fGroupNameView->SetText(name);
 				}
 				for (int32 i = 0; groupInfo.FindString("members", i, &name) >= B_OK; i++)
@@ -193,10 +192,11 @@ public:
 				for (int32 i = 0; i < fMembers->CountItems(); i++) {
 					CheckRetVoid(message.AddString("members", dynamic_cast<BStringItem*>(fMembers->ItemAt(i))->Text()));
 				}
-				UpdateGroup(message);
+				CheckRetVoid(UpdateGroup(message));
 			} else {
 				KMessage message;
 				CheckRetVoid(message.AddInt32("gid", fGid));
+				CheckRetVoid(message.AddString("name", fGroupNameView->Text()));
 				if (fMembers->CountItems() == 0) {
 					CheckRetVoid(message.AddString("members", ""));
 				} else {
@@ -204,7 +204,7 @@ public:
 						CheckRetVoid(message.AddString("members", dynamic_cast<BStringItem*>(fMembers->ItemAt(i))->Text()));
 					}
 				}
-				UpdateGroup(message);
+				CheckRetVoid(UpdateGroup(message));
 			}
 			PostMessage(B_QUIT_REQUESTED);
 			return;
