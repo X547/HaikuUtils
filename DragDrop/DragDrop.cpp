@@ -103,6 +103,7 @@ public:
 
 	void MouseDown(BPoint where)
 	{
+		printf("MouseDown(%g, %g)\n", where.x, where.y);
 		for (std::vector<BRect>::reverse_iterator it = rects.rbegin(); it != rects.rend(); it++) {
 			if ((*it).Contains(where)) {
 				inDrag = true;
