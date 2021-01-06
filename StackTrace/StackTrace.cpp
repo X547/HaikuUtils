@@ -17,7 +17,7 @@ status_t Check(status_t res, const char *msg = NULL, bool fatal = true)
 {
 	if (res < B_OK) {
 		if (fatal)
-			printf("fatal ");
+			fprintf(stderr, "fatal ");
 		if (msg != NULL)
 			fprintf(stderr, "error: %s (%s)\n", msg, strerror(res));
 		else
