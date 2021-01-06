@@ -58,7 +58,6 @@ RSRCS =
 #		you need to specify the path to the library and it's name.
 #		(e.g. for mylib.a, specify "mylib.a" or "path/mylib.a")
 LIBS = $(STDCPPLIBS) be
-#objects.x86_64-cc8-release/lib/libbe_test.so
 
 #	Specify additional paths to directories following the standard libXXX.so
 #	or libXXX.a naming scheme. You can specify full paths or paths relative

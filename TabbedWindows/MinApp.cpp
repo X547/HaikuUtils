@@ -25,14 +25,12 @@ public:
 	{
 		BRect rect = Frame().OffsetToCopy(B_ORIGIN);
 		rect.left += 1; rect.top += 1;
-		PushState();
 		SetHighColor(0x44, 0x44, 0x44);
 		SetPenSize(2);
 		StrokeRect(rect, B_SOLID_HIGH);
 		SetPenSize(1);
 		StrokeLine(rect.LeftTop(), rect.RightBottom());
 		StrokeLine(rect.RightTop(), rect.LeftBottom());
-		PopState();
 	}
 };
 
@@ -85,8 +83,7 @@ class TestApplication: public BApplication
 {
 public:
 	TestApplication(): BApplication("application/x-vnd.test-app")
-	{
-	}
+	{}
 
 	void ReadyToRun()
 	{
