@@ -96,8 +96,14 @@ enum {
 };
 
 enum {
-	updateMsg = 1,
+	updateMsg = teamWindowPrivateMsgBase,
+	infoShowWorkDirMsg,
+	imagesShowLocationMsg,
 	threadsInvokeMsg,
+	threadsTerminateMsg,
+	threadsSendSignalMsg,
+	threadsShowSemMsg,
+	semsShowThreadMsg,
 };
 
 
@@ -558,32 +564,59 @@ static BColumnListView *NewFilesView(TeamWindow *wnd)
 }
 
 
+class TabView: public BTabView
+{
+private:
+	TeamWindow *fWnd;
+
+public:
+	TabView(TeamWindow *wnd): BTabView("tabView", B_WIDTH_FROM_LABEL), fWnd(wnd) {}
+	
+	void Select(int32 index)
+	{
+		BTabView::Select(index);
+		fWnd->TabChanged();
+	}
+	
+};
+
+
 //#pragma mark TeamWindow
 
 std::map<team_id, TeamWindow*> teamWindows;
 BLocker teamWindowsLocker;
 
-void OpenTeamWindow(team_id id, BPoint center)
+TeamWindow *OpenTeamWindow(team_id id, BPoint center)
 {
 	AutoLocker<BLocker> locker(teamWindowsLocker);
 	auto it = teamWindows.find(id);
 	if (it != teamWindows.end()) {
 		it->second->Activate();
+		return it->second;
 	} else {
 		TeamWindow *wnd = new TeamWindow(id);
 		teamWindows[id] = wnd;
 		BRect frame = wnd->Frame();
 		wnd->MoveTo(center.x - frame.Width()/2, center.y - frame.Height()/2);
 		wnd->Show();
+		return wnd;
 	}
+}
+
+static BMessage *NewSignalMsg(int32 signal)
+{
+	BMessage *msg = new BMessage(threadsSendSignalMsg);
+	msg->AddInt32("val", signal);
+	return msg;
 }
 
 TeamWindow::TeamWindow(team_id id): BWindow(BRect(0, 0, 800, 480), "Team", B_DOCUMENT_WINDOW, B_ASYNCHRONOUS_CONTROLS | B_AUTO_UPDATE_SIZE_LIMITS),
 	fId(id),
-	fListUpdater(BMessenger(this), BMessage(updateMsg), 500000)
+	fListUpdater(BMessenger(this), BMessage(updateMsg), 500000),
+	fCurMenu(NULL)
 {
-	BMenuBar *menuBar;
 	BTab *tab;
+	BMenu *menu;
 
 	try {
 		int32 cookie = 0;
@@ -597,15 +630,52 @@ TeamWindow::TeamWindow(team_id id): BWindow(BRect(0, 0, 800, 480), "Team", B_DOC
 		PostMessage(B_QUIT_REQUESTED);
 	}
 
-	menuBar = new BMenuBar("menu", B_ITEMS_IN_ROW, true);
-	BLayoutBuilder::Menu<>(menuBar)
+	fMenuBar = new BMenuBar("menu", B_ITEMS_IN_ROW, true);
+	BLayoutBuilder::Menu<>(fMenuBar)
 		.AddMenu(new BMenu("File"))
 			.AddItem(new BMenuItem("Close", new BMessage(B_QUIT_REQUESTED), 'W'))
 			.End()
 		.End()
 	;
 
-	fTabView = new BTabView("tabView", B_WIDTH_FROM_LABEL);
+	menu = new BMenu("Info");
+	BLayoutBuilder::Menu<>(menu)
+		.AddItem(new BMenuItem("Show working directory", new BMessage(infoShowWorkDirMsg)))
+		.End()
+	;
+	fInfoMenu = new BMenuItem(menu);
+
+	menu = new BMenu("Image");
+	BLayoutBuilder::Menu<>(menu)
+		.AddItem(new BMenuItem("Show location", new BMessage(imagesShowLocationMsg)))
+		.End()
+	;
+	fImagesMenu = new BMenuItem(menu);
+
+	BMenu *signalMenu;
+	menu = new BMenu("Thread");
+	BLayoutBuilder::Menu<>(menu)
+		.AddItem(new BMenuItem("Terminate", new BMessage(threadsTerminateMsg), 'T'))
+		.AddItem(new BMenuItem("Suspend", NewSignalMsg(SIGSTOP)))
+		.AddItem(new BMenuItem("Resume", NewSignalMsg(SIGCONT)))
+		.AddMenu(signalMenu = new BMenu("Send signal"))
+			.End()
+		.AddSeparator()
+		.AddItem(new BMenuItem("Show semaphore", new BMessage(threadsShowSemMsg)))
+		.End()
+	;
+	fThreadsMenu = new BMenuItem(menu);
+	for (size_t i = 0; i < sizeof(signals)/sizeof(signals[0]); i++)
+		signalMenu->AddItem(new BMenuItem(signals[i].name, NewSignalMsg(signals[i].val)));
+
+	menu = new BMenu("Semaphore");
+	BLayoutBuilder::Menu<>(menu)
+		.AddItem(new BMenuItem("Show holder thread", new BMessage(semsShowThreadMsg)))
+		.End()
+	;
+	fSemsMenu = new BMenuItem(menu);
+
+	fTabView = new TabView(this);
 	fTabView->SetBorder(B_NO_BORDER);
 
 	tab = new BTab(); fTabView->AddTab(fInfoView = NewInfoView(this), tab);
@@ -617,13 +687,15 @@ TeamWindow::TeamWindow(team_id id): BWindow(BRect(0, 0, 800, 480), "Team", B_DOC
 	tab = new BTab(); fTabView->AddTab(fFilesView = NewFilesView(this), tab);
 
 	BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
-		.Add(menuBar)
+		.Add(fMenuBar)
 		.AddGroup(B_VERTICAL, 0)
 			.Add(fTabView)
 			.SetInsets(-1, 0, -1, -1)
 			.End()
 		.End()
 	;
+
+	TabChanged();
 }
 
 TeamWindow::~TeamWindow()
@@ -633,6 +705,31 @@ TeamWindow::~TeamWindow()
 	teamWindows.erase(fId);
 }
 
+void TeamWindow::TabChanged()
+{
+	BMenuItem *newMenu = NULL;
+	BTab *tab = fTabView->TabAt(fTabView->Selection());
+	if (tab != NULL) {
+		BView *view = tab->View();
+		if (view == fInfoView)
+			newMenu = fInfoMenu;
+		else if (view == fImagesView)
+			newMenu = fImagesMenu;
+		else if (view == fThreadsView)
+			newMenu = fThreadsMenu;
+		else if (view == fSemsView)
+			newMenu = fSemsMenu;
+	}
+	SetMenu(newMenu);
+}
+
+void TeamWindow::SetMenu(BMenuItem *menu)
+{
+	if (fCurMenu == menu) return;
+	if (fCurMenu != NULL) fMenuBar->RemoveItem(fCurMenu);
+	fCurMenu = menu;
+	if (fCurMenu != NULL) fMenuBar->AddItem(fCurMenu);
+}
 
 void TeamWindow::MessageReceived(BMessage *msg)
 {
@@ -656,18 +753,152 @@ void TeamWindow::MessageReceived(BMessage *msg)
 			else if (view == fFilesView)
 				ListFiles(this, fFilesView);
 		}
-		break;
+		return;
 	}
+
+	case infoShowWorkDirMsg: {
+		BRow *row = fInfoView->RowAt(6); // !!!
+		if (row == NULL) return;
+		ShowLocation(((BStringField*)row->GetField(infoValueCol))->String());
+		return;
+	}
+	case imagesShowLocationMsg: {
+		BRow *row = fImagesView->CurrentSelection(NULL);
+		if (row == NULL) return;
+		ShowLocation(((BStringField*)row->GetField(imagePathCol))->String());
+		return;
+	}
+	
 	case threadsInvokeMsg: {
 		BRow *row = fThreadsView->CurrentSelection(NULL);
-		if (row != NULL) {
-			OpenStackWindow(((BIntegerField*)row->GetField(threadIdCol))->Value(),
-				BPoint((Frame().left + Frame().right)/2, (Frame().top + Frame().bottom)/2)
-			);
+		if (row == NULL) return;
+		BPoint center((Frame().left + Frame().right)/2, (Frame().top + Frame().bottom)/2);
+		OpenStackWindow(((BIntegerField*)row->GetField(threadIdCol))->Value(), center);
+		return;
+	}	
+	case threadsTerminateMsg:
+	case threadsSendSignalMsg: {
+		BTab *tab = fTabView->TabAt(fTabView->Selection());
+		if (tab == NULL) return;
+		BView *view = tab->View();
+		if (view != fThreadsView) return;
+		BRow *row = fThreadsView->CurrentSelection(NULL);
+		if (row == NULL) return;
+		thread_id thread = ((BIntegerField*)row->GetField(threadIdCol))->Value();
+		if (thread < B_OK) return;
+		switch (msg->what) {
+		case threadsTerminateMsg:
+			CheckErrno(kill_thread(thread), "Can't terminate thread.");
+			break;
+		case threadsSendSignalMsg:
+			int32 signal;
+			if (msg->FindInt32("val", &signal) < B_OK) return;
+			CheckErrno(send_signal(thread, signal), "Can't send signal.");
+			break;
 		}
-		break;
+		return;
 	}
-	default:
-		BWindow::MessageReceived(msg);
+	case threadsShowSemMsg: {
+		BTab *tab = fTabView->TabAt(fTabView->Selection());
+		if (tab == NULL) return;
+		BView *view = tab->View();
+		if (view != fThreadsView) return;
+		BRow *row = fThreadsView->CurrentSelection(NULL);
+		if (row == NULL) return;
+		sem_id sem = atoi(((BStringField*)row->GetField(threadSemCol))->String());
+		if (sem < B_OK) return;
+		BMessage showMsg(B_EXECUTE_PROPERTY);
+		showMsg.AddSpecifier("Sem", sem);
+		be_app_messenger.SendMessage(&showMsg);
+		return;
 	}
+	case semsShowThreadMsg: {
+		BTab *tab = fTabView->TabAt(fTabView->Selection());
+		if (tab == NULL) return;
+		BView *view = tab->View();
+		if (view != fSemsView) return;
+		BRow *row = fSemsView->CurrentSelection(NULL);
+		if (row == NULL) return;
+		thread_id thread = atoi(((BStringField*)row->GetField(semLatestHolderCol))->String());
+		if (thread < B_OK) return;
+		BMessage showMsg(B_EXECUTE_PROPERTY);
+		showMsg.AddSpecifier("Thread", thread);
+		be_app_messenger.SendMessage(&showMsg);
+		return;
+	}
+
+	case teamWindowShowImageMsg: {
+		int32 id;
+		if (msg->FindInt32("val", &id) < B_OK) return;
+		fTabView->Select(1); // TODO: remove hard-coded constant
+		ListImages(this, fImagesView);
+		BRow *itemRow = FindIntRow(fImagesView, imageIdCol, NULL, id);
+		if (itemRow == NULL) return;
+		fImagesView->DeselectAll();
+		fImagesView->SetFocusRow(itemRow, true);
+		fImagesView->ScrollTo(itemRow);
+		return;
+	}
+	case teamWindowShowThreadMsg: {
+		int32 id;
+		if (msg->FindInt32("val", &id) < B_OK) return;
+		fTabView->Select(2); // TODO: remove hard-coded constant
+		ListThreads(this, fThreadsView);
+		BRow *itemRow = FindIntRow(fThreadsView, threadIdCol, NULL, id);
+		if (itemRow == NULL) return;
+		fThreadsView->DeselectAll();
+		fThreadsView->SetFocusRow(itemRow, true);
+		fThreadsView->ScrollTo(itemRow);
+		return;
+	}
+	case teamWindowShowAreaMsg: {
+		int32 id;
+		if (msg->FindInt32("val", &id) < B_OK) return;
+		fTabView->Select(3); // TODO: remove hard-coded constant
+		ListAreas(this, fAreasView);
+		BRow *itemRow = FindIntRow(fAreasView, areaIdCol, NULL, id);
+		if (itemRow == NULL) return;
+		fAreasView->DeselectAll();
+		fAreasView->SetFocusRow(itemRow, true);
+		fAreasView->ScrollTo(itemRow);
+		return;
+	}
+	case teamWindowShowPortMsg: {
+		int32 id;
+		if (msg->FindInt32("val", &id) < B_OK) return;
+		fTabView->Select(4); // TODO: remove hard-coded constant
+		ListPorts(this, fPortsView);
+		BRow *itemRow = FindIntRow(fPortsView, portIdCol, NULL, id);
+		if (itemRow == NULL) return;
+		fPortsView->DeselectAll();
+		fPortsView->SetFocusRow(itemRow, true);
+		fPortsView->ScrollTo(itemRow);
+		return;
+	}
+	case teamWindowShowSemMsg: {
+		int32 id;
+		if (msg->FindInt32("val", &id) < B_OK) return;
+		fTabView->Select(5); // TODO: remove hard-coded constant
+		ListSems(this, fSemsView);
+		BRow *itemRow = FindIntRow(fSemsView, semIdCol, NULL, id);
+		if (itemRow == NULL) return;
+		fSemsView->DeselectAll();
+		fSemsView->SetFocusRow(itemRow, true);
+		fSemsView->ScrollTo(itemRow);
+		return;
+	}
+	case teamWindowShowFileMsg: {
+		int32 id;
+		if (msg->FindInt32("val", &id) < B_OK) return;
+		fTabView->Select(6); // TODO: remove hard-coded constant
+		ListFiles(this, fFilesView);
+		BRow *itemRow = FindIntRow(fFilesView, fileIdCol, NULL, id);
+		if (itemRow == NULL) return;
+		fFilesView->DeselectAll();
+		fFilesView->SetFocusRow(itemRow, true);
+		fFilesView->ScrollTo(itemRow);
+		return;
+	}
+	}
+	BWindow::MessageReceived(msg);
 }

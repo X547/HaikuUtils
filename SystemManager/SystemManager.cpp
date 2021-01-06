@@ -9,6 +9,7 @@
 #include <private/system/syscall_process_info.h>
 #include <private/system/syscalls.h>
 #include <Application.h>
+#include <PropertyInfo.h>
 #include <Window.h>
 #include <Alert.h>
 #include <View.h>
@@ -68,47 +69,6 @@ enum ViewLayout {
 	flatLayout = 0,
 	treeLayout = 1,
 	sessionsLayout = 2,
-};
-
-struct SignalRec
-{
-	const char *name;
-	int val;
-};
-
-SignalRec signals[] = {
-	{"SIGHUP", 1},
-	{"SIGINT", 2},
-	{"SIGQUIT", 3},
-	{"SIGILL", 4},
-	{"SIGCHLD", 5},
-	{"SIGABRT", 6},
-	{"SIGPIPE", 7},
-	{"SIGFPE", 8},
-	{"SIGKILL", 9},
-	{"SIGSTOP", 10},
-	{"SIGSEGV", 11},
-	{"SIGCONT", 12},
-	{"SIGTSTP", 13},
-	{"SIGALRM", 14},
-	{"SIGTERM", 15},
-	{"SIGTTIN", 16},
-	{"SIGTTOU", 17},
-	{"SIGUSR1", 18},
-	{"SIGUSR2", 19},
-	{"SIGWINCH", 20},
-	{"SIGKILLTHR", 21},
-	{"SIGTRAP", 22},
-	{"SIGPOLL", 23},
-	{"SIGPROF", 24},
-	{"SIGSYS", 25},
-	{"SIGURG", 26},
-	{"SIGVTALRM", 27},
-	{"SIGXCPU", 28},
-	{"SIGXFSZ", 29},
-	{"SIGBUS", 30},
-	{"SIGRESERVED1", 31},
-	{"SIGRESERVED2", 32},
 };
 
 
@@ -483,6 +443,13 @@ static BColumnListView *NewStatsView()
 }
 
 
+static BMessage *NewSetLayoutMsg(int32 layout)
+{
+	BMessage *msg = new BMessage(setLayoutMsg);
+	msg->SetInt32("val", layout);
+	return msg;
+}
+
 class TestWindow: public BWindow
 {
 private:
@@ -517,21 +484,9 @@ public:
 */
 			.AddMenu(new BMenu("View"))
 				.AddMenu(new BMenu("Layout"))
-					.AddItem(new BMenuItem("Flat", []() {
-						BMessage *msg = new BMessage(setLayoutMsg);
-						msg->SetInt32("val", flatLayout);
-						return msg;
-					}()))
-					.AddItem(new BMenuItem("Tree", []() {
-						BMessage *msg = new BMessage(setLayoutMsg);
-						msg->SetInt32("val", treeLayout);
-						return msg;
-					}()))
-					.AddItem(new BMenuItem("Sessions and groups", []() {
-						BMessage *msg = new BMessage(setLayoutMsg);
-						msg->SetInt32("val", sessionsLayout);
-						return msg;
-					}()))
+					.AddItem(new BMenuItem("Flat", NewSetLayoutMsg(flatLayout)))
+					.AddItem(new BMenuItem("Tree", NewSetLayoutMsg(treeLayout)))
+					.AddItem(new BMenuItem("Sessions and groups", NewSetLayoutMsg(sessionsLayout)))
 					.End()
 				.End()
 			.AddMenu(new BMenu("Action"))
@@ -591,30 +546,26 @@ public:
 			switch (msg->what) {
 			case invokeMsg: {
 				team_id team = SelectedTeam();
-				if (team >= B_OK) {
-					OpenTeamWindow(team,
-						BPoint((Frame().left + Frame().right)/2, (Frame().top + Frame().bottom)/2)
-					);
-				}
+				if (team < B_OK) return;
+				BPoint center((Frame().left + Frame().right)/2, (Frame().top + Frame().bottom)/2);
+				OpenTeamWindow(team, center);
 				return;
 			}
 			case updateMsg: {
 				BTab *tab = fTabView->TabAt(fTabView->Selection());
-				if (tab != NULL) {
-					BView *view = tab->View();
-					if (view == fTeamsView)
-						ListTeams(fTeamsView, fLayout);
-					else if (view == fStatsView)
-						ListStats(fStatsView);
-				}
+				if (tab == NULL) return;
+				BView *view = tab->View();
+				if (view == fTeamsView)
+					ListTeams(fTeamsView, fLayout);
+				else if (view == fStatsView)
+					ListStats(fStatsView);
 				return;
 			}
 			case setLayoutMsg: {
 				int32 layout;
-				if (msg->FindInt32("val", &layout) >= B_OK) {
-					fLayout = (ViewLayout)layout;
-					RelayoutTeams(fTeamsView, fLayout);
-				}
+				CheckRetVoid(msg->FindInt32("val", &layout));
+				fLayout = (ViewLayout)layout;
+				RelayoutTeams(fTeamsView, fLayout);
 				return;
 			}
 			case terminateMsg: {
@@ -633,59 +584,40 @@ public:
 					invoker->Message()->SetPointer("invoker", invoker);
 					alert->Go(invoker);
 					return;
-				} else {
-					if (msg->FindPointer("invoker", &(void*&)invoker) >= B_OK) {
-						delete invoker; invoker = NULL;
-					}
-					if (which != 1) return;
-					CheckRetVoid(msg->FindInt32("team", &team));
 				}
-				if (team >= B_OK)
-					Check(kill_team(team), "Can't terminate team.");
+				if (msg->FindPointer("invoker", &(void*&)invoker) >= B_OK) {
+					delete invoker; invoker = NULL;
+				}
+				if (which != 1) return;
+				CheckRetVoid(msg->FindInt32("team", &team));
+				if (team < B_OK) return;
+				Check(kill_team(team), "Can't terminate team.");
 				return;
 			}
 			case suspendMsg: {
 				team_id team = SelectedTeam();
-				if (team >= B_OK)
-					CheckErrno(kill(team, SIGSTOP), "Can't suspend team.");
+				if (team < B_OK) return;
+				CheckErrno(kill(team, SIGSTOP), "Can't suspend team.");
 				return;
 			}
 			case resumeMsg: {
 				team_id team = SelectedTeam();
-				if (team >= B_OK)
-					CheckErrno(kill(team, SIGCONT), "Can't resume team.");
+				if (team < B_OK) return;
+				CheckErrno(kill(team, SIGCONT), "Can't resume team.");
 				return;
 			}
 			case sendSignalMsg: {
 				int32 signal;
-				if (msg->FindInt32("val", &signal) >= B_OK) {
-					team_id team = SelectedTeam();
-					if (team >= B_OK)
-						CheckErrno(kill(team, signal), "Can't send signal.");
-				}
+				CheckRetVoid(msg->FindInt32("val", &signal));
+				team_id team = SelectedTeam();
+				if (team < B_OK) return;
+				CheckErrno(kill(team, signal), "Can't send signal.");
 				return;
 			}
 			case showLocationMsg: {
 				BRow *row = fTeamsView->CurrentSelection(NULL);
-				if (row != NULL) {
-					const char *path = ((BStringField*)row->GetField(pathCol))->String();
-
-					BEntry entry(path);
-					node_ref node;
-					entry.GetNodeRef(&node);
-
-					BEntry parent;
-					entry.GetParent(&parent);
-					entry_ref parentRef;
-					parent.GetRef(&parentRef);
-
-					BMessage message(B_REFS_RECEIVED);
-					message.AddRef("refs", &parentRef);
-					message.AddData("nodeRefToSelect", B_RAW_TYPE, &node, sizeof(node_ref));
-
-					BMessenger("application/x-vnd.Be-TRAK").SendMessage(&message);
-				}
-				return;
+				if (row == NULL) return;
+				ShowLocation(((BStringField*)row->GetField(pathCol))->String());
 			}
 			}
 		} catch (StatusError &err) {
@@ -695,19 +627,147 @@ public:
 	}
 };
 
+
+static property_info gProperties[] = {
+	{"Team", {B_EXECUTE_PROPERTY, 0}, {B_INDEX_SPECIFIER, 0}},
+	{"Image", {B_EXECUTE_PROPERTY, 0}, {B_INDEX_SPECIFIER, 0}},
+	{"Thread", {B_EXECUTE_PROPERTY, 0}, {B_INDEX_SPECIFIER, 0}},
+	{"Area", {B_EXECUTE_PROPERTY, 0}, {B_INDEX_SPECIFIER, 0}},
+	{"Port", {B_EXECUTE_PROPERTY, 0}, {B_INDEX_SPECIFIER, 0}},
+	{"Sem", {B_EXECUTE_PROPERTY, 0}, {B_INDEX_SPECIFIER, 0}},
+	{0}
+};
+
 class TestApplication: public BApplication
 {
+private:
+	BWindow *fWnd;
+
 public:
 	TestApplication(): BApplication("application/x-vnd.Test-SystemManager")
 	{
 	}
 
 	void ReadyToRun() {
-		BWindow *wnd = new TestWindow(BRect(0, 0, 640, 480));
-		wnd->SetFlags(wnd->Flags() | B_QUIT_ON_WINDOW_CLOSE);
-		wnd->CenterOnScreen();
-		wnd->Show();
+		fWnd = new TestWindow(BRect(0, 0, 640, 480));
+		fWnd->SetFlags(fWnd->Flags() | B_QUIT_ON_WINDOW_CLOSE);
+		fWnd->CenterOnScreen();
+		fWnd->Show();
 	}
+	
+	BHandler *ResolveSpecifier(BMessage* message, int32 index, BMessage* specifier, int32 what, const char* property)
+	{
+		printf("TestApplication::ResolveSpecifier()\n");
+		BPropertyInfo propInfo(gProperties);
+		printf("specifier: "); specifier->PrintToStream();
+		if (propInfo.FindMatch(message, 0, specifier, what, property) >= 0)
+			return this;
+		return BApplication::ResolveSpecifier(message, index, specifier, what, property);
+	}
+	
+	status_t GetSupportedSuites(BMessage *data)
+	{
+		printf("TestApplication::GetSupportedSuites()\n");
+		if (data == NULL) return B_BAD_VALUE;
+		CheckRet(data->AddString("suites", "suite/vnd.Test-SystemMangager"));
+		BPropertyInfo propertyInfo(gProperties);
+		CheckRet(data->AddFlat("messages", &propertyInfo));
+		return BApplication::GetSupportedSuites(data);
+	}
+	
+	status_t HandleScript(BMessage &message, BMessage &reply, int32 index, BMessage &specifier, int32 what, const char* property)
+	{
+		BPropertyInfo propInfo(gProperties);
+		int32 propIdx = propInfo.FindMatch(&message, index, &specifier, what, property);
+		switch (propIdx) {
+		case 0: // Team: Execute
+		case 1: // Image: Execute
+		case 2: // Thread: Execute
+		case 3: // Area: Execute
+		case 4: // Port: Execute
+		case 5: // Sem: Execute
+			switch (what) {
+			case B_INDEX_SPECIFIER: {
+				CheckRet(specifier.FindInt32("index", &index));
+				BRect frame = fWnd->Frame();
+				BPoint center((frame.left + frame.right)/2, (frame.top + frame.bottom)/2);
+				switch (propIdx) {
+				case 0: {
+					OpenTeamWindow(index, center);
+					return B_OK;
+				}
+				case 2: {
+					thread_info info;
+					CheckRet(get_thread_info(index, &info));
+					BWindow *wnd = OpenTeamWindow(info.team, center);
+					BMessage wndMsg(teamWindowShowThreadMsg);
+					wndMsg.AddInt32("val", index);
+					BMessenger(wnd).SendMessage(&wndMsg);
+					return B_OK;
+				}
+				case 3: {
+					area_info info;
+					CheckRet(get_area_info(index, &info));
+					BWindow *wnd = OpenTeamWindow(info.team, center);
+					BMessage wndMsg(teamWindowShowAreaMsg);
+					wndMsg.AddInt32("val", index);
+					BMessenger(wnd).SendMessage(&wndMsg);
+					return B_OK;
+				}
+				case 4: {
+					port_info info;
+					CheckRet(get_port_info(index, &info));
+					BWindow *wnd = OpenTeamWindow(info.team, center);
+					BMessage wndMsg(teamWindowShowPortMsg);
+					wndMsg.AddInt32("val", index);
+					BMessenger(wnd).SendMessage(&wndMsg);
+					return B_OK;
+				}
+				case 5: {
+					sem_info info;
+					CheckRet(get_sem_info(index, &info));
+					BWindow *wnd = OpenTeamWindow(info.team, center);
+					BMessage wndMsg(teamWindowShowSemMsg);
+					wndMsg.AddInt32("val", index);
+					BMessenger(wnd).SendMessage(&wndMsg);
+					return B_OK;
+				}
+				}
+			}
+			}
+			break;
+		}
+		return B_BAD_SCRIPT_SYNTAX;
+	}
+	
+	void MessageReceived(BMessage *msg)
+	{
+		int32 index;
+		BMessage specifier;
+		int32 what;
+		const char* property;
+
+		if (msg->HasSpecifiers() && msg->GetCurrentSpecifier(&index, &specifier, &what, &property) >= B_OK) {
+			BMessage reply(B_REPLY);
+			status_t res = HandleScript(*msg, reply, index, specifier, what, property);
+			if (res != B_OK) {
+				reply.what = B_MESSAGE_NOT_UNDERSTOOD;
+				reply.AddString("message", strerror(res));
+			}
+			reply.AddInt32("error", res);
+			msg->SendReply(&reply);
+			return;
+		}
+
+		switch (msg->what) {
+		case B_SILENT_RELAUNCH:
+			fWnd->Activate();
+			return;
+		}
+
+		BApplication::MessageReceived(msg);
+	}
+	
 };
 
 

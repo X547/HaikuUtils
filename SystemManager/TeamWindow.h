@@ -8,11 +8,28 @@
 class BTabView;
 class BColumnListView;
 
+enum {
+	teamWindowShowImageMsg = 1,
+	teamWindowShowThreadMsg,
+	teamWindowShowAreaMsg,
+	teamWindowShowPortMsg,
+	teamWindowShowSemMsg,
+	teamWindowShowFileMsg,
+
+	teamWindowPrivateMsgBase
+};
+
 class TeamWindow: public BWindow
 {
-private:
+private:	
 	BMessageRunner fListUpdater;
 	BTabView *fTabView;
+	BMenuBar *fMenuBar;
+	BMenuItem *fCurMenu;
+	BMenuItem *fInfoMenu;
+	BMenuItem *fImagesMenu;
+	BMenuItem *fThreadsMenu;
+	BMenuItem *fSemsMenu;
 	BColumnListView *fInfoView;
 	BColumnListView *fImagesView;
 	BColumnListView *fThreadsView;
@@ -27,9 +44,11 @@ public:
 	TeamWindow(team_id id);
 	~TeamWindow();
 
+	void TabChanged();
+	void SetMenu(BMenuItem *menu);
 	void MessageReceived(BMessage *msg);
 };
 
-void OpenTeamWindow(team_id id, BPoint center);
+TeamWindow *OpenTeamWindow(team_id id, BPoint center);
 
 #endif	// _TEAMWINDOW_H_
