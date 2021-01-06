@@ -35,7 +35,7 @@ const uint32 keyboardCodes[] = {
 
 const char *keyboardLabels[] = {
 	"漢字", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "\t⌫",
-	"⮐", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	"↹", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	"⇪", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "⏎",
 	"⇧\t", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "↑", "\t⇧",
 	"◆", "⌥", "⌘", 0, "⌘", "◆", "←", "↓", "→"
@@ -137,7 +137,7 @@ void KeyboardViewNotifier::KeymapChanged()
 
 
 KeyboardView::KeyboardView(const char *name, KeyboardHandler *handler)
-	: BView(name, B_WILL_DRAW | B_FRAME_EVENTS | B_SUBPIXEL_PRECISE), handler(handler)
+	: BView(name, B_WILL_DRAW | B_SUBPIXEL_PRECISE | B_FULL_UPDATE_ON_RESIZE | B_FRAME_EVENTS), handler(handler)
 {
 	uint32 i;
 	SetViewColor(B_TRANSPARENT_COLOR);
@@ -151,7 +151,10 @@ KeyboardView::KeyboardView(const char *name, KeyboardHandler *handler)
 	for (i = 0; i < LEN(track); ++i)
 		track[i] = -1;
 	
-	SetFontSize(20);
+	BFont font(be_plain_font);
+	font.SetFamilyAndStyle("DejaVu Sans", "Book");
+	font.SetSize(20);
+	SetFont(&font);
 	GetFontHeight(&height);
 	
 	notifier.SetTo(this);
@@ -290,7 +293,16 @@ void KeyboardView::Draw(BRect dirty)
 }
 
 
-KeyboardWindow::KeyboardWindow(KeyboardHandler *handler): BWindow(BRect(0, 0, 0, 0), "Keyboard", B_NO_BORDER_WINDOW_LOOK, B_FLOATING_ALL_WINDOW_FEEL, B_NOT_MOVABLE | B_NOT_CLOSABLE | B_NOT_ZOOMABLE | B_NOT_MINIMIZABLE | B_NOT_RESIZABLE | B_AVOID_FOCUS)
+KeyboardWindow::KeyboardWindow(KeyboardHandler *handler):
+	BWindow(
+		BRect(0, 0, 0, 0), "Keyboard", B_MODAL_WINDOW_LOOK, B_FLOATING_ALL_WINDOW_FEEL,
+		B_NOT_CLOSABLE |
+		B_NOT_MINIMIZABLE |
+		B_AVOID_FOCUS
+		// B_NOT_MOVABLE |
+		// B_NOT_ZOOMABLE |
+		// B_NOT_RESIZABLE
+	)
 {
 	BScreen screen(this);
 

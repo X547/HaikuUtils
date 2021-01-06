@@ -22,33 +22,34 @@ bool IsKeyPressed(uint8 *state, uint32 code)
 
 void KeyboardHandler::StartRepeating(BMessage *msg)
 {
-	if (repeatThread > 0) StopRepeating();
+	if (repeatThread >= 0) StopRepeating();
 	
 	repeatMsg = *msg;
 	repeatThread = spawn_thread(RepeatThread, "repeat thread", B_REAL_TIME_PRIORITY, this);
 	repeatThreadSem = create_sem(0, "repeat thread sem");
-	if (repeatThread > 0)
+	if (repeatThread >= 0)
 		resume_thread(repeatThread);
 }
 
 void KeyboardHandler::StopRepeating()
 {
-	if (repeatThread > 0) {
+	if (repeatThread >= 0) {
 		status_t res;
-		sem_id sem = repeatThreadSem;
-		repeatThreadSem = B_BAD_SEM_ID;
-		delete_sem(sem);
-		wait_for_thread(repeatThread, &res);
-		repeatThread = 0;
+		release_sem(repeatThreadSem);
+		wait_for_thread(repeatThread, &res); repeatThread = -1;
+		delete_sem(repeatThreadSem); repeatThreadSem = -1;
 	}
 }
 
 status_t KeyboardHandler::RepeatThread(void *arg)
 {
+	status_t res;
 	KeyboardHandler *h = (KeyboardHandler*)arg;
 	int32 count;
 	
-	if (acquire_sem_etc(h->repeatThreadSem, 1, B_RELATIVE_TIMEOUT, h->repeatDelay) == B_BAD_SEM_ID) return B_OK;
+	res = acquire_sem_etc(h->repeatThreadSem, 1, B_RELATIVE_TIMEOUT, h->repeatDelay);
+	if (res >= B_OK) return B_OK;
+
 	while (true) {
 		h->repeatMsg.ReplaceInt64("when", system_time());
 		h->repeatMsg.FindInt32("be:key_repeat", &count);
@@ -59,7 +60,8 @@ status_t KeyboardHandler::RepeatThread(void *arg)
 			if (h->dev->EnqueueMessage(msg) != B_OK)
 				delete msg;
 		
-		if (acquire_sem_etc(h->repeatThreadSem, 1, B_RELATIVE_TIMEOUT, /* 1000000 / h->repeatRate */ 50000) == B_BAD_SEM_ID) return B_OK;
+		res = acquire_sem_etc(h->repeatThreadSem, 1, B_RELATIVE_TIMEOUT, /* 1000000 / h->repeatRate */ 50000);
+		if (res >= B_OK) return B_OK;
 	}
 }
 
@@ -67,7 +69,7 @@ status_t KeyboardHandler::RepeatThread(void *arg)
 KeyboardHandler::KeyboardHandler(BInputServerDevice *dev, key_map *keyMap, char *chars, bigtime_t repeatDelay, int32 repeatRate)
 	: dev(dev), keyMap(keyMap), chars(chars), repeatDelay(repeatDelay), repeatRate(repeatRate)
 {
-	repeatThread = 0;
+	repeatThread = -1;
 	memset(state, 0, sizeof(state));
 	notifiers = NULL;
 }
@@ -75,18 +77,13 @@ KeyboardHandler::KeyboardHandler(BInputServerDevice *dev, key_map *keyMap, char 
 KeyboardHandler::~KeyboardHandler()
 {
 	StopRepeating();
-	if (keyMap != NULL) free((void*)keyMap);
-	if (chars  != NULL) free((void*)chars);
 }
 
 
 void KeyboardHandler::SetKeyMap(key_map *keyMap, char *chars)
 {
-	if (this->keyMap != NULL) free((void*)this->keyMap);
-	if (this->chars  != NULL) free((void*)this->chars);
-	
-	this->keyMap = keyMap;
-	this->chars  = chars;
+	this->keyMap.SetTo(keyMap);
+	this->chars.SetTo(chars);
 	
 	LocksChanged(keyMap->lock_settings);
 	
@@ -134,16 +131,16 @@ void KeyboardHandler::KeyString(uint32 code, char *str, size_t len)
 	uint32 i;
 	char *ch;
 	switch (modifiers & (B_SHIFT_KEY | B_CONTROL_KEY | B_OPTION_KEY | B_CAPS_LOCK)) {
-		case B_OPTION_KEY | B_CAPS_LOCK | B_SHIFT_KEY: ch = chars + keyMap->option_caps_shift_map[code]; break;
-		case B_OPTION_KEY | B_CAPS_LOCK:               ch = chars + keyMap->option_caps_map[code];       break;
-		case B_OPTION_KEY | B_SHIFT_KEY:               ch = chars + keyMap->option_shift_map[code];      break;
-		case B_OPTION_KEY:                             ch = chars + keyMap->option_map[code];            break;
-		case B_CAPS_LOCK  | B_SHIFT_KEY:               ch = chars + keyMap->caps_shift_map[code];        break;
-		case B_CAPS_LOCK:                              ch = chars + keyMap->caps_map[code];              break;
-		case B_SHIFT_KEY:                              ch = chars + keyMap->shift_map[code];             break;
+		case B_OPTION_KEY | B_CAPS_LOCK | B_SHIFT_KEY: ch = chars.Get() + keyMap->option_caps_shift_map[code]; break;
+		case B_OPTION_KEY | B_CAPS_LOCK:               ch = chars.Get() + keyMap->option_caps_map[code];       break;
+		case B_OPTION_KEY | B_SHIFT_KEY:               ch = chars.Get() + keyMap->option_shift_map[code];      break;
+		case B_OPTION_KEY:                             ch = chars.Get() + keyMap->option_map[code];            break;
+		case B_CAPS_LOCK  | B_SHIFT_KEY:               ch = chars.Get() + keyMap->caps_shift_map[code];        break;
+		case B_CAPS_LOCK:                              ch = chars.Get() + keyMap->caps_map[code];              break;
+		case B_SHIFT_KEY:                              ch = chars.Get() + keyMap->shift_map[code];             break;
 		default:
-			if (modifiers & B_CONTROL_KEY)             ch = chars + keyMap->control_map[code];
-			else                                       ch = chars + keyMap->normal_map[code];
+			if (modifiers & B_CONTROL_KEY)               ch = chars.Get() + keyMap->control_map[code];
+			else                                         ch = chars.Get() + keyMap->normal_map[code];
 	}
 	if (len > 0) {
 		for (i = 0; (i < (uint32)ch[0]) && (i < len-1); ++i)
@@ -247,8 +244,8 @@ void KeyboardHandler::StateChanged(uint8 state[16])
 				msg->AddData("states", B_UINT8_TYPE, state, 16);
 				
 				if (str[0] != '\0') {
-					if (chars[keyMap->normal_map[i]] != 0)
-						rawCh = chars[keyMap->normal_map[i] + 1];
+					if (chars.Get()[keyMap->normal_map[i]] != 0)
+						rawCh = chars.Get()[keyMap->normal_map[i] + 1];
 					else
 						rawCh = str[0];
 					

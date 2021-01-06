@@ -4,6 +4,7 @@
 #include <OS.h>
 #include <InputServerDevice.h>
 #include <InterfaceDefs.h>
+#include <private/shared/AutoDeleter.h>
 
 
 class KeyboardNotifier
@@ -26,8 +27,8 @@ class KeyboardHandler
 private:
 	BInputServerDevice *dev;
 	
-	key_map *keyMap;
-	char *chars;
+	BPrivate::AutoDeleter<key_map, BPrivate::MemoryDelete> keyMap;
+	BPrivate::AutoDeleter<char, BPrivate::MemoryDelete> chars;
 
 	uint8 state[16];
 	uint32 modifiers;

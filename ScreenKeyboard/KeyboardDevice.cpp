@@ -47,7 +47,7 @@ status_t KeyboardDevice::Start(const char* name, void* cookie)
 	
 status_t KeyboardDevice::Stop(const char* name, void* cookie)
 {
-	if (wnd->Lock()) {
+	if (wnd != NULL && wnd->Lock()) {
 		wnd->Quit();
 		wnd = NULL;
 	}
