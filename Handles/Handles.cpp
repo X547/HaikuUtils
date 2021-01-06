@@ -8,8 +8,8 @@
 #include <OS.h>
 #include <sys/stat.h>
 #include <fs_info.h>
-#include <syscalls.h>
-#include <vfs_defs.h>
+#include <private/system/syscalls.h>
+#include <private/system/vfs_defs.h>
 #include <private/interface/ColumnListView.h>
 #include <private/interface/ColumnTypes.h>
 
