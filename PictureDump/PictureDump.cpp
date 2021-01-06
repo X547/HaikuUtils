@@ -313,8 +313,16 @@ void DumpOp(BPositionIO &rd, int16 op, int32 opSize)
 	case 0x011D: printf("FILL_BEZIER_GRADIENT"); break;
 	case 0x011E: printf("STROKE_POLYGON_GRADIENT"); break;
 	case 0x011F: printf("FILL_POLYGON_GRADIENT"); break;
-	case 0x0120: printf("STROKE_SHAPE_GRADIENT"); break;
-	case 0x0121: printf("FILL_SHAPE_GRADIENT"); break;
+	case 0x0120: printf("STROKE_SHAPE_GRADIENT\n"); {indent++;
+		Indent(); printf("shape: "); DumpShape(rd); printf("\n");
+		Indent(); printf("gradient: "); DumpGradient(rd);
+		indent--; break;
+	}
+	case 0x0121: printf("FILL_SHAPE_GRADIENT\n"); {indent++;
+		Indent(); printf("shape: "); DumpShape(rd); printf("\n");
+		Indent(); printf("gradient: "); DumpGradient(rd);
+		indent--; break;
+	}
 	case 0x0122: printf("STROKE_ARC_GRADIENT"); break;
 	case 0x0123: printf("FILL_ARC_GRADIENT"); break;
 	case 0x0124: printf("STROKE_ELLIPSE_GRADIENT"); break;
@@ -339,7 +347,12 @@ void DumpOp(BPositionIO &rd, int16 op, int32 opSize)
 		Indent(); printf("}");
 		indent--; break;
 	}
-	case 0x0202: printf("CLIP_TO_PICTURE"); break;
+	case 0x0202: printf("CLIP_TO_PICTURE\n"); {indent++;
+		Indent(); Read32(rd, val32); printf("token: %d\n", val32);
+		Indent(); ReadPoint(rd, pt); printf("where: "); DumpPoint(pt); printf("\n");
+		Indent(); Read8(rd, val8); printf("inverse: "); DumpBool8(val8);
+		indent--; break;
+	}
 	case 0x0203: printf("PUSH_STATE"); indent++; break;
 	case 0x0204: printf("POP_STATE"); indent--; break;
 	case 0x0205: printf("CLEAR_CLIPPING_RECTS"); break;
@@ -428,6 +441,16 @@ void DumpOp(BPositionIO &rd, int16 op, int32 opSize)
 		Indent(); printf("}");
 		break;
 	case 0x030A: printf("SET_BLENDING_MODE"); break;
+	/* experimental */
+	case 0x030B: printf("SET_FILL_RULE\n"); {indent++;
+		Indent(); Read32(rd, val32); printf("fillRule: ");
+		switch (val32) {
+		case 0: printf("B_EVEN_ODD"); break;
+		case 1: printf("B_NONZERO"); break;
+		default: printf("?(%d)", val32);
+		}
+		indent--; break;
+	}
 	case 0x0380: printf("SET_FONT_FAMILY\n"); {indent++;
 		Indent(); ReadStringLen(rd, str, opSize); printf("family: "); DumpString(str);
 		indent--; break;
@@ -570,8 +593,8 @@ void DumpPictureFile(BPositionIO &rd)
 		DumpPictureFile(rd);
 	}
 	indent--;
-	Read32(rd, size); printf("size: %d\n", size);
-	printf("ops:\n");
+	Read32(rd, size); Indent(); printf("size: %d\n", size);
+	Indent(); printf("ops:\n");
 	indent++;
 	DumpOps(rd, size);
 	indent--;
