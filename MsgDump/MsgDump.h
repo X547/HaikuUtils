@@ -9,6 +9,7 @@
 
 class TestWindow;
 class BTextControl;
+class BButton;
 class BColumnListView;
 class BRow;
 class BEntry;
@@ -52,6 +53,7 @@ class EditWindow: public BWindow
 private:
 	TestWindow *fBase;
 	BTextControl *fNameView, *fTypeView, *fValueView;
+	BButton *fOkView, *fCancelView;
 
 public:
 	EditWindow(TestWindow *base);

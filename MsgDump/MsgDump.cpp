@@ -21,12 +21,13 @@
 #include <LayoutBuilder.h>
 
 enum {
-	msgBase = 'm'<<24,
-	expandAllMsg   = msgBase,
+	expandAllMsg = 1,
 	collapseAllMsg,
 	newFieldMsg,
 	invokeMsg,
-	selectMsg
+	selectMsg,
+	setPathMsg,
+	focusPathMsg,
 };
 
 enum {
@@ -334,12 +335,13 @@ EditWindow::EditWindow(TestWindow *base):
 		.AddGroup(B_HORIZONTAL, B_USE_SMALL_SPACING)
 			.SetInsets(B_USE_SMALL_SPACING)
 			.AddGlue()
-			.Add(new BButton("ok", "OK", new BMessage('stub')))
-			.Add(new BButton("cancel", "Cancel", new BMessage(B_QUIT_REQUESTED)))
+			.Add(fOkView = new BButton("ok", "OK", new BMessage('stub')))
+			.Add(fCancelView = new BButton("cancel", "Cancel", new BMessage(B_QUIT_REQUESTED)))
 			.End()
 		.End()
 	;
 
+	SetDefaultButton(fOkView);
 	fValueView->MakeFocus(true);
 
 	AddToSubset(base);
@@ -393,6 +395,43 @@ static BMenuItem *MenuItemSetTarget(BMenuItem *it, const BMessenger &target)
 	return it;
 }
 
+static void GetPath(BString &path, BColumnListView *view)
+{
+	path.SetTo("");
+	BRow *row, *parent;
+	row = view->CurrentSelection(NULL);
+	if (row == NULL) return;
+	while (view->FindParent(row, &parent, NULL)) {
+		const char *str = ((BStringField*)row->GetField(nameCol))->String();
+		if (path != "") path.Prepend("/");
+		path.Prepend(str);
+		row = parent;
+	}
+}
+
+static void SetPath(BColumnListView *view, const char *path)
+{
+	BRow *row = view->RowAt(0), *row2;
+	int32 i = 0;
+	while (path[i] != '\0') {
+		BString name;
+		while (path[i] != '\0' && !(path[i] == '/')) {name += path[i]; i++;}
+		if (path[i] != '\0') i++;
+		int32 j = 0, count = view->CountRows(row);
+		while (j < count) {
+			row2 = view->RowAt(j, row);
+			if (strcmp(((BStringField*)row2->GetField(nameCol))->String(), name) == 0)
+				break;
+			j++;
+		}
+		if (!(j < count)) {break;}
+		view->ExpandOrCollapse(row, true);
+		row = row2;
+	}
+	view->DeselectAll();
+	view->SetFocusRow(row, true);
+}
+
 
 // #pragma mark - TestWindow
 
@@ -423,6 +462,8 @@ TestWindow::TestWindow(BRect frame): BWindow(frame, "", B_DOCUMENT_WINDOW, B_ASY
 			.AddSeparator()
 			.AddItem(new BMenuItem("Expand all", new BMessage(expandAllMsg)))
 			.AddItem(new BMenuItem("Collapse all", new BMessage(collapseAllMsg)))
+			.AddSeparator()
+			.AddItem(new BMenuItem("Focus path", new BMessage(focusPathMsg), 'L'))
 			.End()
 		.End()
 	;
@@ -431,7 +472,7 @@ TestWindow::TestWindow(BRect frame): BWindow(frame, "", B_DOCUMENT_WINDOW, B_ASY
 		.Add(fMenuBar)
 		.AddGroup(B_VERTICAL, 0)
 			.SetInsets(2)
-			.Add(CreateTextControlLayoutItemHor(fPathView = new BTextControl("path", "Path: ", "", NULL)))
+			.Add(CreateTextControlLayoutItemHor(fPathView = new BTextControl("path", "Path: ", "", new BMessage(setPathMsg))))
 			.End()
 		.AddGroup(B_VERTICAL, 0)
 			.SetInsets(-1, 0, -1, -1)
@@ -510,20 +551,21 @@ void TestWindow::MessageReceived(BMessage* msg)
 		break;
 	}
 	case selectMsg: {
-		BRow *row, *parent;
-		bool isVisible;
-		const char *str;
 		BString path;
-		row = fView->CurrentSelection(NULL);
-		if (row == NULL) {return;}
-		path = ((BStringField*)row->GetField(nameCol))->String();
-		while (fView->FindParent(row, &parent, &isVisible)) {
-			str = ((BStringField*)parent->GetField(nameCol))->String();
-			path.Prepend("/");
-			path.Prepend(str);
-			row = parent;
-		}
+		GetPath(path, fView);
 		fPathView->TextView()->SetText(path);
+		break;
+	}
+	case setPathMsg: {
+		BString path = fPathView->Text();
+		SetPath(fView, path);
+		fView->MakeFocus();
+		GetPath(path, fView);
+		fPathView->TextView()->SetText(path);
+		break;
+	}
+	case focusPathMsg: {
+		fPathView->MakeFocus();
 		break;
 	}
 	default:
