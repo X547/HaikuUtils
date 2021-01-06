@@ -37,13 +37,26 @@ struct ViewList
 	ViewList(BView *view): next(NULL), view(view) {}
 };
 
+
+void Assert(bool cond)
+{
+	if (!cond) {
+		fprintf(stderr, "assert failed\n");
+		debugger("assert failed");
+		exit(1);
+	}
+}
+
+
 BView *CopyView(BView *src)
 {
 	BMessage archive(B_ARCHIVED_OBJECT);
 	src->Archive(&archive);
 	BArchivable *arch = instantiate_object(&archive);
-	if (arch == NULL) return NULL;
-	return dynamic_cast<BView*>(arch);
+	Assert(arch != NULL);
+	BView *view = dynamic_cast<BView*>(arch);
+	Assert(view != NULL);
+	return view;
 }
 
 BView *GetSubViewContains(BView *container, BView *view)
@@ -530,9 +543,9 @@ public:
 			msg->FindPoint("_drop_offset_", &dropOfs);
 			ConvertFromScreen(&dropPt);
 			BArchivable *arch = instantiate_object(msg);
-			if (arch == NULL) return;
+			Assert(arch != NULL);
 			BView *view = dynamic_cast<BView*>(arch);
-			if (view == NULL) return;
+			Assert(view != NULL);
 			view->MoveTo(dropPt - dropOfs);
 			view->SetResizingMode(B_FOLLOW_NONE);
 			AddChild(view);
