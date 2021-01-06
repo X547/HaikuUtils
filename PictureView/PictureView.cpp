@@ -14,6 +14,16 @@ enum {
 	appWindowClosedMsg = 1,
 };
 
+class StateGroup
+{
+private:
+	BView *fView;
+public:
+	StateGroup(BView *view): fView(view) {if (fView != NULL) fView->PushState();}
+	~StateGroup() {if (fView != NULL) fView->PopState();}
+};
+
+
 class TestView: public BView
 {
 private:
@@ -29,7 +39,7 @@ public:
 		BView(frame, name, B_FOLLOW_NONE, B_FULL_UPDATE_ON_RESIZE | B_WILL_DRAW | B_SUBPIXEL_PRECISE),
 		fOffset(0, 0),
 		fScale(1),
-		fRotation(1.0e-8),
+		fRotation(0),
 		fTrack(false)
 	{
 	}
@@ -140,7 +150,7 @@ private:
 	int32 fWndCnt;
 
 public:
-	TestApplication(): BApplication("application/x-vnd.test-app"),
+	TestApplication(): BApplication("application/x-vnd.Test-PictureView"),
 		fWndCnt(0)
 	{
 	}
