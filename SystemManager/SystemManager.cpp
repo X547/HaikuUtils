@@ -27,6 +27,7 @@
 #include <Entry.h>
 #include <Path.h>
 #include <NodeInfo.h>
+#include <FindDirectory.h>
 
 #include "TeamWindow.h"
 #include "Errors.h"
@@ -44,6 +45,7 @@ enum {
 	suspendMsg,
 	resumeMsg,
 	sendSignalMsg,
+	debugMsg,
 
 	showLocationMsg,
 };
@@ -499,6 +501,7 @@ public:
 				.AddItem(new BMenuItem("Resume", new BMessage(resumeMsg)))
 				.AddMenu(signalMenu = new BMenu("Send signal"))
 					.End()
+				.AddItem(new BMenuItem("Debug" B_UTF8_ELLIPSIS, new BMessage(debugMsg)))
 				.AddSeparator()
 				.AddItem(new BMenuItem("Show location", new BMessage(showLocationMsg)))
 				.End()
@@ -612,6 +615,24 @@ public:
 				team_id team = SelectedTeam();
 				if (team < B_OK) return;
 				CheckErrno(kill(team, signal), "Can't send signal.");
+				return;
+			}
+			case debugMsg: {
+				team_id team = SelectedTeam();
+				if (team < B_OK) return;
+				BPath debuggerPath;
+				BString teamStr;
+				Check(find_directory(B_SYSTEM_APPS_DIRECTORY, &debuggerPath), "(1)");
+				Check(debuggerPath.Append("Debugger"), "(2)");
+				teamStr.SetToFormat("%" B_PRId32, team);
+				int argc = 0;
+				const char *argv[4];
+				argv[argc++] = debuggerPath.Path();
+				argv[argc++] = "--team";
+				argv[argc++] = teamStr.String();
+				argv[argc] = NULL;
+				thread_id thread = Check(load_image(argc, argv, (const char**)environ), "(3)");
+				resume_thread(thread);
 				return;
 			}
 			case showLocationMsg: {
