@@ -103,6 +103,7 @@ enum {
 	threadsTerminateMsg,
 	threadsSendSignalMsg,
 	threadsShowSemMsg,
+	threadsShowStackAreaMsg,
 	semsShowThreadMsg,
 };
 
@@ -662,6 +663,7 @@ TeamWindow::TeamWindow(team_id id): BWindow(BRect(0, 0, 800, 480), "Team", B_DOC
 			.End()
 		.AddSeparator()
 		.AddItem(new BMenuItem("Show semaphore", new BMessage(threadsShowSemMsg)))
+		.AddItem(new BMenuItem("Show stack area", new BMessage(threadsShowStackAreaMsg)))
 		.End()
 	;
 	fThreadsMenu = new BMenuItem(menu);
@@ -812,6 +814,28 @@ void TeamWindow::MessageReceived(BMessage *msg)
 		be_app_messenger.SendMessage(&showMsg);
 		return;
 	}
+	case threadsShowStackAreaMsg: {
+		BTab *tab = fTabView->TabAt(fTabView->Selection());
+		if (tab == NULL) return;
+		BView *view = tab->View();
+		if (view != fThreadsView) return;
+		BRow *row = fThreadsView->CurrentSelection(NULL);
+		if (row == NULL) return;
+		int64 stackBase = ((Int64Field*)row->GetField(threadStackBaseCol))->Value();
+		ListAreas(this, fAreasView);
+		for (int32 i = 0; i < fAreasView->CountRows(); i++) {
+			BRow *areaRow = fAreasView->RowAt(i);
+			int64 areaAdr = ((Int64Field*)areaRow->GetField(areaAdrCol))->Value();
+			int64 areaSize = ((Int64Field*)areaRow->GetField(areaSizeCol))->Value();
+			if (stackBase >= areaAdr && stackBase < areaAdr + areaSize) {
+				int32 area = ((BIntegerField*)areaRow->GetField(areaIdCol))->Value();
+				BMessage showMsg(teamWindowShowAreaMsg);
+				CheckRetVoid(showMsg.AddInt32("val", area));
+				CheckRetVoid(showMsg.AddInt32("refresh", false));
+				BMessenger(this).SendMessage(&showMsg);
+			}
+		}
+	}
 	case semsShowThreadMsg: {
 		BTab *tab = fTabView->TabAt(fTabView->Selection());
 		if (tab == NULL) return;
@@ -853,9 +877,11 @@ void TeamWindow::MessageReceived(BMessage *msg)
 	}
 	case teamWindowShowAreaMsg: {
 		int32 id;
+		bool refresh;
 		if (msg->FindInt32("val", &id) < B_OK) return;
+		if (msg->FindBool("refresh", &refresh) < B_OK) refresh = true;
 		fTabView->Select(3); // TODO: remove hard-coded constant
-		ListAreas(this, fAreasView);
+		if (refresh) ListAreas(this, fAreasView);
 		BRow *itemRow = FindIntRow(fAreasView, areaIdCol, NULL, id);
 		if (itemRow == NULL) return;
 		fAreasView->DeselectAll();
