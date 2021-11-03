@@ -40,7 +40,7 @@ private:
 	TestView *fView;
 
 public:
-	TestWindow(BRect frame): BWindow(frame, "TestApp", B_TITLED_WINDOW, B_ASYNCHRONOUS_CONTROLS | B_AUTO_UPDATE_SIZE_LIMITS)
+	TestWindow(BRect frame): BWindow(frame, "TestApp", B_TITLED_WINDOW, B_WILL_ACCEPT_FIRST_CLICK | B_ASYNCHRONOUS_CONTROLS | B_AUTO_UPDATE_SIZE_LIMITS)
 	{
 		fView = new TestView(frame.OffsetToCopy(B_ORIGIN), "view");
 		fView->SetResizingMode(B_FOLLOW_ALL);
