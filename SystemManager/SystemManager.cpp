@@ -667,15 +667,12 @@ private:
 public:
 	TestApplication(): BApplication("application/x-vnd.Test-SystemManager")
 	{
-	}
-
-	void ReadyToRun() {
 		fWnd = new TestWindow(BRect(0, 0, 640, 480));
 		fWnd->SetFlags(fWnd->Flags() | B_QUIT_ON_WINDOW_CLOSE);
 		fWnd->CenterOnScreen();
 		fWnd->Show();
 	}
-	
+
 	BHandler *ResolveSpecifier(BMessage* message, int32 index, BMessage* specifier, int32 what, const char* property)
 	{
 		printf("TestApplication::ResolveSpecifier()\n");
@@ -685,7 +682,7 @@ public:
 			return this;
 		return BApplication::ResolveSpecifier(message, index, specifier, what, property);
 	}
-	
+
 	status_t GetSupportedSuites(BMessage *data)
 	{
 		printf("TestApplication::GetSupportedSuites()\n");
@@ -695,7 +692,7 @@ public:
 		CheckRet(data->AddFlat("messages", &propertyInfo));
 		return BApplication::GetSupportedSuites(data);
 	}
-	
+
 	status_t HandleScript(BMessage &message, BMessage &reply, int32 index, BMessage &specifier, int32 what, const char* property)
 	{
 		BPropertyInfo propInfo(gProperties);
@@ -760,7 +757,7 @@ public:
 		}
 		return B_BAD_SCRIPT_SYNTAX;
 	}
-	
+
 	void MessageReceived(BMessage *msg)
 	{
 		int32 index;
@@ -788,7 +785,7 @@ public:
 
 		BApplication::MessageReceived(msg);
 	}
-	
+
 };
 
 

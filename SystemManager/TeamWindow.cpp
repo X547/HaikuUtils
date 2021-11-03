@@ -375,6 +375,7 @@ static void ListAreas(TeamWindow *wnd, BColumnListView *view)
 		case B_LOMEM: str = "lomem"; break;
 		case B_32_BIT_FULL_LOCK: str = "32 bit full"; break;
 		case B_32_BIT_CONTIGUOUS: str = "32 bit contiguous"; break;
+		case 7: str = "already wired"; break;
 		default:
 			str.SetToFormat("? (%" B_PRIu32 ")", info.lock);
 		}
