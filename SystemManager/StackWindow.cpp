@@ -35,6 +35,10 @@ enum {
 	frameFunctionCol,
 };
 
+enum {
+	stackUpdateMsg = 1,
+};
+
 
 static char *CppDemangle(const char *abiName)
 {
@@ -256,6 +260,7 @@ StackWindow::StackWindow(thread_id id): BWindow(BRect(0, 0, 800, 480), "Thread",
 	menuBar = new BMenuBar("menu", B_ITEMS_IN_ROW, true);
 	BLayoutBuilder::Menu<>(menuBar)
 		.AddMenu(new BMenu("File"))
+			.AddItem(new BMenuItem("Update", new BMessage(stackUpdateMsg), 'R'))
 			.AddItem(new BMenuItem("Close", new BMessage(B_QUIT_REQUESTED), 'W'))
 			.End()
 		.End()
@@ -283,4 +288,17 @@ StackWindow::~StackWindow()
 	printf("-StackWindow\n");
 	AutoLocker<BLocker> locker(stacksLocker);
 	stacks.erase(fId);
+}
+
+
+void StackWindow::MessageReceived(BMessage *msg)
+{
+	switch (msg->what) {
+	case stackUpdateMsg: {
+		fView->Clear();
+		ListFrames(this, fView);
+		return;
+	}
+	}
+	BWindow::MessageReceived(msg);
 }

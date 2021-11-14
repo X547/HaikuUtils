@@ -21,6 +21,8 @@ public:
 
 	StackWindow(thread_id id);
 	~StackWindow();
+	
+	void MessageReceived(BMessage *msg);
 };
 
 void OpenStackWindow(thread_id id, BPoint center);

@@ -26,6 +26,7 @@
 #include <Entry.h>
 #include <Path.h>
 
+#include <stdio.h>
 #include <map>
 
 #include "StackWindow.h"
