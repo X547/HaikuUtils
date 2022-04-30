@@ -26,4 +26,6 @@ void GetSemString(BString &str, sem_id sem);
 
 void ShowLocation(const char *path);
 
+const char *GetFileName(const char *path);
+
 #endif	// _UTILS_H_

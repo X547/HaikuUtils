@@ -26,6 +26,7 @@
 #include <map>
 
 #include "Errors.h"
+#include "Utils.h"
 #include "UIUtils.h"
 
 
@@ -106,66 +107,71 @@ static void LookupSymbolAddress(
 		}
 	}
 
-	// lookup the symbol
+	// symbol table
 	void *baseAddress;
 	char symbolName[1024];
 	char imagePath[B_PATH_NAME_LENGTH], imageNameBuf[B_PATH_NAME_LENGTH], *imageName;
 	bool exactMatch;
-	bool lookupSucceeded = false;
 	if (lookupContext) {
 		status_t error = debug_lookup_symbol_address(lookupContext, address,
 			&baseAddress, symbolName, sizeof(symbolName), imagePath,
 			sizeof(imagePath), &exactMatch);
-		lookupSucceeded = (error == B_OK);
-	}
-
-	if (lookupSucceeded) {
-		strcpy(imageNameBuf, imagePath);
-		imageName = basename(imageNameBuf);
-
-		// we were able to look something up
-		if (strlen(symbolName) > 0) {
-			char *demangledName = CppDemangle(symbolName);
-			if (demangledName != NULL) {
-				strcpy(symbolName, demangledName);
-				free(demangledName);
+		if (error == B_OK) {
+			strcpy(imageNameBuf, imagePath);
+			imageName = basename(imageNameBuf);
+	
+			if (strlen(symbolName) > 0) {
+				char *demangledName = CppDemangle(symbolName);
+				if (demangledName != NULL) {
+					strcpy(symbolName, demangledName);
+					free(demangledName);
+				}
+	
+				imageStr.SetTo(imageName);
+				symbolStr.SetToFormat("%s + %ld%s",
+					symbolName,
+					(addr_t)address - (addr_t)baseAddress,
+					exactMatch ? "" : " (closest symbol)"
+				);
+				return;
 			}
-
-			// we even got a symbol
-			imageStr.SetTo(imageName);
-			symbolStr.SetToFormat("%s + %ld%s",
-				symbolName,
-				(addr_t)address - (addr_t)baseAddress,
-				exactMatch ? "" : " (closest symbol)"
-			);
-		} else {
-			// no symbol: image relative address
 			imageStr.SetTo(imageName);
 			symbolStr.SetToFormat("%ld", (addr_t)address - (addr_t)baseAddress);
-		}
-
-	} else {
-		// lookup failed: find area containing the IP
-		bool useAreaInfo = false;
-		area_info info;
-		ssize_t cookie = 0;
-		while (get_next_area_info(wnd->fTeam, &cookie, &info) == B_OK) {
-			if ((addr_t)info.address <= (addr_t)address &&
-				(addr_t)info.address + info.size > (addr_t)address
-			) {
-				useAreaInfo = true;
-				break;
-			}
-		}
-
-		if (useAreaInfo) {
-			imageStr.SetToFormat("<area: %s>", info.name);
-			symbolStr.SetToFormat("%#lx", (addr_t)address - (addr_t)info.address);
-		} else {
-			imageStr.SetTo("");
-			symbolStr.SetTo("");
+			return;
 		}
 	}
+
+	// image
+	image_info imageInfo;
+	int32 imageCookie = 0;
+	while (get_next_image_info(wnd->fTeam, &imageCookie, &imageInfo) >= B_OK) {
+		if ((addr_t)address >= (addr_t)imageInfo.text && (addr_t)address < (addr_t)imageInfo.text + imageInfo.text_size) {
+			imageStr.SetToFormat("<%s>", GetFileName(imageInfo.name));
+			symbolStr.SetToFormat(".text + %#lx", (addr_t)address - (addr_t)imageInfo.text);
+			return;
+		}
+		if ((addr_t)address >= (addr_t)imageInfo.data && (addr_t)address < (addr_t)imageInfo.data + imageInfo.data_size) {
+			imageStr.SetToFormat("<%s>", GetFileName(imageInfo.name));
+			symbolStr.SetToFormat(".data + %#lx", (addr_t)address - (addr_t)imageInfo.data);
+			return;
+		}
+	}
+
+	// area
+	area_info info;
+	ssize_t cookie = 0;
+	while (get_next_area_info(wnd->fTeam, &cookie, &info) == B_OK) {
+		if ((addr_t)info.address <= (addr_t)address &&
+			(addr_t)info.address + info.size > (addr_t)address
+		) {
+			imageStr.SetToFormat("<area %" B_PRId32 ": %s>", info.area, info.name);
+			symbolStr.SetToFormat("%#lx", (addr_t)address - (addr_t)info.address);
+			return;
+		}
+	}
+
+	imageStr.SetTo("");
+	symbolStr.SetTo("");
 }
 
 static void WriteStackTrace(StackWindow *wnd)

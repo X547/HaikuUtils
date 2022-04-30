@@ -162,3 +162,13 @@ void ShowLocation(const char *path)
 	
 	BMessenger("application/x-vnd.Be-TRAK").SendMessage(&message);
 }
+
+
+const char *GetFileName(const char *path)
+{
+	const char *name = path;
+	for (const char *it = name; *it != '\0'; it++) {
+		if (*it == '/') name = it + 1;
+	}
+	return name;
+}

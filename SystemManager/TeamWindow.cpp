@@ -37,6 +37,7 @@
 
 enum {
 	imageIdCol = 0,
+	imageTypeCol,
 	imageTextCol,
 	imageDataCol,
 	imageNameCol,
@@ -108,15 +109,6 @@ enum {
 	semsShowThreadMsg,
 };
 
-
-static const char *GetFileName(const char *path)
-{
-	const char *name = path;
-	for (const char *it = name; *it != '\0'; it++) {
-		if (*it == '/') name = it + 1;
-	}
-	return name;
-}
 
 static BRow *FindIntRow(BColumnListView *view, int32 col, BRow *parent, int32 val)
 {
@@ -231,8 +223,18 @@ static void ListImages(TeamWindow *wnd, BColumnListView *view)
 			row = new BRow();
 			view->AddRow(row);
 		}
+		
+		BString imageType;
+		switch (info.type) {
+			case B_APP_IMAGE: imageType.SetTo("app"); break;
+			case B_LIBRARY_IMAGE: imageType.SetTo("lib"); break;
+			case B_ADD_ON_IMAGE: imageType.SetTo("addon"); break;
+			case B_SYSTEM_IMAGE: imageType.SetTo("sys"); break;
+			default: imageType.SetToFormat("?(%d)", info.type);
+		}
 
 		row->SetField(new BIntegerField(info.id), imageIdCol);
+		row->SetField(new BStringField(imageType), imageTypeCol);
 		row->SetField(new Int64Field((uintptr_t)info.text), imageTextCol);
 		row->SetField(new Int64Field((uintptr_t)info.data), imageDataCol);
 		row->SetField(new BStringField(GetFileName(info.name)), imageNameCol);
@@ -251,6 +253,7 @@ static BColumnListView *NewImagesView(TeamWindow *wnd)
 	BColumnListView *view;
 	view = new BColumnListView("Images", B_NAVIGABLE);
 	view->AddColumn(new BIntegerColumn("ID", 64, 32, 128, B_ALIGN_RIGHT), imageIdCol);
+	view->AddColumn(new BStringColumn("Type", 56, 32, 96, B_ALIGN_LEFT), imageTypeCol);
 	view->AddColumn(new HexIntegerColumn("Text", 128, 50, 500, B_ALIGN_RIGHT), imageTextCol);
 	view->AddColumn(new HexIntegerColumn("Data", 128, 50, 500, B_ALIGN_RIGHT), imageDataCol);
 	view->AddColumn(new BStringColumn("Name", 150, 50, 500, B_TRUNCATE_END), imageNameCol);
