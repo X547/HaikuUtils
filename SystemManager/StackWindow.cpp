@@ -18,6 +18,7 @@
 #include <String.h>
 #include <image.h>
 #include <drivers/KernelExport.h>
+#include <Entry.h>
 
 #include <private/debug/debug_support.h>
 
@@ -36,7 +37,17 @@ enum {
 };
 
 enum {
-	stackUpdateMsg = 1,
+	invokeMsg = 1,
+	stackUpdateMsg,
+};
+
+
+struct StackFrameRow: public BRow {
+	using BRow::BRow;
+	image_id fImage = -1;
+	BString fImagePath;
+	addr_t fImageBase{};
+	addr_t fIp{};
 };
 
 
@@ -47,11 +58,54 @@ static char *CppDemangle(const char *abiName)
   return ret;
 }
 
+static status_t Addr2Line(BString &srcPath, uint32 &line, uint32 &col, const char *imgPath, addr_t address)
+{
+	BString command;
+	command.SetToFormat("addr2line -e \"%s\" %#" B_PRIxADDR, imgPath, address);
+	FILE *out = popen(command.String(), "r");
+	if (out == NULL) {
+		return errno;
+	}
+	BString outStr;
+	size_t len;
+	for (;;) {
+		size_t oldLen = outStr.Length();
+		len = fread(outStr.LockBuffer(oldLen + 256) + oldLen, 1, 256, out);
+		outStr.UnlockBuffer(oldLen + len);
+		if (len == 0) break;
+	}
+	fclose(out);
+	outStr.Truncate(outStr.FindFirst('\n'));
+	int32 colonPos = outStr.FindLast(':');
+	BString buf;
+	outStr.CopyInto(buf, colonPos + 1, outStr.Length() - (colonPos + 1));
+	line = strtol(buf.String(), NULL, 0);
+	col = 1;
+	outStr.CopyInto(srcPath, 0, colonPos);
+	return B_OK;
+}
+
+
 static void LookupSymbolAddress(
 	StackWindow *wnd,
 	debug_symbol_lookup_context *lookupContext, const void *address,
-	BString &imageStr, BString &symbolStr)
-{
+	BString &imageStr, BString &symbolStr,
+	StackFrameRow *row
+) {
+	{
+		int32 cookie = 0;
+		image_info info;
+		while (get_next_image_info(wnd->fTeam, &cookie, &info) >= B_OK) {
+			if ((addr_t)address >= (addr_t)info.text && (addr_t)address <= (addr_t)info.text + info.text_size - 1) {
+				row->fImage = info.id;
+				row->fImagePath = info.name;
+				row->fImageBase = (addr_t)info.text;
+				row->fIp = (addr_t)address - 1;
+				break;
+			}
+		}
+	}
+
 	// lookup the symbol
 	void *baseAddress;
 	char symbolName[1024];
@@ -124,13 +178,13 @@ static void WriteStackTrace(StackWindow *wnd)
 	debug_symbol_lookup_context *lookupContext = NULL;
 	Check(debug_create_symbol_lookup_context(wnd->fTeam, -1, &lookupContext), "can't create symbol lookup context", false);
 
-	BString imageStr, symbolStr;
-	LookupSymbolAddress(wnd, lookupContext, ip, imageStr, symbolStr);
-
-	BRow *row;
+	StackFrameRow *row;
 	BString str;
 
-	row = new BRow();
+	BString imageStr, symbolStr;
+	row = new StackFrameRow();
+	LookupSymbolAddress(wnd, lookupContext, ip, imageStr, symbolStr, row);
+
 	row->SetField(new Int64Field((addr_t)fp), frameFpCol);
 	row->SetField(new Int64Field((addr_t)ip), frameIpCol);
 	row->SetField(new BStringField(imageStr), frameImageCol);
@@ -147,9 +201,9 @@ static void WriteStackTrace(StackWindow *wnd)
 		ip = stackFrameInfo.return_address;
 		fp = stackFrameInfo.parent_frame;
 
-		LookupSymbolAddress(wnd, lookupContext, ip, imageStr, symbolStr);
+		row = new StackFrameRow();
+		LookupSymbolAddress(wnd, lookupContext, ip, imageStr, symbolStr, row);
 
-		row = new BRow();
 		row->SetField(new Int64Field((addr_t)fp), frameFpCol);
 		row->SetField(new Int64Field((addr_t)ip), frameIpCol);
 		row->SetField(new BStringField(imageStr), frameImageCol);
@@ -221,6 +275,7 @@ static void NewFramesView(StackWindow *wnd)
 {
 	BColumnListView *view;
 	view = new BColumnListView("Frames", B_NAVIGABLE);
+	view->SetInvocationMessage(new BMessage(invokeMsg));
 	view->AddColumn(new HexIntegerColumn("FP", 128, 50, 500, B_ALIGN_RIGHT), frameFpCol);
 	view->AddColumn(new HexIntegerColumn("IP", 128, 50, 500, B_ALIGN_RIGHT), frameIpCol);
 	view->AddColumn(new BStringColumn("Image", 150, 50, 500, B_TRUNCATE_END), frameImageCol);
@@ -294,6 +349,24 @@ StackWindow::~StackWindow()
 void StackWindow::MessageReceived(BMessage *msg)
 {
 	switch (msg->what) {
+	case invokeMsg: {
+		auto row = (StackFrameRow*)fView->CurrentSelection(NULL);
+		if (row == NULL) return;
+		if (row->fImage < B_OK) return;
+		BString srcPath;
+		uint32 line, col;
+		if (Addr2Line(srcPath, line, col, row->fImagePath, row->fIp - row->fImageBase) < B_OK) return;
+		printf("%s:%" B_PRIu32 "\n", srcPath.String(), line);
+		BEntry entry(srcPath);
+		if (!entry.Exists()) return;
+		entry_ref ref;
+		entry.GetRef(&ref);
+		BMessage message(B_REFS_RECEIVED);
+		message.AddRef("refs", &ref);
+		message.AddInt32("be:line", line);
+		BMessenger("application/x-vnd.Be-TRAK").SendMessage(&message);
+		return;
+	}
 	case stackUpdateMsg: {
 		fView->Clear();
 		ListFrames(this, fView);
