@@ -105,6 +105,12 @@ SoftwareRenderer::SoftwareRenderer(BGLView *view, ulong options)
 	: BGLRenderer(view, options), fBackBuf(NULL), fWidth(1), fHeight(1), fDirectModeEnabled(false), fInfo(NULL), fSwapBuffersLevel(0)
 {
 	printf("+SoftwareRenderer\n");
+	
+	OSMesaContext shareContext = NULL;
+	if ((options & BGL_SHARE_CONTEXT) != 0) {
+		shareContext = OSMesaGetCurrentContext();
+	}
+	
 	#if 0
 	int attribList[] = {
 		OSMESA_FORMAT,                OSMESA_BGRA,
@@ -115,7 +121,7 @@ SoftwareRenderer::SoftwareRenderer(BGLView *view, ulong options)
 	};
 	fCtx = OSMesaCreateContextAttribs(attribList, NULL);
 	#else
-	fCtx = OSMesaCreateContextExt(OSMESA_BGRA, 16, 0, 0, NULL);
+	fCtx = OSMesaCreateContextExt(OSMESA_BGRA, 16, 0, 0, shareContext);
  	#endif
 	if (fCtx == NULL) {
 		printf("[!] can't create context\n");
