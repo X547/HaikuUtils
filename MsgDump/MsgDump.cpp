@@ -580,6 +580,25 @@ TestApplication::TestApplication(): BApplication("application/x-vnd.Test-MsgDump
 {
 }
 
+
+void TestApplication::ArgvReceived(int32 argc, char** argv)
+{
+	if (argc <= 1)
+		return;
+
+	BMessage refsReceived(B_REFS_RECEIVED);
+	for (int32 i = 1; i < argc; i++) {
+		BEntry entry(argv[i], true);
+		entry_ref ref;
+		if (entry.GetRef(&ref) == B_OK)
+			refsReceived.AddRef("refs", &ref);
+	}
+
+	if (refsReceived.IsEmpty() == false)
+		RefsReceived(&refsReceived);
+}
+
+
 void TestApplication::RefsReceived(BMessage *refsMsg)
 {
 	entry_ref ref;
@@ -601,7 +620,7 @@ void TestApplication::ReadyToRun()
 }
 
 
-int main()
+int main(int /*argc*/, char** /*argv*/)
 {
 	TestApplication app;
 	app.Run();

@@ -85,6 +85,7 @@ class TestApplication: public BApplication
 {
 public:
 	TestApplication();
+	void ArgvReceived(int32 argc, char** argv);
 	void RefsReceived(BMessage *refsMsg);
 	void ReadyToRun();
 };
