@@ -601,15 +601,21 @@ void TestApplication::ArgvReceived(int32 argc, char** argv)
 
 void TestApplication::RefsReceived(BMessage *refsMsg)
 {
-	entry_ref ref;
-	if (refsMsg->FindRef("refs", &ref) < B_OK) {(new BAlert("Error", "No \"be:refs\" field.", "OK", NULL, NULL, B_WIDTH_AS_USUAL, B_STOP_ALERT))->Go(); return;}
-	BEntry entry(&ref);
-
 	BRect rect(0, 0, 640, 480);
-	rect.OffsetBy(64, 64);
-	TestWindow *wnd = new TestWindow(rect);
-	if (!wnd->Load(entry)) {wnd->PostMessage(B_QUIT_REQUESTED); return;}
-	wnd->Show();
+	entry_ref ref;
+
+	for (int i = 0; refsMsg->FindRef("refs", i, &ref) == B_OK; i++) {
+		BEntry entry(&ref);
+		if (entry.Exists()) {
+			rect.OffsetBy(64, 64);
+			TestWindow *wnd = new TestWindow(rect);
+			if (!wnd->Load(entry)) {
+				wnd->PostMessage(B_QUIT_REQUESTED);
+				continue;
+			}
+			wnd->Show();
+		}
+	}
 }
 
 void TestApplication::ReadyToRun()
