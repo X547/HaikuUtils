@@ -2,6 +2,7 @@
 #define _MSGDUMP_H_
 
 #include <Application.h>
+#include <FilePanel.h>
 #include <Window.h>
 #include <View.h>
 #include <String.h>
@@ -84,10 +85,16 @@ public:
 class TestApplication: public BApplication
 {
 public:
-	TestApplication();
+			TestApplication();
+	virtual	~TestApplication();
+
 	void ArgvReceived(int32 argc, char** argv);
 	void RefsReceived(BMessage *refsMsg);
+	void MessageReceived(BMessage* msg);
 	void ReadyToRun();
+
+private:
+	BFilePanel* fOpenPanel;
 };
 
 #endif	// _MSGDUMP_H_
