@@ -28,6 +28,7 @@ enum {
 	selectMsg,
 	setPathMsg,
 	focusPathMsg,
+	openFileMsg,
 };
 
 enum {
@@ -440,13 +441,13 @@ TestWindow::TestWindow(BRect frame): BWindow(frame, "", B_DOCUMENT_WINDOW, B_ASY
 {
 	BLayoutBuilder::Menu<>(fMenuBar = new BMenuBar("menu", B_ITEMS_IN_ROW, true))
 		.AddMenu(new BMenu("File"))
-			.AddItem(new BMenuItem("New", new BMessage('item'), 'N'))
-			.AddItem(new BMenuItem("Open...", new BMessage('item'), 'O'))
+			// .AddItem(new BMenuItem("New", new BMessage('item'), 'N'))
+			.AddItem(MenuItemSetTarget(new BMenuItem("Open" B_UTF8_ELLIPSIS, new BMessage(openFileMsg), 'O'), be_app))
 			.AddItem(new BMenuItem("Close", new BMessage(B_QUIT_REQUESTED), 'W'))
 			.AddSeparator()
-			.AddItem(new BMenuItem("Save", new BMessage('item'), 'S'))
-			.AddItem(new BMenuItem("Save as...", new BMessage('item'), 'S', B_SHIFT_KEY))
-			.AddSeparator()
+			// .AddItem(new BMenuItem("Save", new BMessage('item'), 'S'))
+			// .AddItem(new BMenuItem("Save as" B_UTF8_ELLIPSIS, new BMessage('item'), 'S', B_SHIFT_KEY))
+			// .AddSeparator()
 			.AddItem(MenuItemSetTarget(new BMenuItem("Quit", new BMessage(B_QUIT_REQUESTED), 'Q'), be_app))
 			.End()
 		.AddMenu(new BMenu("Edit"))
@@ -517,9 +518,9 @@ bool TestWindow::Load(BEntry &entry)
 
 void TestWindow::Quit()
 {
-	if (be_app->CountWindows() == 1) {
+	if (be_app->CountWindows() == 2) // This window + the fOpenPanel
 		be_app->PostMessage(B_QUIT_REQUESTED);
-	}
+
 	BWindow::Quit();
 }
 
@@ -576,10 +577,15 @@ void TestWindow::MessageReceived(BMessage* msg)
 
 // #pragma mark - TestApplication
 
-TestApplication::TestApplication(): BApplication("application/x-vnd.Test-MsgDump")
+TestApplication::TestApplication(): BApplication("application/x-vnd.Test-MsgDump"),
+	fOpenPanel(NULL)
 {
 }
 
+TestApplication::~TestApplication()
+{
+	delete fOpenPanel;
+}
 
 void TestApplication::ArgvReceived(int32 argc, char** argv)
 {
@@ -618,11 +624,29 @@ void TestApplication::RefsReceived(BMessage *refsMsg)
 	}
 }
 
+
+void TestApplication::MessageReceived(BMessage* msg)
+{
+	switch (msg->what) {
+		case openFileMsg: {
+			if (!fOpenPanel) {
+				fOpenPanel = new BFilePanel(B_OPEN_PANEL, NULL, NULL,
+					B_FILE_NODE, true, NULL, NULL, false, true);
+				fOpenPanel->SetTarget(this);
+			}
+			fOpenPanel->Show();
+		} break;
+
+		default:
+			BApplication::MessageReceived(msg);
+	}
+}
+
+
 void TestApplication::ReadyToRun()
 {
-	if (be_app->CountWindows() == 0) {
-		be_app->PostMessage(B_QUIT_REQUESTED);
-	}
+	if (be_app->CountWindows() == 0)
+		be_app->PostMessage(openFileMsg);
 }
 
 
