@@ -13,8 +13,10 @@ private:
 	ObjectDeleter<BBitmap> fIcon;
 
 public:
-	IconStringField(BBitmap *icon, const char *string);
+	IconStringField(BBitmap *icon = NULL, const char *string = "");
 	inline BBitmap *Icon() {return fIcon.Get();}
+
+	inline void SetIcon(BBitmap *icon) {fIcon.SetTo(icon);}
 };
 
 class IconStringColumn: public BStringColumn
@@ -26,9 +28,9 @@ public:
 		alignment align = B_ALIGN_LEFT
 	);
 
-	void DrawField(BField* _field, BRect rect, BView* parent);
-	float GetPreferredWidth(BField* field, BView* parent) const;
-	bool AcceptsField(const BField* field) const;
+	void DrawField(BField* _field, BRect rect, BView* parent) final;
+	float GetPreferredWidth(BField* field, BView* parent) const final;
+	bool AcceptsField(const BField* field) const final;
 };
 
 class HexIntegerColumn: public BTitledColumn

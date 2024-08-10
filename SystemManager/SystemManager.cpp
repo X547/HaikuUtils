@@ -218,6 +218,8 @@ static void ListTeams(BColumnListView *view, ViewLayout layout) {
 	BList prevRows;
 	BString str;
 
+	view->ScrollView()->Invalidate();
+
 	CollectRowList(prevRows, view);
 
 	while (get_next_team_info(&cookie, &info) == B_OK) {
@@ -251,22 +253,35 @@ static void ListTeams(BColumnListView *view, ViewLayout layout) {
 		row = FindIntRowList(prevRows, info.team);
 		if (row == NULL) {
 			row = new BRow();
+			row->SetField(new IconStringField(0), nameCol);
+			row->SetField(new BIntegerField(0), idCol);
+			row->SetField(new BIntegerField(0), parentIdCol);
+			row->SetField(new BIntegerField(0), sidCol);
+			row->SetField(new BIntegerField(0), gidCol);
+			row->SetField(new BStringField(0), memSizeCol);
+			row->SetField(new BStringField(0), memAllocCol);
+			row->SetField(new BStringField(0), userCol);
+			row->SetField(new BStringField(0), pathCol);
 			view->AddRow(row);
 		} else {
 			prevRows.RemoveItem(row);
 		}
-		row->SetField(new IconStringField(icon, path.Leaf()), nameCol);
-		row->SetField(new BIntegerField(info.team), idCol);
-		row->SetField(new BIntegerField(_kern_process_info(info.team, PARENT_ID)), parentIdCol);
-		row->SetField(new BIntegerField(_kern_process_info(info.team, SESSION_ID)), sidCol);
-		row->SetField(new BIntegerField(_kern_process_info(info.team, GROUP_ID)), gidCol);
+
+		static_cast<IconStringField*>(row->GetField(nameCol))->SetIcon(icon);
+		static_cast<IconStringField*>(row->GetField(nameCol))->SetString(path.Leaf());
+		static_cast<BIntegerField*>(row->GetField(idCol))->SetValue(info.team);
+		static_cast<BIntegerField*>(row->GetField(parentIdCol))->SetValue(_kern_process_info(info.team, PARENT_ID));
+		static_cast<BIntegerField*>(row->GetField(sidCol))->SetValue(_kern_process_info(info.team, SESSION_ID));
+		static_cast<BIntegerField*>(row->GetField(gidCol))->SetValue(_kern_process_info(info.team, GROUP_ID));
 		size_t memSize, memAlloc;
 		GetTeamMemory(memSize, memAlloc, info.team);
-		GetSizeString(str, memSize); row->SetField(new BStringField(str), memSizeCol);
-		GetSizeString(str, memAlloc); row->SetField(new BStringField(str), memAllocCol);
+		GetSizeString(str, memSize);
+		static_cast<BStringField*>(row->GetField(memSizeCol))->SetString(str);
+		GetSizeString(str, memAlloc);
+		static_cast<BStringField*>(row->GetField(memAllocCol))->SetString(str);
 		GetUserGroupString(str, uid, gid);
-		row->SetField(new BStringField(str), userCol);
-		row->SetField(new BStringField(imageInfo.name), pathCol);
+		static_cast<BStringField*>(row->GetField(userCol))->SetString(str);
+		static_cast<BStringField*>(row->GetField(pathCol))->SetString(imageInfo.name);
 	}
 
 	for (int32 i = 0; i < prevRows.CountItems(); i++) {

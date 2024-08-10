@@ -211,6 +211,8 @@ static void ListImages(TeamWindow *wnd, BColumnListView *view)
 	BRow *row;
 	BList prevRows;
 
+	view->ScrollView()->Invalidate();
+
 	for (int32 i = 0; i < view->CountRows(); i++) {
 		row = view->RowAt(i);
 		prevRows.AddItem((void*)(addr_t)(((BIntegerField*)row->GetField(imageIdCol))->Value()));
@@ -221,9 +223,15 @@ static void ListImages(TeamWindow *wnd, BColumnListView *view)
 		row = FindIntRow(view, imageIdCol, NULL, info.id);
 		if (row == NULL) {
 			row = new BRow();
+			row->SetField(new BIntegerField(0), imageIdCol);
+			row->SetField(new BStringField(""), imageTypeCol);
+			row->SetField(new Int64Field(0), imageTextCol);
+			row->SetField(new Int64Field(0), imageDataCol);
+			row->SetField(new BStringField(""), imageNameCol);
+			row->SetField(new BStringField(""), imagePathCol);
 			view->AddRow(row);
 		}
-		
+
 		BString imageType;
 		switch (info.type) {
 			case B_APP_IMAGE: imageType.SetTo("app"); break;
@@ -233,12 +241,12 @@ static void ListImages(TeamWindow *wnd, BColumnListView *view)
 			default: imageType.SetToFormat("?(%d)", info.type);
 		}
 
-		row->SetField(new BIntegerField(info.id), imageIdCol);
-		row->SetField(new BStringField(imageType), imageTypeCol);
-		row->SetField(new Int64Field((uintptr_t)info.text), imageTextCol);
-		row->SetField(new Int64Field((uintptr_t)info.data), imageDataCol);
-		row->SetField(new BStringField(GetFileName(info.name)), imageNameCol);
-		row->SetField(new BStringField(info.name), imagePathCol);
+		static_cast<BIntegerField*>(row->GetField(imageIdCol))->SetValue(info.id);
+		static_cast<BStringField*>(row->GetField(imageTypeCol))->SetString(imageType);
+		static_cast<Int64Field*>(row->GetField(imageTextCol))->SetValue((uintptr_t)info.text);
+		static_cast<Int64Field*>(row->GetField(imageDataCol))->SetValue((uintptr_t)info.data);
+		static_cast<BStringField*>(row->GetField(imageNameCol))->SetString(GetFileName(info.name));
+		static_cast<BStringField*>(row->GetField(imagePathCol))->SetString(info.name);
 	}
 
 	for (int32 i = 0; i < prevRows.CountItems(); i++) {
@@ -270,6 +278,8 @@ static void ListThreads(TeamWindow *wnd, BColumnListView *view)
 	BRow *row;
 	BList prevRows;
 
+	view->ScrollView()->Invalidate();
+
 	for (int32 i = 0; i < view->CountRows(); i++) {
 		row = view->RowAt(i);
 		prevRows.AddItem((void*)(addr_t)(((BIntegerField*)row->GetField(threadIdCol))->Value()));
@@ -280,11 +290,20 @@ static void ListThreads(TeamWindow *wnd, BColumnListView *view)
 		row = FindIntRow(view, threadIdCol, NULL, info.thread);
 		if (row == NULL) {
 			row = new BRow();
+			row->SetField(new BIntegerField(0), threadIdCol);
+			row->SetField(new BStringField(0), threadNameCol);
+			row->SetField(new BStringField(0), threadStateCol);
+			row->SetField(new BIntegerField(0), threadPriorityCol);
+			row->SetField(new BStringField(0), threadSemCol);
+			row->SetField(new BIntegerField(0), threadUserTimeCol);
+			row->SetField(new BIntegerField(0), threadKernelTimeCol);
+			row->SetField(new Int64Field(0), threadStackBaseCol);
+			row->SetField(new Int64Field(0), threadStackEndCol);
 			view->AddRow(row);
 		}
 
-		row->SetField(new BIntegerField(info.thread), threadIdCol);
-		row->SetField(new BStringField(info.name), threadNameCol);
+		static_cast<BIntegerField*>(row->GetField(threadIdCol))->SetValue(info.thread);
+		static_cast<BStringField*>(row->GetField(threadNameCol))->SetString(info.name);
 
 		switch (info.state) {
 		case B_THREAD_RUNNING: str = "running"; break;
@@ -296,15 +315,16 @@ static void ListThreads(TeamWindow *wnd, BColumnListView *view)
 		default:
 			str.SetToFormat("? (%d)", info.state);
 		}
-		row->SetField(new BStringField(str), threadStateCol);
+		static_cast<BStringField*>(row->GetField(threadStateCol))->SetString(str);
 
-		row->SetField(new BIntegerField(info.priority), threadPriorityCol);
+		static_cast<BIntegerField*>(row->GetField(threadPriorityCol))->SetValue(info.priority);
 		GetSemString(str, info.sem);
-		row->SetField(new BStringField(str), threadSemCol);
-		row->SetField(new BIntegerField(info.user_time), threadUserTimeCol);
-		row->SetField(new BIntegerField(info.kernel_time), threadKernelTimeCol);
-		row->SetField(new Int64Field((addr_t)info.stack_base), threadStackBaseCol);
-		row->SetField(new Int64Field((addr_t)info.stack_end), threadStackEndCol);
+
+		static_cast<BStringField*>(row->GetField(threadSemCol))->SetString(str);
+		static_cast<BIntegerField*>(row->GetField(threadUserTimeCol))->SetValue(info.user_time);
+		static_cast<BIntegerField*>(row->GetField(threadKernelTimeCol))->SetValue(info.kernel_time);
+		static_cast<Int64Field*>(row->GetField(threadStackBaseCol))->SetValue((addr_t)info.stack_base);
+		static_cast<Int64Field*>(row->GetField(threadStackEndCol))->SetValue((addr_t)info.stack_end);
 	}
 
 	for (int32 i = 0; i < prevRows.CountItems(); i++) {
@@ -340,6 +360,8 @@ static void ListAreas(TeamWindow *wnd, BColumnListView *view)
 	BRow *row;
 	BList prevRows;
 
+	view->ScrollView()->Invalidate();
+
 	for (int32 i = 0; i < view->CountRows(); i++) {
 		row = view->RowAt(i);
 		prevRows.AddItem((void*)(addr_t)(((BIntegerField*)row->GetField(areaIdCol))->Value()));
@@ -350,14 +372,21 @@ static void ListAreas(TeamWindow *wnd, BColumnListView *view)
 		row = FindIntRow(view, areaIdCol, NULL, info.area);
 		if (row == NULL) {
 			row = new BRow();
+			row->SetField(new BIntegerField(0), areaIdCol);
+			row->SetField(new BStringField(""), areaNameCol);
+			row->SetField(new Int64Field(0), areaAdrCol);
+			row->SetField(new Int64Field(0), areaSizeCol);
+			row->SetField(new Int64Field(0), areaAllocCol);
+			row->SetField(new BStringField(""), areaProtCol);
+			row->SetField(new BStringField(""), areaLockCol);
 			view->AddRow(row);
 		}
 
-		row->SetField(new BIntegerField(info.area), areaIdCol);
-		row->SetField(new BStringField(info.name), areaNameCol);
-		row->SetField(new Int64Field((addr_t)info.address), areaAdrCol);
-		row->SetField(new Int64Field(info.size), areaSizeCol);
-		row->SetField(new Int64Field(info.ram_size), areaAllocCol);
+		static_cast<BIntegerField*>(row->GetField(areaIdCol))->SetValue(info.area);
+		static_cast<BStringField*>(row->GetField(areaNameCol))->SetString(info.name);
+		static_cast<Int64Field*>(row->GetField(areaAdrCol))->SetValue((addr_t)info.address);
+		static_cast<Int64Field*>(row->GetField(areaSizeCol))->SetValue(info.size);
+		static_cast<Int64Field*>(row->GetField(areaAllocCol))->SetValue(info.ram_size);
 
 		str = "";
 		if (B_READ_AREA & info.protection) str += "R";
@@ -369,7 +398,7 @@ static void ListAreas(TeamWindow *wnd, BColumnListView *view)
 		if (B_KERNEL_EXECUTE_AREA & info.protection) str += "x";
 		if (B_KERNEL_STACK_AREA & info.protection) str += "s";
 		if (B_CLONEABLE_AREA & info.protection) str += "C";
-		row->SetField(new BStringField(str), areaProtCol);
+		static_cast<BStringField*>(row->GetField(areaProtCol))->SetString(str);
 
 		switch (info.lock) {
 		case B_NO_LOCK: str = "no"; break;
@@ -383,7 +412,7 @@ static void ListAreas(TeamWindow *wnd, BColumnListView *view)
 		default:
 			str.SetToFormat("? (%" B_PRIu32 ")", info.lock);
 		}
-		row->SetField(new BStringField(str), areaLockCol);
+		static_cast<BStringField*>(row->GetField(areaLockCol))->SetString(str);
 	}
 
 	for (int32 i = 0; i < prevRows.CountItems(); i++) {
@@ -416,6 +445,8 @@ static void ListPorts(TeamWindow *wnd, BColumnListView *view)
 	BRow *row;
 	BList prevRows;
 
+	view->ScrollView()->Invalidate();
+
 	for (int32 i = 0; i < view->CountRows(); i++) {
 		row = view->RowAt(i);
 		prevRows.AddItem((void*)(addr_t)(((BIntegerField*)row->GetField(portIdCol))->Value()));
@@ -426,14 +457,19 @@ static void ListPorts(TeamWindow *wnd, BColumnListView *view)
 		row = FindIntRow(view, portIdCol, NULL, info.port);
 		if (row == NULL) {
 			row = new BRow();
+			row->SetField(new BIntegerField(0), portIdCol);
+			row->SetField(new BStringField(""), portNameCol);
+			row->SetField(new BIntegerField(0), portCapacityCol);
+			row->SetField(new BIntegerField(0), portQueuedCol);
+			row->SetField(new BIntegerField(0), portTotalCol);
 			view->AddRow(row);
 		}
 
-		row->SetField(new BIntegerField(info.port), portIdCol);
-		row->SetField(new BStringField(info.name), portNameCol);
-		row->SetField(new BIntegerField(info.capacity), portCapacityCol);
-		row->SetField(new BIntegerField(info.queue_count), portQueuedCol);
-		row->SetField(new BIntegerField(info.total_count), portTotalCol);
+		static_cast<BIntegerField*>(row->GetField(portIdCol))->SetValue(info.port);
+		static_cast<BStringField*>(row->GetField(portNameCol))->SetString(info.name);
+		static_cast<BIntegerField*>(row->GetField(portNameCol))->SetValue(info.capacity);
+		static_cast<BIntegerField*>(row->GetField(portCapacityCol))->SetValue(info.queue_count);
+		static_cast<BIntegerField*>(row->GetField(portTotalCol))->SetValue(info.total_count);
 	}
 
 	for (int32 i = 0; i < prevRows.CountItems(); i++) {
@@ -464,6 +500,8 @@ static void ListSems(TeamWindow *wnd, BColumnListView *view)
 	BList prevRows;
 	BString str;
 
+	view->ScrollView()->Invalidate();
+
 	for (int32 i = 0; i < view->CountRows(); i++) {
 		row = view->RowAt(i);
 		prevRows.AddItem((void*)(addr_t)(((BIntegerField*)row->GetField(semIdCol))->Value()));
@@ -474,14 +512,18 @@ static void ListSems(TeamWindow *wnd, BColumnListView *view)
 		row = FindIntRow(view, semIdCol, NULL, info.sem);
 		if (row == NULL) {
 			row = new BRow();
+			row->SetField(new BIntegerField(0), semIdCol);
+			row->SetField(new BStringField(""), semNameCol);
+			row->SetField(new BIntegerField(0), semCountCol);
+			row->SetField(new BStringField(""), semLatestHolderCol);
 			view->AddRow(row);
 		}
 
-		row->SetField(new BIntegerField(info.sem), semIdCol);
-		row->SetField(new BStringField(info.name), semNameCol);
-		row->SetField(new BIntegerField(info.count), semCountCol);
+		static_cast<BIntegerField*>(row->GetField(semIdCol))->SetValue(info.sem);
+		static_cast<BStringField*>(row->GetField(semNameCol))->SetString(info.name);
+		static_cast<BIntegerField*>(row->GetField(semCountCol))->SetValue(info.count);
 		GetThreadString(str, info.latest_holder);
-		row->SetField(new BStringField(str), semLatestHolderCol);
+		static_cast<BStringField*>(row->GetField(semLatestHolderCol))->SetString(str);
 	}
 
 	for (int32 i = 0; i < prevRows.CountItems(); i++) {
@@ -513,6 +555,8 @@ static void ListFiles(TeamWindow *wnd, BColumnListView *view)
 	BString buf;
 	char path[B_OS_NAME_LENGTH];
 
+	view->ScrollView()->Invalidate();
+
 	for (int32 i = 0; i < view->CountRows(); i++) {
 		row = view->RowAt(i);
 		prevRows.AddItem((void*)(addr_t)(((BIntegerField*)row->GetField(fileIdCol))->Value()));
@@ -523,27 +567,35 @@ static void ListFiles(TeamWindow *wnd, BColumnListView *view)
 		row = FindIntRow(view, fileIdCol, NULL, info.number);
 		if (row == NULL) {
 			row = new BRow();
+			row->SetField(new BStringField(0), fileNameCol);
+			row->SetField(new BIntegerField(0), fileIdCol);
+			row->SetField(new BStringField(""), fileModeCol);
+			row->SetField(new BIntegerField(0), fileDevCol);
+			row->SetField(new BIntegerField(0), fileNodeCol);
+			row->SetField(new BStringField(""), fileDevNameCol);
+			row->SetField(new BStringField(""), fileVolNameCol);
+			row->SetField(new BStringField(""), fileFsNameCol);
 			view->AddRow(row);
 		}
 
 		if (_kern_entry_ref_to_path(info.device, info.node, NULL, path, B_OS_NAME_LENGTH) == B_OK)
-			row->SetField(new BStringField(path), fileNameCol);
+			static_cast<BStringField*>(row->GetField(fileNameCol))->SetString(path);
 		else
-			row->SetField(new BStringField("?"), fileNameCol);
+			static_cast<BStringField*>(row->GetField(fileNameCol))->SetString("?");
 
-		row->SetField(new BIntegerField(info.number), fileIdCol);
+		static_cast<BIntegerField*>(row->GetField(fileIdCol))->SetValue(info.number);
 
 		if ((info.open_mode & O_RWMASK) == O_RDONLY) {buf = "R";}
 		if ((info.open_mode & O_RWMASK) == O_WRONLY) {buf = "W";}
 		if ((info.open_mode & O_RWMASK) == O_RDWR  ) {buf = "RW";}
-		row->SetField(new BStringField(buf), fileModeCol);
-		row->SetField(new BIntegerField(info.device), fileDevCol);
-		row->SetField(new BIntegerField(info.node), fileNodeCol);
+		static_cast<BStringField*>(row->GetField(fileModeCol))->SetString(buf);
+		static_cast<BIntegerField*>(row->GetField(fileDevCol))->SetValue(info.device);
+		static_cast<BIntegerField*>(row->GetField(fileNodeCol))->SetValue(info.node);
 
 		fs_stat_dev(info.device, &fsInfo);
-		row->SetField(new BStringField(fsInfo.device_name), fileDevNameCol);
-		row->SetField(new BStringField(fsInfo.volume_name), fileVolNameCol);
-		row->SetField(new BStringField(fsInfo.fsh_name), fileFsNameCol);
+		static_cast<BStringField*>(row->GetField(fileDevNameCol))->SetString(fsInfo.device_name);
+		static_cast<BStringField*>(row->GetField(fileVolNameCol))->SetString(fsInfo.volume_name);
+		static_cast<BStringField*>(row->GetField(fileFsNameCol))->SetString(fsInfo.fsh_name);
 	}
 
 	for (int32 i = 0; i < prevRows.CountItems(); i++) {
