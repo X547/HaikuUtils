@@ -182,7 +182,7 @@ static void WriteStackTrace(StackWindow *wnd)
 	error = debug_get_instruction_pointer(&wnd->fDebugContext, wnd->fId, &ip, &fp);
 
 	debug_symbol_lookup_context *lookupContext = NULL;
-	Check(debug_create_symbol_lookup_context(wnd->fTeam, -1, &lookupContext), "can't create symbol lookup context", false);
+	Check(debug_create_symbol_lookup_context(&wnd->fDebugContext, -1, &lookupContext), "can't create symbol lookup context", false);
 
 	StackFrameRow *row;
 	BString str;
