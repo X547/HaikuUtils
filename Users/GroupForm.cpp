@@ -131,7 +131,8 @@ public:
 				.Add(CreateTextControlLayoutItem(fPasswordView = new BTextControl("password", "Password:", "", NULL)))
 				.Add(CreateTextControlLayoutItem(fPasswordRepeatView = new BTextControl("passwordRepeat", "Repeat password:", "", NULL)))
 		;} layoutItem
-				.End()
+				.End();
+		layoutItem
 			.Add(new BSeparatorView(B_HORIZONTAL))
 			.AddGroup(B_HORIZONTAL, B_USE_SMALL_SPACING)
 				.SetInsets(B_USE_SMALL_SPACING)
