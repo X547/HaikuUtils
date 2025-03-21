@@ -497,15 +497,15 @@ public:
 				.AddItem(new BMenuItem("Save as...", new BMessage('item'), 'S', B_SHIFT_KEY))
 				.AddSeparator()
 				.AddItem(new BMenuItem("Quit", new BMessage(B_QUIT_REQUESTED), 'Q'))
-				.End()
+			.End()
 */
 			.AddMenu(new BMenu("View"))
 				.AddMenu(new BMenu("Layout"))
 					.AddItem(new BMenuItem("Flat", NewSetLayoutMsg(flatLayout)))
 					.AddItem(new BMenuItem("Tree", NewSetLayoutMsg(treeLayout)))
 					.AddItem(new BMenuItem("Sessions and groups", NewSetLayoutMsg(sessionsLayout)))
-					.End()
 				.End()
+			.End()
 			.AddMenu(new BMenu("Action"))
 /*
 				.AddItem(new BMenuItem("Update", new BMessage(updateMsg), 'R'))
@@ -515,13 +515,12 @@ public:
 				.AddItem(new BMenuItem("Suspend", new BMessage(suspendMsg)))
 				.AddItem(new BMenuItem("Resume", new BMessage(resumeMsg)))
 				.AddMenu(signalMenu = new BMenu("Send signal"))
-					.End()
+				.End()
 				.AddItem(new BMenuItem("Debug" B_UTF8_ELLIPSIS, new BMessage(debugMsg)))
 				.AddSeparator()
 				.AddItem(new BMenuItem("Show location", new BMessage(showLocationMsg)))
-				.End()
 			.End()
-		;
+		.End();
 
 		for (size_t i = 0; i < sizeof(signals)/sizeof(signals[0]); i++) {
 			BMessage *msg = new BMessage(sendSignalMsg);
@@ -545,9 +544,8 @@ public:
 			.AddGroup(B_VERTICAL, 0)
 				.Add(fTabView)
 				.SetInsets(-1, 0, -1, -1)
-				.End()
 			.End()
-		;
+		.End();
 	}
 
 	team_id SelectedTeam(const char **name = NULL)

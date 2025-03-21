@@ -1,29 +1,29 @@
 BLayoutItem *CreateTextControlLayoutItem(BTextControl *view)
 {
 	BGroupLayout *layout;
-		BLayoutBuilder::Group<>(B_VERTICAL, 0)
-			.GetLayout(&layout)
-			.AddGroup(B_HORIZONTAL, 0)
-				.Add(view->CreateLabelLayoutItem())
-				.AddGlue()
-				.End()
-			.Add(view->CreateTextViewLayoutItem())
-			.End();
+	BLayoutBuilder::Group<>(B_VERTICAL, 0)
+		.GetLayout(&layout)
+		.AddGroup(B_HORIZONTAL, 0)
+			.Add(view->CreateLabelLayoutItem())
+			.AddGlue()
+		.End()
+		.Add(view->CreateTextViewLayoutItem())
+	.End();
 	return layout;
 }
 
 BLayoutItem *CreateMenuFieldLayoutItem(BMenuField *view)
 {
 	BGroupLayout *layout;
-		BLayoutBuilder::Group<>(B_VERTICAL, 0)
-			.GetLayout(&layout)
-			.AddGroup(B_HORIZONTAL, 0)
-				.Add(view->CreateLabelLayoutItem())
-				.AddGlue()
-				.End()
-			.AddStrut(16)
-			.Add(view->CreateMenuBarLayoutItem())
-			.End();
+	BLayoutBuilder::Group<>(B_VERTICAL, 0)
+		.GetLayout(&layout)
+		.AddGroup(B_HORIZONTAL, 0)
+			.Add(view->CreateLabelLayoutItem())
+			.AddGlue()
+		.End()
+		.AddStrut(16)
+		.Add(view->CreateMenuBarLayoutItem())
+	.End();
 	return layout;
 }
 
@@ -115,7 +115,7 @@ static BView *NewInfoView(TeamWindow *wnd)
 		)
 		.Add(CreateMenuFieldLayoutItem(fMenuField))
 		.AddGlue()
-		.End();
+	.End();
 
 	return view;
 }

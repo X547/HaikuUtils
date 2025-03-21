@@ -601,7 +601,8 @@ public:
 			.AddGroup(B_HORIZONTAL)
 				.Add(fView)
 				.SetInsets(-1)
-			.End();
+			.End()
+		.End();
 
 		SetKeyMenuBar(fMenuBar);
 	}

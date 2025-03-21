@@ -297,21 +297,21 @@ static BLayoutItem *CreateTextControlLayoutItemHor(BTextControl *view)
 		.GetLayout(&layout)
 		.Add(view->CreateLabelLayoutItem())
 		.Add(view->CreateTextViewLayoutItem())
-		.End();
+	.End();
 	return layout;
 }
 
 static BLayoutItem *CreateTextControlLayoutItemVert(BTextControl *view)
 {
 	BGroupLayout *layout;
-		BLayoutBuilder::Group<>(B_VERTICAL, 0)
-			.GetLayout(&layout)
-			.AddGroup(B_HORIZONTAL, 0)
-				.Add(view->CreateLabelLayoutItem())
-				.AddGlue()
-				.End()
-			.Add(view->CreateTextViewLayoutItem())
-			.End();
+	BLayoutBuilder::Group<>(B_VERTICAL, 0)
+		.GetLayout(&layout)
+		.AddGroup(B_HORIZONTAL, 0)
+			.Add(view->CreateLabelLayoutItem())
+			.AddGlue()
+		.End()
+		.Add(view->CreateTextViewLayoutItem())
+	.End();
 	return layout;
 }
 
@@ -331,16 +331,15 @@ EditWindow::EditWindow(TestWindow *base):
 			.Add(CreateTextControlLayoutItemVert(fNameView = new BTextControl("name", "Name: ", "", NULL)))
 			.Add(CreateTextControlLayoutItemVert(fTypeView = new BTextControl("type", "Type: ", "", NULL)))
 			.Add(CreateTextControlLayoutItemVert(fValueView = new BTextControl("value", "Value: ", "", NULL)))
-			.End()
+		.End()
 		.Add(new BSeparatorView(B_HORIZONTAL))
 		.AddGroup(B_HORIZONTAL, B_USE_SMALL_SPACING)
 			.SetInsets(B_USE_SMALL_SPACING)
 			.AddGlue()
 			.Add(fOkView = new BButton("ok", "OK", new BMessage('stub')))
 			.Add(fCancelView = new BButton("cancel", "Cancel", new BMessage(B_QUIT_REQUESTED)))
-			.End()
 		.End()
-	;
+	.End();
 
 	SetDefaultButton(fOkView);
 	fValueView->MakeFocus(true);
@@ -449,7 +448,7 @@ TestWindow::TestWindow(BRect frame): BWindow(frame, "", B_DOCUMENT_WINDOW, B_ASY
 			// .AddItem(new BMenuItem("Save as" B_UTF8_ELLIPSIS, new BMessage('item'), 'S', B_SHIFT_KEY))
 			// .AddSeparator()
 			.AddItem(MenuItemSetTarget(new BMenuItem("Quit", new BMessage(B_QUIT_REQUESTED), 'Q'), be_app))
-			.End()
+		.End()
 		.AddMenu(new BMenu("Edit"))
 			.AddItem(new BMenuItem("Undo", new BMessage('item'), 'Z'))
 			.AddItem(new BMenuItem("Redo", new BMessage('item'), 'Y'))
@@ -465,22 +464,20 @@ TestWindow::TestWindow(BRect frame): BWindow(frame, "", B_DOCUMENT_WINDOW, B_ASY
 			.AddItem(new BMenuItem("Collapse all", new BMessage(collapseAllMsg)))
 			.AddSeparator()
 			.AddItem(new BMenuItem("Focus path", new BMessage(focusPathMsg), 'L'))
-			.End()
 		.End()
-	;
+	.End();
 
 	BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
 		.Add(fMenuBar)
 		.AddGroup(B_VERTICAL, 0)
 			.SetInsets(2)
 			.Add(CreateTextControlLayoutItemHor(fPathView = new BTextControl("path", "Path: ", "", new BMessage(setPathMsg))))
-			.End()
+		.End()
 		.AddGroup(B_VERTICAL, 0)
 			.SetInsets(-1, 0, -1, -1)
 			.Add(fView = new BColumnListView("view", B_NAVIGABLE))
-			.End()
 		.End()
-	;
+	.End();
 
 	fView->SetInvocationMessage(new BMessage(invokeMsg));
 	fView->SetSelectionMessage(new BMessage(selectMsg));

@@ -323,9 +323,8 @@ StackWindow::StackWindow(thread_id id): BWindow(BRect(0, 0, 800, 480), "Thread",
 		.AddMenu(new BMenu("File"))
 			.AddItem(new BMenuItem("Update", new BMessage(stackUpdateMsg), 'R'))
 			.AddItem(new BMenuItem("Close", new BMessage(B_QUIT_REQUESTED), 'W'))
-			.End()
 		.End()
-	;
+	.End();
 
 	try {
 		NewFramesView(this);
@@ -339,9 +338,8 @@ StackWindow::StackWindow(thread_id id): BWindow(BRect(0, 0, 800, 480), "Thread",
 		.AddGroup(B_VERTICAL, 0)
 			.Add(fView)
 			.SetInsets(-1)
-			.End()
 		.End()
-	;
+	.End();
 }
 
 StackWindow::~StackWindow()

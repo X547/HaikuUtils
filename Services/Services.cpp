@@ -362,16 +362,14 @@ public:
 				.AddItem(new BMenuItem("Restart", new BMessage(restartMsg)))
 				.AddSeparator()
 				.AddItem(fEnabledItem = new BMenuItem("Enabled", new BMessage(enableMsg)))
-				.End()
 			.End()
-		;
+		.End();
 
 		BLayoutBuilder::Menu<>(toolbar = new BMenuBar("toolbar", B_ITEMS_IN_ROW, true))
 			.AddItem(new IconMenuItem(LoadIcon(resStartIcon, 16, 16), new BMessage(startMsg)))
 			.AddItem(new IconMenuItem(LoadIcon(resStopIcon, 16, 16), new BMessage(stopMsg)))
 			.AddItem(new IconMenuItem(LoadIcon(resRestartIcon, 16, 16), new BMessage(restartMsg)))
-			.End()
-		;
+		.End();
 
 		fView = new BColumnListView("view", 0);
 		fView->SetInvocationMessage(new BMessage(invokeMsg));
@@ -385,7 +383,7 @@ public:
 				.Add(fView)
 				.SetInsets(-1)
 			.End()
-		;
+		.End();
 
 		SetKeyMenuBar(menubar);
 	}

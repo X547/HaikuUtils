@@ -164,7 +164,8 @@ public:
 			.AddGroup(B_HORIZONTAL)
 				.Add(this->view)
 				.SetInsets(-1)
-			.End();
+			.End()
+		.End();
 	}
 
 	void MessageReceived(BMessage* msg)

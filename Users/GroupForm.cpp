@@ -41,14 +41,14 @@ enum {
 static BLayoutItem *CreateTextControlLayoutItem(BTextControl *view)
 {
 	BGroupLayout *layout;
-		BLayoutBuilder::Group<>(B_VERTICAL, 0)
-			.GetLayout(&layout)
-			.AddGroup(B_HORIZONTAL, 0)
-				.Add(view->CreateLabelLayoutItem())
-				.AddGlue()
-				.End()
-			.Add(view->CreateTextViewLayoutItem())
-			.End();
+	BLayoutBuilder::Group<>(B_VERTICAL, 0)
+		.GetLayout(&layout)
+		.AddGroup(B_HORIZONTAL, 0)
+			.Add(view->CreateLabelLayoutItem())
+			.AddGlue()
+		.End()
+		.Add(view->CreateTextViewLayoutItem())
+	.End();
 	return layout;
 }
 
@@ -96,8 +96,7 @@ public:
 		BLayoutBuilder::Menu<>(fMembersToolbar = new BMenuBar("membersToolbar", B_ITEMS_IN_ROW, true))
 			.AddItem(new IconMenuItem(LoadIcon(resAddIcon, 16, 16), fAddMemberMenu, new BMessage(removeMemberMsg)))
 			.AddItem(new IconMenuItem(LoadIcon(resRemoveIcon, 16, 16), new BMessage(removeMemberMsg)))
-			.End()
-		;
+		.End();
 
 		BBox *boxView = new BBox("box");
 		BLayoutBuilder::Group<>(boxView, B_VERTICAL, 0)
@@ -110,9 +109,8 @@ public:
 					B_SUPPORTS_LAYOUT, false, true, B_PLAIN_BORDER
 				))
 				.SetInsets(-1)
-				.End()
 			.End()
-		;
+		.End();
 		fMembers->SetExplicitMinSize(BSize(B_SIZE_UNSET, 64));
 
 		BGroupLayout *passwordLayout;
@@ -125,24 +123,23 @@ public:
 					.AddGroup(B_HORIZONTAL, 0)
 						.Add(new BStringView("membersLabel", "Members:"))
 						.AddGlue()
-						.End()
-					.Add(boxView)
 					.End()
+					.Add(boxView)
+				.End()
 				.AddGroup(B_VERTICAL, B_USE_SMALL_SPACING)
 					.GetLayout(&passwordLayout)
 					.Add(CreateTextControlLayoutItem(fPasswordView = new BTextControl("password", "Password:", "", NULL)))
 					.Add(CreateTextControlLayoutItem(fPasswordRepeatView = new BTextControl("passwordRepeat", "Repeat password:", "", NULL)))
-					.End()
 				.End()
+			.End()
 			.Add(new BSeparatorView(B_HORIZONTAL))
 			.AddGroup(B_HORIZONTAL, B_USE_SMALL_SPACING)
 				.SetInsets(B_USE_SMALL_SPACING)
 				.AddGlue()
 				.Add(fOkView = new BButton("ok", "OK", new BMessage(okMsg)))
 				.Add(fCancelView = new BButton("cancel", "Cancel", new BMessage(B_QUIT_REQUESTED)))
-				.End()
 			.End()
-		;
+		.End();
 
 		{
 			KMessage usersReply;

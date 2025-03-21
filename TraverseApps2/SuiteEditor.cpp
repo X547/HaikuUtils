@@ -570,7 +570,8 @@ SuiteEditor::SuiteEditor(BMessenger handle):
 		.AddGroup(B_HORIZONTAL)
 			.Add(fView)
 			.SetInsets(-1)
-		.End();
+		.End()
+	.End();
 
 	CenterOnScreen();
 }

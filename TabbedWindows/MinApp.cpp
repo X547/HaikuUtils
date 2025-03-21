@@ -64,7 +64,7 @@ public:
 		BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
 			.Add(menubar)
 			.Add(fView)
-			.End();
+		.End();
 	}
 
 	void Quit()

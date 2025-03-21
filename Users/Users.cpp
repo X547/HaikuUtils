@@ -210,7 +210,7 @@ public:
 /*
 			.AddMenu(new BMenu("File"))
 				.AddItem(new BMenuItem("Close", new BMessage(B_QUIT_REQUESTED), 'W'))
-				.End()
+			.End()
 */
 			.AddMenu(new BMenu("Action"))
 				.AddItem(new BMenuItem("Add", new BMessage(addMsg)))
@@ -219,20 +219,18 @@ public:
 				.AddItem(new BMenuItem("Set password", new BMessage(setPasswordMsg)))
 				.AddSeparator()
 				.AddMenu(fAddMemberMenu = new BMenu("Add member"))
-					.End()
+				.End()
 				.AddMenu(fRemoveMemberMenu = new BMenu("Remove member"))
-					.End()
 				.End()
 			.End()
-		;
+		.End();
 
 		BMenuBar *toolBar = new BMenuBar("toolbar", B_ITEMS_IN_ROW, true);
 		BLayoutBuilder::Menu<>(toolBar)
 			.AddItem(new IconMenuItem(LoadIcon(resAddIcon, 16, 16), new BMessage(addMsg)))
 			.AddItem(new IconMenuItem(LoadIcon(resRemoveIcon, 16, 16), new BMessage(removeMsg)))
 			.AddItem(new IconMenuItem(LoadIcon(resEditIcon, 16, 16), new BMessage(editMsg)))
-			.End()
-		;
+		.End();
 
 		fTabView = new BTabView("tabView", B_WIDTH_FROM_LABEL);
 		fTabView->SetBorder(B_NO_BORDER);
@@ -246,9 +244,8 @@ public:
 			.AddGroup(B_VERTICAL, 0)
 				.Add(fTabView)
 				.SetInsets(-1, 0, -1, -1)
-				.End()
 			.End()
-		;
+		.End();
 
 		SetKeyMenuBar(menuBar);
 		fUsersView->MakeFocus();

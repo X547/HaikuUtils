@@ -33,14 +33,14 @@ enum {
 static BLayoutItem *CreateTextControlLayoutItem(BTextControl *view)
 {
 	BGroupLayout *layout;
-		BLayoutBuilder::Group<>(B_VERTICAL, 0)
-			.GetLayout(&layout)
-			.AddGroup(B_HORIZONTAL, 0)
-				.Add(view->CreateLabelLayoutItem())
-				.AddGlue()
-				.End()
-			.Add(view->CreateTextViewLayoutItem())
-			.End();
+	BLayoutBuilder::Group<>(B_VERTICAL, 0)
+		.GetLayout(&layout)
+		.AddGroup(B_HORIZONTAL, 0)
+			.Add(view->CreateLabelLayoutItem())
+			.AddGlue()
+		.End()
+		.Add(view->CreateTextViewLayoutItem())
+	.End();
 	return layout;
 }
 
@@ -51,7 +51,7 @@ static BLayoutItem *CreateMenuFieldLayoutItem(BMenuField *view)
 		.GetLayout(&layout)
 		.Add(view->CreateLabelLayoutItem())
 		.Add(view->CreateMenuBarLayoutItem())
-		.End();
+	.End();
 	return layout;
 }
 
@@ -110,17 +110,16 @@ public:
 					.GetLayout(&passwordLayout)
 					.Add(CreateTextControlLayoutItem(fPasswordView = new BTextControl("password", "Password:", "", NULL)))
 					.Add(CreateTextControlLayoutItem(fPasswordRepeatView = new BTextControl("passwordRepeat", "Repeat password:", "", NULL)))
-					.End()
 				.End()
+			.End()
 			.Add(new BSeparatorView(B_HORIZONTAL))
 			.AddGroup(B_HORIZONTAL, B_USE_SMALL_SPACING)
 				.SetInsets(B_USE_SMALL_SPACING)
 				.AddGlue()
 				.Add(fOkView = new BButton("ok", "OK", new BMessage(okMsg)))
 				.Add(fCancelView = new BButton("cancel", "Cancel", new BMessage(B_CANCEL)))
-				.End()
 			.End()
-		;
+		.End();
 
 		if (fUid < 0) {
 			fPasswordView->TextView()->HideTyping(true);

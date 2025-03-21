@@ -692,22 +692,19 @@ TeamWindow::TeamWindow(team_id id): BWindow(BRect(0, 0, 800, 480), "Team", B_DOC
 	BLayoutBuilder::Menu<>(fMenuBar)
 		.AddMenu(new BMenu("File"))
 			.AddItem(new BMenuItem("Close", new BMessage(B_QUIT_REQUESTED), 'W'))
-			.End()
 		.End()
-	;
+	.End();
 
 	menu = new BMenu("Info");
 	BLayoutBuilder::Menu<>(menu)
 		.AddItem(new BMenuItem("Show working directory", new BMessage(infoShowWorkDirMsg)))
-		.End()
-	;
+	.End();
 	fInfoMenu = new BMenuItem(menu);
 
 	menu = new BMenu("Image");
 	BLayoutBuilder::Menu<>(menu)
 		.AddItem(new BMenuItem("Show location", new BMessage(imagesShowLocationMsg)))
-		.End()
-	;
+	.End();
 	fImagesMenu = new BMenuItem(menu);
 
 	BMenu *signalMenu;
@@ -717,12 +714,11 @@ TeamWindow::TeamWindow(team_id id): BWindow(BRect(0, 0, 800, 480), "Team", B_DOC
 		.AddItem(new BMenuItem("Suspend", NewSignalMsg(SIGSTOP)))
 		.AddItem(new BMenuItem("Resume", NewSignalMsg(SIGCONT)))
 		.AddMenu(signalMenu = new BMenu("Send signal"))
-			.End()
+		.End()
 		.AddSeparator()
 		.AddItem(new BMenuItem("Show semaphore", new BMessage(threadsShowSemMsg)))
 		.AddItem(new BMenuItem("Show stack area", new BMessage(threadsShowStackAreaMsg)))
-		.End()
-	;
+	.End();
 	fThreadsMenu = new BMenuItem(menu);
 	for (size_t i = 0; i < sizeof(signals)/sizeof(signals[0]); i++)
 		signalMenu->AddItem(new BMenuItem(signals[i].name, NewSignalMsg(signals[i].val)));
@@ -730,8 +726,7 @@ TeamWindow::TeamWindow(team_id id): BWindow(BRect(0, 0, 800, 480), "Team", B_DOC
 	menu = new BMenu("Semaphore");
 	BLayoutBuilder::Menu<>(menu)
 		.AddItem(new BMenuItem("Show holder thread", new BMessage(semsShowThreadMsg)))
-		.End()
-	;
+	.End();
 	fSemsMenu = new BMenuItem(menu);
 
 	fTabView = new TabView(this);
@@ -750,9 +745,8 @@ TeamWindow::TeamWindow(team_id id): BWindow(BRect(0, 0, 800, 480), "Team", B_DOC
 		.AddGroup(B_VERTICAL, 0)
 			.Add(fTabView)
 			.SetInsets(-1, 0, -1, -1)
-			.End()
 		.End()
-	;
+	.End();
 
 	TabChanged();
 }

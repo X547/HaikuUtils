@@ -29,14 +29,14 @@ enum {
 static BLayoutItem *CreateTextControlLayoutItem(BTextControl *view)
 {
 	BGroupLayout *layout;
-		BLayoutBuilder::Group<>(B_VERTICAL, 0)
-			.GetLayout(&layout)
-			.AddGroup(B_HORIZONTAL, 0)
-				.Add(view->CreateLabelLayoutItem())
-				.AddGlue()
-				.End()
-			.Add(view->CreateTextViewLayoutItem())
-			.End();
+	BLayoutBuilder::Group<>(B_VERTICAL, 0)
+		.GetLayout(&layout)
+		.AddGroup(B_HORIZONTAL, 0)
+			.Add(view->CreateLabelLayoutItem())
+			.AddGlue()
+		.End()
+		.Add(view->CreateTextViewLayoutItem())
+	.End();
 	return layout;
 }
 
@@ -66,16 +66,15 @@ public:
 				.SetInsets(B_USE_SMALL_SPACING)
 				.Add(CreateTextControlLayoutItem(fPasswordView = new BTextControl("password", "Password:", "", NULL)))
 				.Add(CreateTextControlLayoutItem(fPasswordRepeatView = new BTextControl("passwordRepeat", "Repeat password:", "", NULL)))
-				.End()
+			.End()
 			.Add(new BSeparatorView(B_HORIZONTAL))
 			.AddGroup(B_HORIZONTAL, B_USE_SMALL_SPACING)
 				.SetInsets(B_USE_SMALL_SPACING)
 				.AddGlue()
 				.Add(fOkView = new BButton("ok", "OK", new BMessage(okMsg)))
 				.Add(fCancelView = new BButton("cancel", "Cancel", new BMessage(B_CANCEL)))
-				.End()
 			.End()
-		;
+		.End();
 
 		fPasswordView->TextView()->HideTyping(true);
 		fPasswordRepeatView->TextView()->HideTyping(true);
