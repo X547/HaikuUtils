@@ -115,8 +115,9 @@ public:
 		;
 		fMembers->SetExplicitMinSize(BSize(B_SIZE_UNSET, 64));
 
+		BGroupLayout *passwordLayout;
 
-		auto layoutItem = BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
+		BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
 			.AddGroup(B_VERTICAL, B_USE_SMALL_SPACING)
 				.SetInsets(B_USE_SMALL_SPACING)
 				.Add(CreateTextControlLayoutItem(fGroupNameView = new BTextControl("groupName", "Group name:", "", NULL)))
@@ -127,10 +128,11 @@ public:
 						.End()
 					.Add(boxView)
 					.End()
-		; if (false && fGid < 0) {layoutItem
-				.Add(CreateTextControlLayoutItem(fPasswordView = new BTextControl("password", "Password:", "", NULL)))
-				.Add(CreateTextControlLayoutItem(fPasswordRepeatView = new BTextControl("passwordRepeat", "Repeat password:", "", NULL)))
-		;} layoutItem
+				.AddGroup(B_VERTICAL, B_USE_SMALL_SPACING)
+					.GetLayout(&passwordLayout)
+					.Add(CreateTextControlLayoutItem(fPasswordView = new BTextControl("password", "Password:", "", NULL)))
+					.Add(CreateTextControlLayoutItem(fPasswordRepeatView = new BTextControl("passwordRepeat", "Repeat password:", "", NULL)))
+					.End()
 				.End()
 			.Add(new BSeparatorView(B_HORIZONTAL))
 			.AddGroup(B_HORIZONTAL, B_USE_SMALL_SPACING)
@@ -158,6 +160,8 @@ public:
 		if (false && fGid < 0) {
 			fPasswordView->TextView()->HideTyping(true);
 			fPasswordRepeatView->TextView()->HideTyping(true);
+		} else {
+			passwordLayout->SetVisible(false);
 		}
 
 		if (fGid >= 0) {
