@@ -304,10 +304,46 @@ void DumpOp(JsonWriter &wr, BPositionIO &rd, int16 op, int32 opSize)
 		wr.EndObject();
 		break;
 	}
-	case 0x0105: wr.Key("STROKE_BEZIER"); wr.StartObject(); wr.EndObject(); break;
-	case 0x0106: wr.Key("FILL_BEZIER"); wr.StartObject(); wr.EndObject(); break;
-	case 0x010B: wr.Key("STROKE_POLYGON"); wr.StartObject(); wr.EndObject(); break;
-	case 0x010C: wr.Key("FILL_POLYGON"); wr.StartObject(); wr.EndObject(); break;
+	case 0x0105: wr.Key("STROKE_BEZIER"); {
+		wr.StartArray();
+		for (int32 i = 0; i < 4; i++) {
+			ReadPoint(rd, pt); DumpPoint(wr, pt);
+		}
+		wr.EndArray();
+		break;
+	}
+	case 0x0106: wr.Key("FILL_BEZIER"); {
+		wr.StartArray();
+		for (int32 i = 0; i < 4; i++) {
+			ReadPoint(rd, pt); DumpPoint(wr, pt);
+		}
+		wr.EndArray();
+		break;
+	}
+	case 0x010B: wr.Key("STROKE_POLYGON"); {
+		wr.StartObject();
+		wr.Key("points");
+		int32 numPoints;
+		Read32(rd, numPoints);
+		wr.StartArray();
+		for (int32 i = 0; i < numPoints; i++) {
+			ReadPoint(rd, pt); DumpPoint(wr, pt);
+		}
+		wr.EndArray();
+		Read8(rd, val8); wr.Key("isClosed"); DumpBool8(wr, val8);
+		wr.EndObject();
+		break;
+	}
+	case 0x010C: wr.Key("FILL_POLYGON"); {
+		int32 numPoints;
+		Read32(rd, numPoints);
+		wr.StartArray();
+		for (int32 i = 0; i < numPoints; i++) {
+			ReadPoint(rd, pt); DumpPoint(wr, pt);
+		}
+		wr.EndArray();
+		break;
+	}
 	case 0x010D: wr.Key("STROKE_SHAPE"); {
 		DumpShape(wr, rd);
 		break;
@@ -318,7 +354,6 @@ void DumpOp(JsonWriter &wr, BPositionIO &rd, int16 op, int32 opSize)
 	}
 	case 0x010F: wr.Key("DRAW_STRING"); {
 		wr.StartObject();
-		off_t pos = rd.Position();
 		ReadString(rd, str); wr.Key("string"); DumpString(wr, str);
 		ReadFloat(rd, floatVal); wr.Key("escapementSpace"); wr.Double(floatVal);
 		ReadFloat(rd, floatVal); wr.Key("escapementNonSpace"); wr.Double(floatVal);
@@ -339,7 +374,7 @@ void DumpOp(JsonWriter &wr, BPositionIO &rd, int16 op, int32 opSize)
 		size_t size = opSize - (rd.Position() - pos);
 		wr.StartArray();
 		for (size_t i = 0; i < size; i++) {
-			Read8(rd, val8); wr.Int(val8);
+			Read8(rd, val8); wr.Int((uint8)val8);
 		}
 		wr.EndArray();
 		wr.EndObject();
@@ -352,8 +387,24 @@ void DumpOp(JsonWriter &wr, BPositionIO &rd, int16 op, int32 opSize)
 		wr.EndObject();
 		break;
 	}
-	case 0x0113: wr.Key("STROKE_ARC"); wr.StartObject(); wr.EndObject(); break;
-	case 0x0114: wr.Key("FILL_ARC"); wr.StartObject(); wr.EndObject(); break;
+	case 0x0113: wr.Key("STROKE_ARC"); {
+		wr.StartObject();
+		wr.Key("center"); ReadPoint(rd, pt); DumpPoint(wr, pt);
+		wr.Key("radius"); ReadPoint(rd, pt); DumpPoint(wr, pt);
+		wr.Key("startTheta"); ReadFloat(rd, floatVal); wr.Double(floatVal);
+		wr.Key("arcTheta"); ReadFloat(rd, floatVal); wr.Double(floatVal);
+		wr.EndObject();
+		break;
+	}
+	case 0x0114: wr.Key("FILL_ARC"); {
+		wr.StartObject();
+		wr.Key("center"); ReadPoint(rd, pt); DumpPoint(wr, pt);
+		wr.Key("radius"); ReadPoint(rd, pt); DumpPoint(wr, pt);
+		wr.Key("startTheta"); ReadFloat(rd, floatVal); wr.Double(floatVal);
+		wr.Key("arcTheta"); ReadFloat(rd, floatVal); wr.Double(floatVal);
+		wr.EndObject();
+		break;
+	}
 	case 0x0115: wr.Key("STROKE_ELLIPSE"); {
 		ReadRect(rd, rc); DumpRect(wr, rc);
 		break;
@@ -364,7 +415,6 @@ void DumpOp(JsonWriter &wr, BPositionIO &rd, int16 op, int32 opSize)
 	}
 	case 0x0117: wr.Key("DRAW_STRING_LOCATIONS"); {
 		wr.StartObject();
-		off_t pos = rd.Position();
 		int32 pointCount;
 		Read32(rd, pointCount);
 		wr.Key("pointList");
@@ -379,7 +429,13 @@ void DumpOp(JsonWriter &wr, BPositionIO &rd, int16 op, int32 opSize)
 		break;
 	}
 
-	case 0x0118: wr.Key("STROKE_RECT_GRADIENT"); wr.StartObject(); wr.EndObject(); break;
+	case 0x0118: wr.Key("STROKE_RECT_GRADIENT"); {
+		wr.StartObject();
+		ReadRect(rd, rc); wr.Key("rect"); DumpRect(wr, rc);
+		wr.Key("gradient"); DumpGradient(wr, rd);
+		wr.EndObject();
+		break;
+	}
 	case 0x0119: wr.Key("FILL_RECT_GRADIENT"); {
 		wr.StartObject();
 		ReadRect(rd, rc); wr.Key("rect"); DumpRect(wr, rc);
@@ -387,12 +443,75 @@ void DumpOp(JsonWriter &wr, BPositionIO &rd, int16 op, int32 opSize)
 		wr.EndObject();
 		break;
 	}
-	case 0x011A: wr.Key("STROKE_ROUND_RECT_GRADIENT"); wr.StartObject(); wr.EndObject(); break;
-	case 0x011B: wr.Key("FILL_ROUND_RECT_GRADIENT"); wr.StartObject(); wr.EndObject(); break;
-	case 0x011C: wr.Key("STROKE_BEZIER_GRADIENT"); wr.StartObject(); wr.EndObject(); break;
-	case 0x011D: wr.Key("FILL_BEZIER_GRADIENT"); wr.StartObject(); wr.EndObject(); break;
-	case 0x011E: wr.Key("STROKE_POLYGON_GRADIENT"); wr.StartObject(); wr.EndObject(); break;
-	case 0x011F: wr.Key("FILL_POLYGON_GRADIENT"); wr.StartObject(); wr.EndObject(); break;
+	case 0x011A: wr.Key("STROKE_ROUND_RECT_GRADIENT"); {
+		wr.StartObject();
+		ReadRect(rd, rc); wr.Key("rect"); DumpRect(wr, rc);
+		wr.Key("radius"); ReadPoint(rd, pt); DumpPoint(wr, pt);
+		wr.Key("gradient"); DumpGradient(wr, rd);
+		wr.EndObject();
+		break;
+	}
+	case 0x011B: wr.Key("FILL_ROUND_RECT_GRADIENT"); {
+		wr.StartObject();
+		ReadRect(rd, rc); wr.Key("rect"); DumpRect(wr, rc);
+		wr.Key("radius"); ReadPoint(rd, pt); DumpPoint(wr, pt);
+		wr.Key("gradient"); DumpGradient(wr, rd);
+		wr.EndObject();
+		break;
+	}
+	case 0x011C: wr.Key("STROKE_BEZIER_GRADIENT"); {
+		wr.StartObject();
+		wr.Key("points");
+		wr.StartArray();
+		for (int32 i = 0; i < 4; i++) {
+			ReadPoint(rd, pt); DumpPoint(wr, pt);
+		}
+		wr.EndArray();
+		wr.Key("gradient"); DumpGradient(wr, rd);
+		wr.EndObject();
+		break;
+	}
+	case 0x011D: wr.Key("FILL_BEZIER_GRADIENT"); {
+		wr.StartObject();
+		wr.Key("points");
+		wr.StartArray();
+		for (int32 i = 0; i < 4; i++) {
+			ReadPoint(rd, pt); DumpPoint(wr, pt);
+		}
+		wr.EndArray();
+		wr.Key("gradient"); DumpGradient(wr, rd);
+		wr.EndObject();
+		break;
+	}
+	case 0x011E: wr.Key("STROKE_POLYGON_GRADIENT"); {
+		wr.StartObject();
+		wr.Key("points");
+		int32 numPoints;
+		Read32(rd, numPoints);
+		wr.StartArray();
+		for (int32 i = 0; i < numPoints; i++) {
+			ReadPoint(rd, pt); DumpPoint(wr, pt);
+		}
+		wr.EndArray();
+		Read8(rd, val8); wr.Key("isClosed"); DumpBool8(wr, val8);
+		wr.Key("gradient"); DumpGradient(wr, rd);
+		wr.EndObject();
+		break;
+	}
+	case 0x011F: wr.Key("FILL_POLYGON_GRADIENT"); {
+		wr.StartObject();
+		wr.Key("points");
+		int32 numPoints;
+		Read32(rd, numPoints);
+		wr.StartArray();
+		for (int32 i = 0; i < numPoints; i++) {
+			ReadPoint(rd, pt); DumpPoint(wr, pt);
+		}
+		wr.EndArray();
+		wr.Key("gradient"); DumpGradient(wr, rd);
+		wr.EndObject();
+		break;
+	}
 	case 0x0120: wr.Key("STROKE_SHAPE_GRADIENT"); {
 		wr.StartObject();
 		wr.Key("shape"); DumpShape(wr, rd);
@@ -407,14 +526,45 @@ void DumpOp(JsonWriter &wr, BPositionIO &rd, int16 op, int32 opSize)
 		wr.EndObject();
 		break;
 	}
-	case 0x0122: wr.Key("STROKE_ARC_GRADIENT"); wr.StartObject(); wr.EndObject(); break;
-	case 0x0123: wr.Key("FILL_ARC_GRADIENT"); wr.StartObject(); wr.EndObject(); break;
-	case 0x0124: wr.Key("STROKE_ELLIPSE_GRADIENT"); wr.StartObject(); wr.EndObject(); break;
-	case 0x0125: wr.Key("FILL_ELLIPSE_GRADIENT"); wr.StartObject(); wr.EndObject(); break;
+	case 0x0122: wr.Key("STROKE_ARC_GRADIENT"); {
+		wr.StartObject();
+		wr.Key("center"); ReadPoint(rd, pt); DumpPoint(wr, pt);
+		wr.Key("radius"); ReadPoint(rd, pt); DumpPoint(wr, pt);
+		wr.Key("startTheta"); ReadFloat(rd, floatVal); wr.Double(floatVal);
+		wr.Key("arcTheta"); ReadFloat(rd, floatVal); wr.Double(floatVal);
+		wr.Key("gradient"); DumpGradient(wr, rd);
+		wr.EndObject();
+		break;
+	}
+	case 0x0123: wr.Key("FILL_ARC_GRADIENT"); {
+		wr.StartObject();
+		wr.Key("center"); ReadPoint(rd, pt); DumpPoint(wr, pt);
+		wr.Key("radius"); ReadPoint(rd, pt); DumpPoint(wr, pt);
+		wr.Key("startTheta"); ReadFloat(rd, floatVal); wr.Double(floatVal);
+		wr.Key("arcTheta"); ReadFloat(rd, floatVal); wr.Double(floatVal);
+		wr.Key("gradient"); DumpGradient(wr, rd);
+		wr.EndObject();
+		break;
+	}
+	case 0x0124: wr.Key("STROKE_ELLIPSE_GRADIENT"); {
+		wr.StartObject();
+		wr.Key("rect"); ReadRect(rd, rc); DumpRect(wr, rc);
+		wr.Key("gradient"); DumpGradient(wr, rd);
+		wr.EndObject();
+		break;
+	}
+	case 0x0125: wr.Key("FILL_ELLIPSE_GRADIENT"); {
+		wr.StartObject();
+		wr.Key("rect"); ReadRect(rd, rc); DumpRect(wr, rc);
+		wr.Key("gradient"); DumpGradient(wr, rd);
+		wr.EndObject();
+		break;
+	}
 
-	case 0x0200: wr.Key("ENTER_STATE_CHANGE");
+	case 0x0200: wr.Key("ENTER_STATE_CHANGE"); {
 		DumpOps(wr, rd, opSize);
 		break;
+	}
 	case 0x0201: wr.Key("SET_CLIPPING_RECTS"); {
 		int32 numRects;
 		Read32(rd, numRects);
@@ -434,9 +584,18 @@ void DumpOp(JsonWriter &wr, BPositionIO &rd, int16 op, int32 opSize)
 		wr.EndObject();
 		break;
 	}
-	case 0x0203: wr.Key("PUSH_STATE"); wr.StartObject(); wr.EndObject(); break;
-	case 0x0204: wr.Key("POP_STATE"); wr.StartObject(); wr.EndObject(); break;
-	case 0x0205: wr.Key("CLEAR_CLIPPING_RECTS"); wr.StartObject(); wr.EndObject(); break;
+	case 0x0203: wr.Key("PUSH_STATE");
+		wr.StartObject();
+		wr.EndObject();
+		break;
+	case 0x0204: wr.Key("POP_STATE");
+		wr.StartObject();
+		wr.EndObject();
+		break;
+	case 0x0205: wr.Key("CLEAR_CLIPPING_RECTS");
+		wr.StartObject();
+		wr.EndObject();
+		break;
 	case 0x0206: wr.Key("CLIP_TO_RECT"); {
 		wr.StartObject();
 		Read8(rd, val8); wr.Key("inverse"); DumpBool8(wr, val8);
@@ -451,6 +610,7 @@ void DumpOp(JsonWriter &wr, BPositionIO &rd, int16 op, int32 opSize)
 		wr.EndObject();
 		break;
 	}
+
 	case 0x0300: wr.Key("SET_ORIGIN"); {
 		ReadPoint(rd, pt); DumpPoint(wr, pt);
 		break;
@@ -522,7 +682,36 @@ void DumpOp(JsonWriter &wr, BPositionIO &rd, int16 op, int32 opSize)
 	case 0x0309: wr.Key("ENTER_FONT_STATE");
 		DumpOps(wr, rd, opSize);
 		break;
-	case 0x030A: wr.Key("SET_BLENDING_MODE"); wr.StartObject(); wr.EndObject(); break;
+	case 0x030A: wr.Key("SET_BLENDING_MODE");
+		wr.StartObject();
+		wr.Key("srcAlpha");
+		Read16(rd, val16);
+		switch (val16) {
+		case 0: wr.String("B_PIXEL_ALPHA"); break;
+		case 1: wr.String("B_CONSTANT_ALPHA"); break;
+		default: wr.Int(val16);
+		}
+		wr.Key("alphaFunc");
+		Read16(rd, val16);
+		switch (val16) {
+		case 0: wr.String("B_ALPHA_OVERLAY"); break;
+		case 1: wr.String("B_ALPHA_COMPOSITE"); break;
+		case 2: wr.String("B_ALPHA_COMPOSITE_SOURCE_IN"); break;
+		case 3: wr.String("B_ALPHA_COMPOSITE_SOURCE_OUT"); break;
+		case 4: wr.String("B_ALPHA_COMPOSITE_SOURCE_ATOP"); break;
+		case 5: wr.String("B_ALPHA_COMPOSITE_DESTINATION_OVER"); break;
+		case 6: wr.String("B_ALPHA_COMPOSITE_DESTINATION_IN"); break;
+		case 7: wr.String("B_ALPHA_COMPOSITE_DESTINATION_OUT"); break;
+		case 8: wr.String("B_ALPHA_COMPOSITE_DESTINATION_ATOP"); break;
+		case 9: wr.String("B_ALPHA_COMPOSITE_XOR"); break;
+		case 10: wr.String("B_ALPHA_COMPOSITE_CLEAR"); break;
+		case 11: wr.String("B_ALPHA_COMPOSITE_DIFFERENCE"); break;
+		case 12: wr.String("B_ALPHA_COMPOSITE_LIGHTEN"); break;
+		case 13: wr.String("B_ALPHA_COMPOSITE_DARKEN"); break;
+		default: wr.Int(val16);
+		}
+		wr.EndObject();
+		break;
 	case 0x030B: wr.Key("SET_FILL_RULE"); {
 		Read32(rd, val32);
 		switch (val32) {
@@ -532,6 +721,7 @@ void DumpOp(JsonWriter &wr, BPositionIO &rd, int16 op, int32 opSize)
 		}
 		break;
 	}
+
 	case 0x0380: wr.Key("SET_FONT_FAMILY"); {
 		ReadString(rd, str); DumpString(wr, str);
 		break;
@@ -596,7 +786,10 @@ void DumpOp(JsonWriter &wr, BPositionIO &rd, int16 op, int32 opSize)
 		ReadFloat(rd, floatVal); wr.Double(floatVal);
 		break;
 	}
-	case 0x0388: wr.Key("SET_FONT_BPP"); wr.StartObject(); wr.EndObject(); break;
+	case 0x0388: wr.Key("SET_FONT_BPP"); {
+		Read32(rd, val32); wr.Int(val32);
+		break;
+	}
 	case 0x0389: wr.Key("SET_FONT_FACE"); {
 		Read32(rd, val32); wr.StartArray();
 		for (uint32 i = 0; i < 32; i++) {
@@ -641,7 +834,11 @@ void DumpOp(JsonWriter &wr, BPositionIO &rd, int16 op, int32 opSize)
 		ReadDouble(rd, doubleVal); wr.Double(doubleVal);
 		break;
 	}
-	case 0x0394: wr.Key("BLEND_LAYER"); wr.StartObject(); wr.EndObject(); break;
+	case 0x0394: wr.Key("BLEND_LAYER");
+		wr.StartObject();
+		// TODO
+		wr.EndObject();
+		break;
 	default: wr.Key("UNKNOWN"); wr.Int(op); break;
 	}
 	wr.EndObject();
