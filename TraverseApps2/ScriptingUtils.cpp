@@ -4,6 +4,8 @@
 #include <Messenger.h>
 #include <private/app/MessengerPrivate.h>
 
+#include <stdio.h>
+
 void DumpMessenger(const BMessenger &handle)
 {
 	printf("(team: %d, token: %d)", BMessenger::Private((BMessenger&)handle).Team(), BMessenger::Private((BMessenger&)handle).Token());

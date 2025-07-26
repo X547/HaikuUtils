@@ -613,9 +613,9 @@ public:
 		case invokeMsg: {
 			BRow *row = fView->CurrentSelection();
 			if (row != NULL) {
-				FrameTree *frame = fFrames.ThisObject(dynamic_cast<HandleRow*>(row)->handle);
-				if (frame != NULL) {
-					SuiteEditor *wnd = new SuiteEditor(frame->obj);
+				HandleRow *handleRow = dynamic_cast<HandleRow*>(row);
+				if (handleRow != NULL) {
+					SuiteEditor *wnd = new SuiteEditor(handleRow->handle);
 					if (wnd->InitCheck() >= B_OK)
 						wnd->Show();
 				}

@@ -10,6 +10,7 @@
 
 #include "ScriptingUtils.h"
 
+#include <stdio.h>
 #include <map>
 #include <set>
 
@@ -21,6 +22,10 @@ enum {
 	valueCol
 };
 
+enum {
+	kForwardCommand = 1,
+};
+
 class Property
 {
 public:
@@ -30,6 +35,8 @@ public:
 
 	Property(const property_info &info)
 	{
+		if (info.commands[0] == 0)
+			commands.insert(kForwardCommand);
 		for (int32 i = 0; i < 10 && info.commands[i] != 0; i++)
 			commands.insert(info.commands[i]);
 		for (int32 i = 0; i < 10 && info.specifiers[i] != 0; i++)
@@ -242,6 +249,7 @@ static void WritePropertyCmds(BString &str, const std::set<uint32> &cmds)
 	for (auto it = cmds.begin(); it != cmds.end(); it++) {
 		if (first) first = false; else str += ", ";
 		switch(*it) {
+		case kForwardCommand: str += "FORWARD"; break;
 		case B_SET_PROPERTY: str += "SET"; break;
 		case B_GET_PROPERTY: str += "GET"; break;
 		case B_CREATE_PROPERTY: str += "CREATE"; break;
