@@ -6,6 +6,7 @@ dep_rapidjson = dependency('RapidJSON')
 
 executable('PictureDumpJson',
 	'PictureDump.cpp',
+	'PictureBinary.cpp',
 	'PictureVisitorJson.cpp',
 	dependencies: [
 		dep_libbe,

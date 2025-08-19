@@ -27,6 +27,13 @@ public:
 	PictureVisitorJson(JsonWriter &wr);
 
 	// Meta
+	void			EnterPicture(int32 version, int32 unknown) final;
+	void			ExitPicture() final;
+	void			EnterPictures(int32 count) final;
+	void			ExitPictures() final;
+	void			EnterOps() final;
+	void			ExitOps() final;
+
 	void			EnterStateChange() final;
 	void			ExitStateChange() final;
 	void			EnterFontState() final;

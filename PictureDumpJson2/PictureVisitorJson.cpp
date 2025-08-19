@@ -204,6 +204,41 @@ void PictureVisitorJson::WriteTransform(const BAffineTransform& tr)
 
 // #pragma mark - Meta
 
+void PictureVisitorJson::EnterPicture(int32 version, int32 unknown)
+{
+	fWr.StartObject();
+	fWr.Key("version"); fWr.Int(version);
+	fWr.Key("unknown"); fWr.Int(unknown);
+}
+
+void PictureVisitorJson::ExitPicture()
+{
+	fWr.EndObject();
+}
+
+void PictureVisitorJson::EnterPictures(int32 count)
+{
+	fWr.Key("pictures");
+	fWr.StartArray();
+}
+
+void PictureVisitorJson::ExitPictures()
+{
+	fWr.EndArray();
+}
+
+void PictureVisitorJson::EnterOps()
+{
+	fWr.Key("ops");
+	fWr.StartArray();
+}
+
+void PictureVisitorJson::ExitOps()
+{
+	fWr.EndArray();
+}
+
+
 void PictureVisitorJson::EnterStateChange()
 {
 	fWr.StartObject();
@@ -345,26 +380,26 @@ void PictureVisitorJson::SetBlendingMode(source_alpha srcAlpha,
 	fWr.StartObject();
 	fWr.Key("srcAlpha");
 	switch (srcAlpha) {
-		case 0: fWr.String("B_PIXEL_ALPHA"); break;
-		case 1: fWr.String("B_CONSTANT_ALPHA"); break;
+		case B_PIXEL_ALPHA: fWr.String("B_PIXEL_ALPHA"); break;
+		case B_CONSTANT_ALPHA: fWr.String("B_CONSTANT_ALPHA"); break;
 		default: fWr.Int(srcAlpha);
 	}
 	fWr.Key("alphaFunc");
 	switch (alphaFunc) {
-		case 0: fWr.String("B_ALPHA_OVERLAY"); break;
-		case 1: fWr.String("B_ALPHA_COMPOSITE"); break;
-		case 2: fWr.String("B_ALPHA_COMPOSITE_SOURCE_IN"); break;
-		case 3: fWr.String("B_ALPHA_COMPOSITE_SOURCE_OUT"); break;
-		case 4: fWr.String("B_ALPHA_COMPOSITE_SOURCE_ATOP"); break;
-		case 5: fWr.String("B_ALPHA_COMPOSITE_DESTINATION_OVER"); break;
-		case 6: fWr.String("B_ALPHA_COMPOSITE_DESTINATION_IN"); break;
-		case 7: fWr.String("B_ALPHA_COMPOSITE_DESTINATION_OUT"); break;
-		case 8: fWr.String("B_ALPHA_COMPOSITE_DESTINATION_ATOP"); break;
-		case 9: fWr.String("B_ALPHA_COMPOSITE_XOR"); break;
-		case 10: fWr.String("B_ALPHA_COMPOSITE_CLEAR"); break;
-		case 11: fWr.String("B_ALPHA_COMPOSITE_DIFFERENCE"); break;
-		case 12: fWr.String("B_ALPHA_COMPOSITE_LIGHTEN"); break;
-		case 13: fWr.String("B_ALPHA_COMPOSITE_DARKEN"); break;
+		case B_ALPHA_OVERLAY: fWr.String("B_ALPHA_OVERLAY"); break;
+		case B_ALPHA_COMPOSITE: fWr.String("B_ALPHA_COMPOSITE"); break;
+		case B_ALPHA_COMPOSITE_SOURCE_IN: fWr.String("B_ALPHA_COMPOSITE_SOURCE_IN"); break;
+		case B_ALPHA_COMPOSITE_SOURCE_OUT: fWr.String("B_ALPHA_COMPOSITE_SOURCE_OUT"); break;
+		case B_ALPHA_COMPOSITE_SOURCE_ATOP: fWr.String("B_ALPHA_COMPOSITE_SOURCE_ATOP"); break;
+		case B_ALPHA_COMPOSITE_DESTINATION_OVER: fWr.String("B_ALPHA_COMPOSITE_DESTINATION_OVER"); break;
+		case B_ALPHA_COMPOSITE_DESTINATION_IN: fWr.String("B_ALPHA_COMPOSITE_DESTINATION_IN"); break;
+		case B_ALPHA_COMPOSITE_DESTINATION_OUT: fWr.String("B_ALPHA_COMPOSITE_DESTINATION_OUT"); break;
+		case B_ALPHA_COMPOSITE_DESTINATION_ATOP: fWr.String("B_ALPHA_COMPOSITE_DESTINATION_ATOP"); break;
+		case B_ALPHA_COMPOSITE_XOR: fWr.String("B_ALPHA_COMPOSITE_XOR"); break;
+		case B_ALPHA_COMPOSITE_CLEAR: fWr.String("B_ALPHA_COMPOSITE_CLEAR"); break;
+		case B_ALPHA_COMPOSITE_DIFFERENCE: fWr.String("B_ALPHA_COMPOSITE_DIFFERENCE"); break;
+		case B_ALPHA_COMPOSITE_LIGHTEN: fWr.String("B_ALPHA_COMPOSITE_LIGHTEN"); break;
+		case B_ALPHA_COMPOSITE_DARKEN: fWr.String("B_ALPHA_COMPOSITE_DARKEN"); break;
 		default: fWr.Int(alphaFunc);
 	}
 	fWr.EndObject();
@@ -376,8 +411,8 @@ void PictureVisitorJson::SetFillRule(int32 fillRule)
 	fWr.StartObject();
 	fWr.Key("SET_FILL_RULE");
 	switch (fillRule) {
-		case 0: fWr.String("B_EVEN_ODD"); break;
-		case 1: fWr.String("B_NONZERO"); break;
+		case B_EVEN_ODD: fWr.String("B_EVEN_ODD"); break;
+		case B_NONZERO: fWr.String("B_NONZERO"); break;
 		default: fWr.Int(fillRule);
 	}
 	fWr.EndObject();
@@ -500,10 +535,10 @@ void PictureVisitorJson::SetFontSpacing(int32 spacing)
 	fWr.StartObject();
 	fWr.Key("SET_FONT_SPACING");
 	switch (spacing) {
-		case 0: fWr.String("B_CHAR_SPACING"); break;
-		case 1: fWr.String("B_STRING_SPACING"); break;
-		case 2: fWr.String("B_BITMAP_SPACING"); break;
-		case 3: fWr.String("B_FIXED_SPACING"); break;
+		case B_CHAR_SPACING: fWr.String("B_CHAR_SPACING"); break;
+		case B_STRING_SPACING: fWr.String("B_STRING_SPACING"); break;
+		case B_BITMAP_SPACING: fWr.String("B_BITMAP_SPACING"); break;
+		case B_FIXED_SPACING: fWr.String("B_FIXED_SPACING"); break;
 		default: fWr.Int(spacing);
 	}
 	fWr.EndObject();
@@ -530,18 +565,18 @@ void PictureVisitorJson::SetFontEncoding(int32 encoding)
 	fWr.StartObject();
 	fWr.Key("SET_FONT_ENCODING");
 	switch (encoding) {
-		case 0: fWr.String("B_UNICODE_UTF8"); break;
-		case 1: fWr.String("B_ISO_8859_1"); break;
-		case 2: fWr.String("B_ISO_8859_2"); break;
-		case 3: fWr.String("B_ISO_8859_3"); break;
-		case 4: fWr.String("B_ISO_8859_4"); break;
-		case 5: fWr.String("B_ISO_8859_5"); break;
-		case 6: fWr.String("B_ISO_8859_6"); break;
-		case 7: fWr.String("B_ISO_8859_7"); break;
-		case 8: fWr.String("B_ISO_8859_8"); break;
-		case 9: fWr.String("B_ISO_8859_9"); break;
-		case 10: fWr.String("B_ISO_8859_10"); break;
-		case 11: fWr.String("B_MACINTOSH_ROMAN"); break;
+		case B_UNICODE_UTF8: fWr.String("B_UNICODE_UTF8"); break;
+		case B_ISO_8859_1: fWr.String("B_ISO_8859_1"); break;
+		case B_ISO_8859_2: fWr.String("B_ISO_8859_2"); break;
+		case B_ISO_8859_3: fWr.String("B_ISO_8859_3"); break;
+		case B_ISO_8859_4: fWr.String("B_ISO_8859_4"); break;
+		case B_ISO_8859_5: fWr.String("B_ISO_8859_5"); break;
+		case B_ISO_8859_6: fWr.String("B_ISO_8859_6"); break;
+		case B_ISO_8859_7: fWr.String("B_ISO_8859_7"); break;
+		case B_ISO_8859_8: fWr.String("B_ISO_8859_8"); break;
+		case B_ISO_8859_9: fWr.String("B_ISO_8859_9"); break;
+		case B_ISO_8859_10: fWr.String("B_ISO_8859_10"); break;
+		case B_MACINTOSH_ROMAN: fWr.String("B_MACINTOSH_ROMAN"); break;
 		default: fWr.Int(encoding);
 	}
 	fWr.EndObject();
@@ -606,7 +641,7 @@ void PictureVisitorJson::MovePenBy(float dx, float dy)
 {
 	fWr.StartObject();
 	fWr.Key("MOVE_PEN_BY");
-	fWr.Key("start"); WritePoint(BPoint(dx, dy));
+	WritePoint(BPoint(dx, dy));
 	fWr.EndObject();
 }
 

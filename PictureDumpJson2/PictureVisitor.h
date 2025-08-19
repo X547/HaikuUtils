@@ -12,6 +12,13 @@ class Layer;
 class PictureVisitor {
 public:
 	// Meta
+	virtual void			EnterPicture(int32 version, int32 unknown) {}
+	virtual void			ExitPicture() {}
+	virtual void			EnterPictures(int32 count) {}
+	virtual void			ExitPictures() {}
+	virtual void			EnterOps() {}
+	virtual void			ExitOps() {}
+
 	virtual void			EnterStateChange() {}
 	virtual void			ExitStateChange() {}
 	virtual void			EnterFontState() {}
