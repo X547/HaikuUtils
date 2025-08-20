@@ -885,7 +885,7 @@ void PictureVisitorJson::StrokePolygon(int32 numPoints, const BPoint* points, bo
 void PictureVisitorJson::FillPolygon(int32 numPoints, const BPoint* points, const BGradient& gradient)
 {
 	fWr.StartObject();
-	fWr.Key("STROKE_POLYGON_GRADIENT");
+	fWr.Key("FILL_POLYGON_GRADIENT");
 	fWr.StartObject();
 	fWr.Key("points");
 	fWr.StartArray();
