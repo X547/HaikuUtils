@@ -2,29 +2,42 @@
 
 #include "PictureVisitor.h"
 
-#include <iostream>
-#include <rapidjson/writer.h>
-#include <rapidjson/ostreamwrapper.h>
+#include <vector>
+#include <string_view>
+
+#include <DataIO.h>
 
 
-class PictureVisitorJson final: public PictureVisitor {
-public:
-	using JsonWriter = rapidjson::Writer<rapidjson::OStreamWrapper>;
-
+class PictureVisitorBinary final: public PictureVisitor {
 private:
-	JsonWriter &fWr;
+	BPositionIO &fWr;
+	std::vector<off_t> fChunkStack;
+
+	void RaiseUnimplemented();
+	void Check(bool cond);
+	void CheckStatus(status_t status);
+
+	void BeginChunk(int16 op);
+	void EndChunk();
+
+	void Write8(int8 val) {CheckStatus(fWr.WriteExactly(&val, sizeof(val)));}
+	void Write16(int16 val) {CheckStatus(fWr.WriteExactly(&val, sizeof(val)));}
+	void Write32(int32 val) {CheckStatus(fWr.WriteExactly(&val, sizeof(val)));}
+	void WriteBool(bool val) {Write8(val ? 1 : 0);}
+	void WriteFloat(float val) {CheckStatus(fWr.WriteExactly(&val, sizeof(val)));}
+	void WriteDouble(double val) {CheckStatus(fWr.WriteExactly(&val, sizeof(val)));}
+	void WritePoint(const BPoint &val) {CheckStatus(fWr.WriteExactly(&val, sizeof(val)));}
+	void WriteRect(const BRect &val) {CheckStatus(fWr.WriteExactly(&val, sizeof(val)));}
+	void WriteTransform(const BAffineTransform& val) {CheckStatus(fWr.WriteExactly(&val, sizeof(val)));}
+	void WritePattern(const pattern& val) {CheckStatus(fWr.WriteExactly(&val, sizeof(val)));}
 
 	void WriteColor(const rgb_color &c);
-	void WritePoint(const BPoint &pt);
-	void WriteRect(const BRect &rc);
+	void WriteString(std::string_view str);
 	void WriteShape(const BShape &shape);
 	void WriteGradient(const BGradient &gradient);
-	void WriteTransform(const BAffineTransform& transform);
-
-	class ShapeIterator;
 
 public:
-	PictureVisitorJson(JsonWriter &wr);
+	PictureVisitorBinary(BPositionIO &fWr);
 
 	// Meta
 	void			EnterPicture(int32 version, int32 unknown) final;

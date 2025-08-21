@@ -1,0 +1,198 @@
+version: 2
+
+unknown: 0
+
+pictures:
+
+  - version: 2
+    unknown: 0
+    ops:
+      - ENTER_STATE_CHANGE:
+          - SET_PEN_LOCATION:
+              x: 0.0
+              y: 0.0
+          - SET_PEN_SIZE: 1.0
+          - SET_LINE_MODE:
+              capMode: B_BUTT_CAP
+              joinMode: B_BEVEL_JOIN
+              miterLimit: 10.0
+          - SET_STIPLE_PATTERN: B_SOLID_HIGH
+          - SET_DRAWING_MODE: B_OP_COPY
+          - SET_BLENDING_MODE:
+              srcAlpha: B_PIXEL_ALPHA
+              alphaFunc: B_ALPHA_OVERLAY
+          - SET_SCALE: 1.0
+          - SET_FORE_COLOR: '#ffff0000'
+          - SET_BACK_COLOR: '#ffffffff'
+          - SET_ORIGIN:
+              x: 0.0
+              y: 0.0
+          - CLEAR_CLIPPING_RECTS: {}
+          - ENTER_FONT_STATE:
+              - SET_FONT_FAMILY: "Swis721 BT\0"
+              - SET_FONT_STYLE: "Roman\0"
+              - SET_FONT_SIZE: 10.0
+              - SET_FONT_ENCODING: B_UNICODE_UTF8
+              - SET_FONT_SHEAR: 0.0
+              - SET_FONT_ROTATE: 0.0
+              - SET_FONT_SPACING: B_BITMAP_SPACING
+              - SET_FONT_BPP: 3
+              - SET_FONT_FLAGS: []
+              - SET_FONT_FACE:
+                  - B_REGULAR_FACE
+      - FILL_RECT:
+          left: 0.0
+          top: 0.0
+          right: 20.0
+          bottom: 20.0
+
+  - version: 2
+    unknown: 0
+    ops:
+      - ENTER_STATE_CHANGE:
+          - SET_PEN_LOCATION:
+              x: 0.0
+              y: 0.0
+          - SET_PEN_SIZE: 1.0
+          - SET_LINE_MODE:
+              capMode: B_BUTT_CAP
+              joinMode: B_BEVEL_JOIN
+              miterLimit: 10.0
+          - SET_STIPLE_PATTERN: B_SOLID_HIGH
+          - SET_DRAWING_MODE: B_OP_COPY
+          - SET_BLENDING_MODE:
+              srcAlpha: B_PIXEL_ALPHA
+              alphaFunc: B_ALPHA_OVERLAY
+          - SET_SCALE: 1.0
+          - SET_FORE_COLOR: '#ff00ff00'
+          - SET_BACK_COLOR: '#ffffffff'
+          - SET_ORIGIN:
+              x: 0.0
+              y: 0.0
+          - CLEAR_CLIPPING_RECTS: {}
+          - ENTER_FONT_STATE:
+              - SET_FONT_FAMILY: "Swis721 BT\0"
+              - SET_FONT_STYLE: "Roman\0"
+              - SET_FONT_SIZE: 10.0
+              - SET_FONT_ENCODING: B_UNICODE_UTF8
+              - SET_FONT_SHEAR: 0.0
+              - SET_FONT_ROTATE: 0.0
+              - SET_FONT_SPACING: B_BITMAP_SPACING
+              - SET_FONT_BPP: 3
+              - SET_FONT_FLAGS: []
+              - SET_FONT_FACE:
+                  - B_REGULAR_FACE
+      - FILL_RECT:
+          left: 0.0
+          top: 0.0
+          right: 20.0
+          bottom: 20.0
+
+  - version: 2
+    unknown: 0
+    ops:
+      - ENTER_STATE_CHANGE:
+          - SET_PEN_LOCATION:
+              x: 0.0
+              y: 0.0
+          - SET_PEN_SIZE: 1.0
+          - SET_LINE_MODE:
+              capMode: B_BUTT_CAP
+              joinMode: B_BEVEL_JOIN
+              miterLimit: 10.0
+          - SET_STIPLE_PATTERN: B_SOLID_HIGH
+          - SET_DRAWING_MODE: B_OP_COPY
+          - SET_BLENDING_MODE:
+              srcAlpha: B_PIXEL_ALPHA
+              alphaFunc: B_ALPHA_OVERLAY
+          - SET_SCALE: 1.0
+          - SET_FORE_COLOR: '#ff0000ff'
+          - SET_BACK_COLOR: '#ffffffff'
+          - SET_ORIGIN:
+              x: 0.0
+              y: 0.0
+          - CLEAR_CLIPPING_RECTS: {}
+          - ENTER_FONT_STATE:
+              - SET_FONT_FAMILY: "Swis721 BT\0"
+              - SET_FONT_STYLE: "Roman\0"
+              - SET_FONT_SIZE: 10.0
+              - SET_FONT_ENCODING: B_UNICODE_UTF8
+              - SET_FONT_SHEAR: 0.0
+              - SET_FONT_ROTATE: 0.0
+              - SET_FONT_SPACING: B_BITMAP_SPACING
+              - SET_FONT_BPP: 3
+              - SET_FONT_FLAGS: []
+              - SET_FONT_FACE:
+                  - B_REGULAR_FACE
+      - FILL_RECT:
+          left: 0.0
+          top: 0.0
+          right: 20.0
+          bottom: 20.0
+
+ops:
+
+  - ENTER_STATE_CHANGE:
+      - SET_PEN_LOCATION:
+          x: 10.0
+          y: 10.0
+      - SET_PEN_SIZE: 1.0
+      - SET_LINE_MODE:
+          capMode: B_BUTT_CAP
+          joinMode: B_BEVEL_JOIN
+          miterLimit: 10.0
+      - SET_STIPLE_PATTERN: B_SOLID_HIGH
+      - SET_DRAWING_MODE: B_OP_COPY
+      - SET_BLENDING_MODE:
+          srcAlpha: B_PIXEL_ALPHA
+          alphaFunc: B_ALPHA_OVERLAY
+      - SET_SCALE: 1.0
+      - SET_FORE_COLOR: '#ff0000ff'
+      - SET_BACK_COLOR: '#ffffffff'
+      - SET_ORIGIN:
+          x: 0.0
+          y: 0.0
+      - CLEAR_CLIPPING_RECTS: {}
+      - ENTER_FONT_STATE:
+          - SET_FONT_FAMILY: "Swis721 BT\0"
+          - SET_FONT_STYLE: "Roman\0"
+          - SET_FONT_SIZE: 10.0
+          - SET_FONT_ENCODING: B_UNICODE_UTF8
+          - SET_FONT_SHEAR: 0.0
+          - SET_FONT_ROTATE: 0.0
+          - SET_FONT_SPACING: B_BITMAP_SPACING
+          - SET_FONT_BPP: 3
+          - SET_FONT_FLAGS: []
+          - SET_FONT_FACE:
+              - B_REGULAR_FACE
+
+  - DRAW_PICTURE:
+      where:
+        x: 10.0
+        y: 10.0
+      token: 0
+
+  - MOVE_PEN_BY:
+      x: 30.0
+      y: 0.0
+
+  - ENTER_STATE_CHANGE:
+      - SET_PEN_LOCATION:
+          x: 40.0
+          y: 10.0
+
+  - DRAW_PICTURE:
+      where:
+        x: 40.0
+        y: 10.0
+      token: 1
+
+  - MOVE_PEN_BY:
+      x: 30.0
+      y: 0.0
+
+  - DRAW_PICTURE:
+      where:
+        x: 70.0
+        y: 10.0
+      token: 2

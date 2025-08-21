@@ -171,7 +171,7 @@ void PictureVisitorJson::WriteGradient(const BGradient &gradient)
 		break;
 	}
 	case BGradient::TYPE_DIAMOND: {
-		const BGradientRadialFocus &grad = static_cast<const BGradientRadialFocus &>(gradient);
+		const BGradientDiamond &grad = static_cast<const BGradientDiamond &>(gradient);
 		fWr.Key("center"); WritePoint(grad.Center());
 		break;
 	}
@@ -254,6 +254,7 @@ void PictureVisitorJson::ExitStateChange()
 
 void PictureVisitorJson::EnterFontState()
 {
+	fWr.StartObject();
 	fWr.Key("ENTER_FONT_STATE");
 	fWr.StartArray();
 }
@@ -261,6 +262,7 @@ void PictureVisitorJson::EnterFontState()
 void PictureVisitorJson::ExitFontState()
 {
 	fWr.EndArray();
+	fWr.EndObject();
 }
 
 void PictureVisitorJson::PushState()
@@ -605,6 +607,14 @@ void PictureVisitorJson::SetFontShear(float shear)
 	fWr.StartObject();
 	fWr.Key("SET_FONT_SHEAR");
 	fWr.Double(shear);
+	fWr.EndObject();
+}
+
+void PictureVisitorJson::SetFontBpp(int32 bpp)
+{
+	fWr.StartObject();
+	fWr.Key("SET_FONT_BPP");
+	fWr.Int(bpp);
 	fWr.EndObject();
 }
 

@@ -7,6 +7,8 @@
 #include <rapidjson/reader.h>
 #include <rapidjson/istreamwrapper.h>
 
+#include <private/shared/AutoDeleter.h>
+
 #include "PictureVisitor.h"
 
 
@@ -111,6 +113,18 @@ private:
 	void RaiseUnimplemented();
 	void Assume(bool cond);
 	void AssumeToken(JsonTokenKind tokenKind);
+
+	bool ReadBool();
+	uint8 ReadUint8();
+	int32 ReadInt32();
+	double ReadReal();
+	int32 HexDigit(char digit);
+	void ReadColor(rgb_color &color);
+	void ReadPoint(BPoint &pt);
+	void ReadRect(BRect &rect);
+	void ReadShape(BShape &shape);
+	void ReadGradientStops(BGradient &gradient);
+	void ReadGradient(ObjectDeleter<BGradient> &outGradient);
 
 	void ReadPicture(PictureVisitor &vis);
 	void ReadOps(PictureVisitor &vis);

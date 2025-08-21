@@ -16,6 +16,18 @@ executable('PictureDumpJson',
 	install: true
 )
 
+executable('PictureCompileJson',
+	'PictureCompile.cpp',
+	'PictureVisitorBinary.cpp',
+	'PictureJson.cpp',
+	dependencies: [
+		dep_libbe,
+		dep_rapidjson,
+	],
+	gnu_symbol_visibility: 'hidden',
+	install: true
+)
+
 executable('PictureJsonIdentity',
 	'PictureJsonIdentity.cpp',
 	'PictureVisitorJson.cpp',
