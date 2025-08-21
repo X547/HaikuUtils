@@ -9,6 +9,8 @@
 #include <GradientConic.h>
 #include <GradientDiamond.h>
 
+#include <private/interface/ShapePrivate.h>
+
 #include "PictureOpcodes.h"
 
 
@@ -64,9 +66,25 @@ void PictureVisitorBinary::WriteColor(const rgb_color &c)
 	Write8(c.alpha);
 }
 
+void PictureVisitorBinary::WriteString(std::string_view str)
+{
+	Write32(str.size());
+	CheckStatus(fWr.WriteExactly(str.data(), str.size()));
+}
+
 void PictureVisitorBinary::WriteShape(const BShape &shape)
 {
-	RaiseUnimplemented();
+	int32 opCount;
+	int32 ptCount;
+	uint32* opList;
+	BPoint* ptList;
+
+	BShape::Private(const_cast<BShape&>(shape)).GetData(&opCount, &ptCount, &opList, &ptList);
+
+	Write32(opCount);
+	Write32(ptCount);
+	CheckStatus(fWr.WriteExactly(opList, opCount*sizeof(uint32)));
+	CheckStatus(fWr.WriteExactly(ptList, ptCount*sizeof(BPoint)));
 }
 
 void PictureVisitorBinary::WriteGradient(const BGradient &gradient)
@@ -110,32 +128,34 @@ void PictureVisitorBinary::ExitOps()
 
 void PictureVisitorBinary::EnterStateChange()
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_ENTER_STATE_CHANGE);
 }
 
 void PictureVisitorBinary::ExitStateChange()
 {
-	RaiseUnimplemented();
+	EndChunk();
 }
 
 void PictureVisitorBinary::EnterFontState()
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_ENTER_FONT_STATE);
 }
 
 void PictureVisitorBinary::ExitFontState()
 {
-	RaiseUnimplemented();
+	EndChunk();
 }
 
 void PictureVisitorBinary::PushState()
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_PUSH_STATE);
+	EndChunk();
 }
 
 void PictureVisitorBinary::PopState()
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_POP_STATE);
+	EndChunk();
 }
 
 
@@ -143,7 +163,9 @@ void PictureVisitorBinary::PopState()
 
 void PictureVisitorBinary::SetDrawingMode(drawing_mode mode)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_DRAWING_MODE);
+	Write16(mode);
+	EndChunk();
 }
 
 void PictureVisitorBinary::SetLineMode(
@@ -152,39 +174,56 @@ void PictureVisitorBinary::SetLineMode(
 	float miterLimit
 )
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_LINE_MODE);
+	Write16(cap);
+	Write16(join);
+	WriteFloat(miterLimit);
+	EndChunk();
 }
 
 void PictureVisitorBinary::SetPenSize(float penSize)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_PEN_SIZE);
+	WriteFloat(penSize);
+	EndChunk();
 }
 
 void PictureVisitorBinary::SetHighColor(const rgb_color& color)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_FORE_COLOR);
+	WriteColor(color);
+	EndChunk();
 }
 
 void PictureVisitorBinary::SetLowColor(const rgb_color& color)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_BACK_COLOR);
+	WriteColor(color);
+	EndChunk();
 }
 
 void PictureVisitorBinary::SetPattern(const ::pattern& pat)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_STIPLE_PATTERN);
+	WritePattern(pat);
+	EndChunk();
 }
 
 void PictureVisitorBinary::SetBlendingMode(
 	source_alpha srcAlpha, alpha_function alphaFunc
 )
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_BLENDING_MODE);
+	Write16(srcAlpha);
+	Write16(alphaFunc);
+	EndChunk();
 }
 
 void PictureVisitorBinary::SetFillRule(int32 fillRule)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_FILL_RULE);
+	Write32(fillRule);
+	EndChunk();
 }
 
 
@@ -192,22 +231,30 @@ void PictureVisitorBinary::SetFillRule(int32 fillRule)
 
 void PictureVisitorBinary::SetOrigin(const BPoint& point)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_ORIGIN);
+	WritePoint(point);
+	EndChunk();
 }
 
 void PictureVisitorBinary::SetScale(float scale)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_SCALE);
+	WriteFloat(scale);
+	EndChunk();
 }
 
 void PictureVisitorBinary::SetPenLocation(const BPoint& point)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_PEN_LOCATION);
+	WritePoint(point);
+	EndChunk();
 }
 
 void PictureVisitorBinary::SetTransform(const BAffineTransform& transform)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_TRANSFORM);
+	WriteTransform(transform);
+	EndChunk();
 }
 
 
@@ -215,27 +262,43 @@ void PictureVisitorBinary::SetTransform(const BAffineTransform& transform)
 
 void PictureVisitorBinary::SetClipping(const BRegion& region)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_CLIPPING_RECTS);
+	Write32(region.CountRects());
+	for (int32 i = 0; i < region.CountRects(); i++) {
+		WriteRect(region.RectAt(i));
+	}
+	EndChunk();
 }
 
 void PictureVisitorBinary::ClearClipping()
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_CLEAR_CLIPPING_RECTS);
+	EndChunk();
 }
 
 void PictureVisitorBinary::ClipToPicture(int32 pictureToken, const BPoint& origin, bool inverse)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_CLIP_TO_PICTURE);
+	Write32(pictureToken);
+	WritePoint(origin);
+	WriteBool(inverse);
+	EndChunk();
 }
 
 void PictureVisitorBinary::ClipToRect(const BRect& rect, bool inverse)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_CLIP_TO_RECT);
+	WriteBool(inverse);
+	WriteRect(rect);
+	EndChunk();
 }
 
 void PictureVisitorBinary::ClipToShape(const BShape& shape, bool inverse)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_CLIP_TO_SHAPE);
+	WriteBool(inverse);
+	WriteShape(shape);
+	EndChunk();
 }
 
 
@@ -243,52 +306,72 @@ void PictureVisitorBinary::ClipToShape(const BShape& shape, bool inverse)
 
 void PictureVisitorBinary::SetFontFamily(const font_family family)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_FONT_FAMILY);
+	WriteString(std::string_view(family, strlen(family) + 1));
+	EndChunk();
 }
 
 void PictureVisitorBinary::SetFontStyle(const font_style style)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_FONT_STYLE);
+	WriteString(std::string_view(style, strlen(style) + 1));
+	EndChunk();
 }
 
 void PictureVisitorBinary::SetFontSpacing(int32 spacing)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_FONT_SPACING);
+	Write32(spacing);
+	EndChunk();
 }
 
 void PictureVisitorBinary::SetFontSize(float size)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_FONT_SIZE);
+	WriteFloat(size);
+	EndChunk();
 }
 
 void PictureVisitorBinary::SetFontRotation(float rotation)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_FONT_ROTATE);
+	WriteFloat(rotation);
+	EndChunk();
 }
 
 void PictureVisitorBinary::SetFontEncoding(int32 encoding)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_FONT_ENCODING);
+	Write32(encoding);
+	EndChunk();
 }
 
 void PictureVisitorBinary::PictureVisitorBinary::SetFontFlags(int32 flags)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_FONT_FLAGS);
+	Write32(flags);
+	EndChunk();
 }
 
 void PictureVisitorBinary::SetFontShear(float shear)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_FONT_SHEAR);
+	WriteFloat(shear);
+	EndChunk();
 }
 
 void PictureVisitorBinary::SetFontBpp(int32 bpp)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_FONT_BPP);
+	Write32(bpp);
+	EndChunk();
 }
 
 void PictureVisitorBinary::SetFontFace(int32 face)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_SET_FONT_FACE);
+	Write32(face);
+	EndChunk();
 }
 
 
@@ -296,22 +379,33 @@ void PictureVisitorBinary::SetFontFace(int32 face)
 
 void PictureVisitorBinary::MovePenBy(float dx, float dy)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_MOVE_PEN_BY);
+	WriteFloat(dx);
+	WriteFloat(dy);
+	EndChunk();
 }
 
 void PictureVisitorBinary::TranslateBy(double x, double y)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_AFFINE_TRANSLATE);
+	WriteDouble(x);
+	WriteDouble(y);
+	EndChunk();
 }
 
 void PictureVisitorBinary::ScaleBy(double x, double y)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_AFFINE_SCALE);
+	WriteDouble(x);
+	WriteDouble(y);
+	EndChunk();
 }
 
 void PictureVisitorBinary::RotateBy(double angleRadians)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_AFFINE_ROTATE);
+	WriteDouble(angleRadians);
+	EndChunk();
 }
 
 
@@ -482,22 +576,32 @@ void PictureVisitorBinary::FillPolygon(int32 numPoints, const BPoint* points, co
 
 void PictureVisitorBinary::StrokeShape(const BShape& shape)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_STROKE_SHAPE);
+	WriteShape(shape);
+	EndChunk();
 }
 
 void PictureVisitorBinary::FillShape(const BShape& shape)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_FILL_SHAPE);
+	WriteShape(shape);
+	EndChunk();
 }
 
 void PictureVisitorBinary::StrokeShape(const BShape& shape, const BGradient& gradient)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_STROKE_SHAPE_GRADIENT);
+	WriteShape(shape);
+	WriteGradient(gradient);
+	EndChunk();
 }
 
 void PictureVisitorBinary::FillShape(const BShape& shape, const BGradient& gradient)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_FILL_SHAPE_GRADIENT);
+	WriteShape(shape);
+	WriteGradient(gradient);
+	EndChunk();
 }
 
 
@@ -508,7 +612,12 @@ void PictureVisitorBinary::StrokeArc(
 	float arcTheta
 )
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_STROKE_ARC);
+	WritePoint(center);
+	WritePoint(radius);
+	WriteFloat(startTheta);
+	WriteFloat(arcTheta);
+	EndChunk();
 }
 
 void PictureVisitorBinary::FillArc(
@@ -518,7 +627,12 @@ void PictureVisitorBinary::FillArc(
 	float arcTheta
 )
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_FILL_ARC);
+	WritePoint(center);
+	WritePoint(radius);
+	WriteFloat(startTheta);
+	WriteFloat(arcTheta);
+	EndChunk();
 }
 
 void PictureVisitorBinary::StrokeArc(
@@ -529,7 +643,13 @@ void PictureVisitorBinary::StrokeArc(
 	const BGradient& gradient
 )
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_STROKE_ARC_GRADIENT);
+	WritePoint(center);
+	WritePoint(radius);
+	WriteFloat(startTheta);
+	WriteFloat(arcTheta);
+	WriteGradient(gradient);
+	EndChunk();
 }
 
 void PictureVisitorBinary::FillArc(
@@ -540,28 +660,44 @@ void PictureVisitorBinary::FillArc(
 	const BGradient& gradient
 )
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_FILL_ARC_GRADIENT);
+	WritePoint(center);
+	WritePoint(radius);
+	WriteFloat(startTheta);
+	WriteFloat(arcTheta);
+	WriteGradient(gradient);
+	EndChunk();
 }
 
 
 void PictureVisitorBinary::StrokeEllipse(const BRect& rect)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_STROKE_ELLIPSE);
+	WriteRect(rect);
+	EndChunk();
 }
 
 void PictureVisitorBinary::FillEllipse(const BRect& rect)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_FILL_ELLIPSE);
+	WriteRect(rect);
+	EndChunk();
 }
 
 void PictureVisitorBinary::StrokeEllipse(const BRect& rect, const BGradient& gradient)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_STROKE_ELLIPSE_GRADIENT);
+	WriteRect(rect);
+	WriteGradient(gradient);
+	EndChunk();
 }
 
 void PictureVisitorBinary::FillEllipse(const BRect& rect, const BGradient& gradient)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_FILL_ELLIPSE_GRADIENT);
+	WriteRect(rect);
+	WriteGradient(gradient);
+	EndChunk();
 }
 
 
@@ -572,16 +708,25 @@ void PictureVisitorBinary::DrawString(
 	const escapement_delta& delta
 )
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_DRAW_STRING);
+	WriteString(std::string_view(string, length));
+	WriteFloat(delta.space);
+	WriteFloat(delta.nonspace);
+	EndChunk();
 }
 
 void PictureVisitorBinary::DrawString(
-	const char* string,
-	int32 length, const BPoint* locations,
-	int32 locationCount
+	const char* string, int32 length,
+	const BPoint* locations, int32 locationCount
 )
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_DRAW_STRING_LOCATIONS);
+	Write32(locationCount);
+	for (int32 i = 0; i < locationCount; i++) {
+		WritePoint(locations[i]);
+	}
+	WriteString(std::string_view(string, length));
+	EndChunk();
 }
 
 
@@ -595,12 +740,24 @@ void PictureVisitorBinary::DrawBitmap(
 	const void* data, int32 length
 )
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_DRAW_PIXELS);
+	WriteRect(srcRect);
+	WriteRect(dstRect);
+	Write32(width);
+	Write32(height);
+	Write32(bytesPerRow);
+	Write32(colorSpace);
+	Write32(flags);
+	CheckStatus(fWr.WriteExactly(data, length));
+	EndChunk();
 }
 
 void PictureVisitorBinary::DrawPicture(const BPoint& where, int32 token)
 {
-	RaiseUnimplemented();
+	BeginChunk(B_PIC_DRAW_PICTURE);
+	WritePoint(where);
+	Write32(token);
+	EndChunk();
 }
 
 
