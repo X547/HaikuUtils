@@ -26,19 +26,23 @@ void PictureVisitorBinary::RaiseUnimplemented()
 	abort();
 }
 
+void PictureVisitorBinary::RaiseError()
+{
+	fprintf(stderr, "[!] error\n");
+	abort();
+}
+
 void PictureVisitorBinary::Check(bool cond)
 {
 	if (!cond) {
-		fprintf(stderr, "[!] error\n");
-		abort();
+		RaiseError();
 	}
 }
 
 void PictureVisitorBinary::CheckStatus(status_t status)
 {
 	if (status < B_OK) {
-		fprintf(stderr, "[!] error\n");
-		abort();
+		RaiseError();
 	}
 }
 
@@ -56,6 +60,7 @@ void PictureVisitorBinary::EndChunk()
 	fChunkStack.pop_back();
 	fWr.Seek(startPos + 2, SEEK_SET);
 	Write32(pos - startPos - (2 + 4));
+	fWr.Seek(pos, SEEK_SET);
 }
 
 void PictureVisitorBinary::WriteColor(const rgb_color &c)
@@ -89,7 +94,48 @@ void PictureVisitorBinary::WriteShape(const BShape &shape)
 
 void PictureVisitorBinary::WriteGradient(const BGradient &gradient)
 {
-	RaiseUnimplemented();
+	Write32(gradient.GetType());
+	for (int32 i = 0; i < gradient.CountColorStops(); i++) {
+		BGradient::ColorStop *cs = gradient.ColorStopAt(i);
+		WriteColor(cs->color);
+		WriteFloat(cs->offset);
+	}
+	switch (gradient.GetType()) {
+		case BGradient::TYPE_LINEAR: {
+			const BGradientLinear &grad = static_cast<const BGradientLinear&>(gradient);
+			WritePoint(grad.Start());
+			WritePoint(grad.End());
+			break;
+		}
+		case BGradient::TYPE_RADIAL: {
+			const BGradientRadial &grad = static_cast<const BGradientRadial&>(gradient);
+			WritePoint(grad.Center());
+			WriteFloat(grad.Radius());
+			break;
+		}
+		case BGradient::TYPE_RADIAL_FOCUS: {
+			const BGradientRadialFocus &grad = static_cast<const BGradientRadialFocus&>(gradient);
+			WritePoint(grad.Center());
+			WritePoint(grad.Focal());
+			WriteFloat(grad.Radius());
+			break;
+		}
+		case BGradient::TYPE_DIAMOND: {
+			const BGradientDiamond &grad = static_cast<const BGradientDiamond&>(gradient);
+			WritePoint(grad.Center());
+			break;
+		}
+		case BGradient::TYPE_CONIC: {
+			const BGradientConic &grad = static_cast<const BGradientConic&>(gradient);
+			WritePoint(grad.Center());
+			WriteFloat(grad.Angle());
+			break;
+		}
+		default: {
+			RaiseError();
+			break;
+		}
+	}
 }
 
 
@@ -97,32 +143,67 @@ void PictureVisitorBinary::WriteGradient(const BGradient &gradient)
 
 void PictureVisitorBinary::EnterPicture(int32 version, int32 unknown)
 {
-	RaiseUnimplemented();
+	if (!fPictureStack.empty()) {
+		PictureInfo &prevInfo = fPictureStack.back();
+		prevInfo.pictCnt++;
+	}
+
+	fPictureStack.push_back({});
+	PictureInfo &info = fPictureStack.back();
+
+	info.pos = fWr.Position();
+
+	Write32(version);
+	Write32(unknown);
 }
 
 void PictureVisitorBinary::ExitPicture()
 {
-	RaiseUnimplemented();
+	PictureInfo &info = fPictureStack.back();
+	if (!info.isSet.pictures) {
+		Write32(info.pictCnt);
+	}
+	if (!info.isSet.ops) {
+		Write32(0);
+	}
+	fPictureStack.pop_back();
 }
 
 void PictureVisitorBinary::EnterPictures(int32 count)
 {
-	RaiseUnimplemented();
+	PictureInfo &info = fPictureStack.back();
+	Write32(0);
+	info.isSet.pictures = true;
 }
 
 void PictureVisitorBinary::ExitPictures()
 {
-	RaiseUnimplemented();
+	PictureInfo &info = fPictureStack.back();
+	off_t oldPos = fWr.Position();
+	fWr.Seek(info.pos + 4 + 4, SEEK_SET);
+	Write32(info.pictCnt);
+	fWr.Seek(oldPos, SEEK_SET);
 }
 
 void PictureVisitorBinary::EnterOps()
 {
-	RaiseUnimplemented();
+	PictureInfo &info = fPictureStack.back();
+	if (!info.isSet.pictures) {
+		info.isSet.pictures = true;
+		Write32(info.pictCnt);
+	}
+	Write32(0);
+	info.opsPos = fWr.Position();
+	info.isSet.ops = true;
 }
 
 void PictureVisitorBinary::ExitOps()
 {
-	RaiseUnimplemented();
+	PictureInfo &info = fPictureStack.back();
+	off_t oldPos = fWr.Position();
+	fWr.Seek(info.opsPos - 4, SEEK_SET);
+	Write32(oldPos - info.opsPos);
+	fWr.Seek(oldPos, SEEK_SET);
 }
 
 

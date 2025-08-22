@@ -10,10 +10,22 @@
 
 class PictureVisitorBinary final: public PictureVisitor {
 private:
+	struct PictureInfo {
+		off_t pos {};
+		int32 pictCnt {};
+		off_t opsPos {};
+		struct {
+			bool pictures: 1;
+			bool ops: 1;
+		} isSet {};
+	};
+
 	BPositionIO &fWr;
+	std::vector<PictureInfo> fPictureStack;
 	std::vector<off_t> fChunkStack;
 
 	void RaiseUnimplemented();
+	void RaiseError();
 	void Check(bool cond);
 	void CheckStatus(status_t status);
 
