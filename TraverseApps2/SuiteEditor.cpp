@@ -130,7 +130,7 @@ static void WriteType(BString &buf, type_code type)
 	case 'NWAD': buf.SetToFormat("NETWORK_ADDRESS"); break;
 	case 'MIMS': buf.SetToFormat("MIME_STRING"); break;
 	case 'TEXT': buf.SetToFormat("ASCII"); break;
-	default: buf.SetToFormat("?(%d)", type);
+	default: buf.SetToFormat("?(%" B_PRId32 ")", type);
 	}
 }
 
@@ -198,9 +198,9 @@ static void WriteValue(BColumnListView *view, BRow *upRow, type_code type, const
 	//case B_MESSAGE_TYPE: break;
 	case B_MESSENGER_TYPE: {
 		BString buf2;
-		buf2.SetToFormat("port: %ld", *(int32*)data); buf.Append(buf2); ((int32*&)data)++;
-		buf2.SetToFormat(", token: %ld", *(int32*)data); buf.Append(buf2); ((int32*&)data)++;
-		buf2.SetToFormat(", team: %ld", *(int32*)data); buf.Append(buf2); ((int32*&)data)++;
+		buf2.SetToFormat("port: %" B_PRId32, *(int32*)data); buf.Append(buf2); ((int32*&)data)++;
+		buf2.SetToFormat(", token: %" B_PRId32, *(int32*)data); buf.Append(buf2); ((int32*&)data)++;
+		buf2.SetToFormat(", team: %" B_PRId32, *(int32*)data); buf.Append(buf2); ((int32*&)data)++;
 		break;
 	}
 	//case B_MIME_TYPE: break;
@@ -213,13 +213,13 @@ static void WriteValue(BColumnListView *view, BRow *upRow, type_code type, const
 	case B_POINT_TYPE:     buf.SetToFormat("%g, %g", ((BPoint*)data)->x, ((BPoint*)data)->y); break;
 	case B_RECT_TYPE:      buf.SetToFormat("%g, %g, %g, %g", ((BRect*)data)->left, ((BRect*)data)->top, ((BRect*)data)->right, ((BRect*)data)->bottom); break;
 	case B_SIZE_TYPE:      buf.SetToFormat("%g, %g", ((BSize*)data)->width, ((BSize*)data)->height); break;
-	case B_RGB_COLOR_TYPE: buf.SetToFormat("0x%08x", *(uint32*)data); break;
+	case B_RGB_COLOR_TYPE: buf.SetToFormat("0x%08" B_PRIx32, *(uint32*)data); break;
 	//case B_PROPERTY_INFO_TYPE: break;
 	//case B_RAW_TYPE: break;
 	case B_REF_TYPE: {
 		BString buf2;
-		buf2.SetToFormat("dev: %ld", *(int32*)data); buf.Append(buf2); ((int32*&)data)++;
-		buf2.SetToFormat(", inode: %lld", *(int64*)data); buf.Append(buf2); ((int64*&)data)++;
+		buf2.SetToFormat("dev: %" B_PRId32, *(int32*)data); buf.Append(buf2); ((int32*&)data)++;
+		buf2.SetToFormat(", inode: %" B_PRId64, *(int64*)data); buf.Append(buf2); ((int64*&)data)++;
 		buf2.SetToFormat(", name: \"%s\"", (char*)data); buf.Append(buf2);
 		break;
 	}
@@ -233,7 +233,7 @@ static void WriteValue(BColumnListView *view, BRow *upRow, type_code type, const
 	//case B_MIME_STRING_TYPE: break;
 	//case B_ASCII_TYPE: break;
 	default:
-		buf.SetToFormat("<%d bytes>", size);
+		buf.SetToFormat("<%" B_PRIdSSIZE " bytes>", size);
 		upRow->SetField(new BStringField(buf), valueCol);
 		WriteData(view, upRow, (const uint8*)data, size);
 		return;
@@ -257,7 +257,7 @@ static void WritePropertyCmds(BString &str, const std::set<uint32> &cmds)
 		case B_COUNT_PROPERTIES: str += "COUNT"; break;
 		case B_EXECUTE_PROPERTY: str += "EXECUTE"; break;
 		case B_GET_SUPPORTED_SUITES: str += "GET_SUITES"; break;
-		default: buf.SetToFormat("? (%d)", *it); str += buf;
+		default: buf.SetToFormat("? (%" B_PRId32 ")", *it); str += buf;
 		}
 	}
 }
@@ -278,7 +278,7 @@ static void WriteSpecifiers(BString &str, const std::set<uint32> &specs)
 		case B_REVERSE_RANGE_SPECIFIER: str += "REV_RANGE"; break;
 		case B_NAME_SPECIFIER: str += "NAME"; break;
 		case B_ID_SPECIFIER: str += "ID"; break;
-		default: buf.SetToFormat("? (%d)", *it); str += buf;
+		default: buf.SetToFormat("? (%" B_PRId32 ")", *it); str += buf;
 		}
 	}
 }
@@ -481,7 +481,7 @@ static void TraverseObjects(const BMessenger &obj, const BMessage &path, const c
 		return;
 	}
 	for (int32 i = 0; i < count; i++) {
-		Indent(); printf("%d\n", i);
+		Indent(); printf("%" B_PRId32 "\n", i);
 		indent++;
 		spec = BMessage();
 		spec.AddSpecifier(prop, i);
@@ -509,7 +509,7 @@ static void TraverseProps(const BMessenger &obj, const BMessage &path, const Pro
 			bool boolVal;
 			BString strVal;
 			if (GetInt32(int32val, obj, spec) >= B_OK) {
-				printf(": %d", int32val);
+				printf(": %" B_PRId32, int32val);
 			} else if (GetBool(boolVal, obj, spec) >= B_OK) {
 				printf(": %s", boolVal? "true": "false");
 			} else if (GetString(strVal, obj, spec) >= B_OK) {
