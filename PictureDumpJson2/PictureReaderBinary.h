@@ -7,12 +7,12 @@ class BPositionIO;
 class PictureVisitor;
 
 
-class PictureBinary {
+class PictureReaderBinary {
 private:
 	BPositionIO &fRd;
 
 public:
-	PictureBinary(BPositionIO &rd): fRd(rd) {}
+	PictureReaderBinary(BPositionIO &rd): fRd(rd) {}
 
 	status_t Accept(PictureVisitor &vis) const;
 };

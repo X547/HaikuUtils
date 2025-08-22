@@ -1,4 +1,4 @@
-#include "PictureBinary.h"
+#include "PictureReaderBinary.h"
 
 #include <vector>
 #include <system_error>
@@ -755,7 +755,7 @@ static void DumpOps(PictureVisitor &vis, BPositionIO &rd, int32 size)
 }
 
 
-status_t PictureBinary::Accept(PictureVisitor &vis) const
+status_t PictureReaderBinary::Accept(PictureVisitor &vis) const
 {
 	int32 version;
 	int32 unknown;

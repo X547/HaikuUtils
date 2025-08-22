@@ -1,5 +1,5 @@
-#include "PictureJson.h"
-#include "PictureVisitorJson.h"
+#include "PictureReaderJson.h"
+#include "PictureWriterJson.h"
 
 #include <File.h>
 
@@ -14,9 +14,9 @@ int main(int argCnt, char **args)
 {
 	rapidjson::OStreamWrapper os(std::cout);
 	JsonWriter wr(os);
-	PictureVisitorJson vis(wr);
+	PictureWriterJson vis(wr);
 
-	PictureJson pict;
+	PictureReaderJson pict;
 	pict.Accept(vis);
 	return 0;
 }

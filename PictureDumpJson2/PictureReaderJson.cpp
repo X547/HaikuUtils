@@ -1,4 +1,4 @@
-#include "PictureJson.h"
+#include "PictureReaderJson.h"
 
 #include <rapidjson/reader.h>
 #include <rapidjson/istreamwrapper.h>
@@ -109,12 +109,12 @@ public:
 };
 
 
-PictureJson::PictureJson():
+PictureReaderJson::PictureReaderJson():
 	fStream(std::cin)
 {
 }
 
-void PictureJson::ReadToken()
+void PictureReaderJson::ReadToken()
 {
 	JsonTokenHandler handler(fToken);
 	if (fRd.IterativeParseComplete()) {
@@ -126,32 +126,32 @@ void PictureJson::ReadToken()
 	}
 }
 
-void PictureJson::RaiseError()
+void PictureReaderJson::RaiseError()
 {
 	// TODO: implement
 	fprintf(stderr, "[!] error\n");
 	abort();
 }
 
-void PictureJson::RaiseUnimplemented()
+void PictureReaderJson::RaiseUnimplemented()
 {
 	fprintf(stderr, "[!] unimplemented\n");
 	abort();
 }
 
-void PictureJson::Assume(bool cond)
+void PictureReaderJson::Assume(bool cond)
 {
 	if (!cond) {
 		RaiseError();
 	}
 }
 
-void PictureJson::AssumeToken(JsonTokenKind tokenKind)
+void PictureReaderJson::AssumeToken(JsonTokenKind tokenKind)
 {
 	Assume(fToken.kind == tokenKind);
 }
 
-void PictureJson::Accept(PictureVisitor &vis)
+void PictureReaderJson::Accept(PictureVisitor &vis)
 {
 	fRd.IterativeParseInit();
 	ReadToken();
@@ -159,7 +159,7 @@ void PictureJson::Accept(PictureVisitor &vis)
 }
 
 
-bool PictureJson::ReadBool()
+bool PictureReaderJson::ReadBool()
 {
 	AssumeToken(JsonTokenKind::Bool);
 	bool val = fToken.boolVal;
@@ -167,7 +167,7 @@ bool PictureJson::ReadBool()
 	return val;
 }
 
-uint8 PictureJson::ReadUint8()
+uint8 PictureReaderJson::ReadUint8()
 {
 	Assume(fToken.IsInt32());
 	int32 val = fToken.Int32Val();
@@ -176,7 +176,7 @@ uint8 PictureJson::ReadUint8()
 	return (uint8)val;
 }
 
-int32 PictureJson::ReadInt32()
+int32 PictureReaderJson::ReadInt32()
 {
 	Assume(fToken.IsInt32());
 	int32 val = fToken.Int32Val();
@@ -184,7 +184,7 @@ int32 PictureJson::ReadInt32()
 	return val;
 }
 
-double PictureJson::ReadReal()
+double PictureReaderJson::ReadReal()
 {
 	Assume(fToken.IsReal());
 	double val = fToken.RealVal();
@@ -192,7 +192,7 @@ double PictureJson::ReadReal()
 	return val;
 }
 
-int32 PictureJson::HexDigit(char digit)
+int32 PictureReaderJson::HexDigit(char digit)
 {
 	if (digit >= '0' && digit <= '9') {
 		return digit - '0';
@@ -207,7 +207,7 @@ int32 PictureJson::HexDigit(char digit)
 	return 0;
 }
 
-void PictureJson::ReadColor(rgb_color &color)
+void PictureReaderJson::ReadColor(rgb_color &color)
 {
 	AssumeToken(JsonTokenKind::String);
 	Assume(fToken.strVal.size() == 9);
@@ -219,7 +219,7 @@ void PictureJson::ReadColor(rgb_color &color)
 	ReadToken();
 }
 
-void PictureJson::ReadPoint(BPoint &pt)
+void PictureReaderJson::ReadPoint(BPoint &pt)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	struct {
@@ -244,7 +244,7 @@ void PictureJson::ReadPoint(BPoint &pt)
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
 }
 
-void PictureJson::ReadRect(BRect &rect)
+void PictureReaderJson::ReadRect(BRect &rect)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	struct {
@@ -281,12 +281,12 @@ void PictureJson::ReadRect(BRect &rect)
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
 }
 
-void PictureJson::ReadShape(BShape &shape)
+void PictureReaderJson::ReadShape(BShape &shape)
 {
 	RaiseUnimplemented();
 }
 
-void PictureJson::ReadGradientStops(BGradient &gradient)
+void PictureReaderJson::ReadGradientStops(BGradient &gradient)
 {
 	AssumeToken(JsonTokenKind::StartArray); ReadToken();
 	int32 i = 0;
@@ -318,7 +318,7 @@ void PictureJson::ReadGradientStops(BGradient &gradient)
 	AssumeToken(JsonTokenKind::EndArray); ReadToken();
 }
 
-void PictureJson::ReadGradient(ObjectDeleter<BGradient> &outGradient)
+void PictureReaderJson::ReadGradient(ObjectDeleter<BGradient> &outGradient)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	AssumeToken(JsonTokenKind::Key);
@@ -500,7 +500,7 @@ void PictureJson::ReadGradient(ObjectDeleter<BGradient> &outGradient)
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
 }
 
-void PictureJson::ReadPicture(PictureVisitor &vis)
+void PictureReaderJson::ReadPicture(PictureVisitor &vis)
 {
 	int32 version = 2;
 	int32 unknown = 0;
@@ -550,7 +550,7 @@ void PictureJson::ReadPicture(PictureVisitor &vis)
 	vis.ExitPicture();
 }
 
-void PictureJson::ReadOps(PictureVisitor &vis)
+void PictureReaderJson::ReadOps(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartArray); ReadToken();
 	while (fToken.kind == JsonTokenKind::StartObject) {
@@ -768,14 +768,14 @@ void PictureJson::ReadOps(PictureVisitor &vis)
 	AssumeToken(JsonTokenKind::EndArray); ReadToken();
 }
 
-void PictureJson::ReadMovePenBy(PictureVisitor &vis)
+void PictureReaderJson::ReadMovePenBy(PictureVisitor &vis)
 {
 	BPoint dp;
 	ReadPoint(dp);
 	vis.MovePenBy(dp.x, dp.y);
 }
 
-void PictureJson::ReadStrokeLine(PictureVisitor &vis)
+void PictureReaderJson::ReadStrokeLine(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	BPoint start, end;
@@ -802,21 +802,21 @@ void PictureJson::ReadStrokeLine(PictureVisitor &vis)
 	vis.StrokeLine(start, end);
 }
 
-void PictureJson::ReadStrokeRect(PictureVisitor &vis)
+void PictureReaderJson::ReadStrokeRect(PictureVisitor &vis)
 {
 	BRect rect;
 	ReadRect(rect);
 	vis.StrokeRect(rect);
 }
 
-void PictureJson::ReadFillRect(PictureVisitor &vis)
+void PictureReaderJson::ReadFillRect(PictureVisitor &vis)
 {
 	BRect rect;
 	ReadRect(rect);
 	vis.FillRect(rect);
 }
 
-void PictureJson::ReadStrokeRoundRect(PictureVisitor &vis)
+void PictureReaderJson::ReadStrokeRoundRect(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	BRect rect;
@@ -844,7 +844,7 @@ void PictureJson::ReadStrokeRoundRect(PictureVisitor &vis)
 	vis.StrokeRoundRect(rect, radius);
 }
 
-void PictureJson::ReadFillRoundRect(PictureVisitor &vis)
+void PictureReaderJson::ReadFillRoundRect(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	BRect rect;
@@ -872,7 +872,7 @@ void PictureJson::ReadFillRoundRect(PictureVisitor &vis)
 	vis.FillRoundRect(rect, radius);
 }
 
-void PictureJson::ReadStrokeBezier(PictureVisitor &vis)
+void PictureReaderJson::ReadStrokeBezier(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartArray); ReadToken();
 	BPoint points[4];
@@ -883,7 +883,7 @@ void PictureJson::ReadStrokeBezier(PictureVisitor &vis)
 	vis.StrokeBezier(points);
 }
 
-void PictureJson::ReadFillBezier(PictureVisitor &vis)
+void PictureReaderJson::ReadFillBezier(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartArray); ReadToken();
 	BPoint points[4];
@@ -894,7 +894,7 @@ void PictureJson::ReadFillBezier(PictureVisitor &vis)
 	vis.FillBezier(points);
 }
 
-void PictureJson::ReadStrokePolygon(PictureVisitor &vis)
+void PictureReaderJson::ReadStrokePolygon(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	std::vector<BPoint> points;
@@ -928,7 +928,7 @@ void PictureJson::ReadStrokePolygon(PictureVisitor &vis)
 	vis.StrokePolygon(points.size(), points.data(), isClosed);
 }
 
-void PictureJson::ReadFillPolygon(PictureVisitor &vis)
+void PictureReaderJson::ReadFillPolygon(PictureVisitor &vis)
 {
 	std::vector<BPoint> points;
 	AssumeToken(JsonTokenKind::StartArray); ReadToken();
@@ -941,21 +941,21 @@ void PictureJson::ReadFillPolygon(PictureVisitor &vis)
 	vis.FillPolygon(points.size(), points.data());
 }
 
-void PictureJson::ReadStrokeShape(PictureVisitor &vis)
+void PictureReaderJson::ReadStrokeShape(PictureVisitor &vis)
 {
 	BShape shape;
 	ReadShape(shape);
 	vis.StrokeShape(shape);
 }
 
-void PictureJson::ReadFillShape(PictureVisitor &vis)
+void PictureReaderJson::ReadFillShape(PictureVisitor &vis)
 {
 	BShape shape;
 	ReadShape(shape);
 	vis.FillShape(shape);
 }
 
-void PictureJson::ReadDrawString(PictureVisitor &vis)
+void PictureReaderJson::ReadDrawString(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	std::string string;
@@ -989,7 +989,7 @@ void PictureJson::ReadDrawString(PictureVisitor &vis)
 	vis.DrawString(string.c_str(), string.size(), delta);
 }
 
-void PictureJson::ReadDrawBitmap(PictureVisitor &vis)
+void PictureReaderJson::ReadDrawBitmap(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 
@@ -1080,7 +1080,7 @@ void PictureJson::ReadDrawBitmap(PictureVisitor &vis)
 	);
 }
 
-void PictureJson::ReadDrawPicture(PictureVisitor &vis)
+void PictureReaderJson::ReadDrawPicture(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	BPoint where;
@@ -1108,7 +1108,7 @@ void PictureJson::ReadDrawPicture(PictureVisitor &vis)
 	vis.DrawPicture(where, token);
 }
 
-void PictureJson::ReadStrokeArc(PictureVisitor &vis)
+void PictureReaderJson::ReadStrokeArc(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	BPoint center;
@@ -1150,7 +1150,7 @@ void PictureJson::ReadStrokeArc(PictureVisitor &vis)
 	vis.StrokeArc(center, radius, startTheta, arcTheta);
 }
 
-void PictureJson::ReadFillArc(PictureVisitor &vis)
+void PictureReaderJson::ReadFillArc(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	BPoint center;
@@ -1192,26 +1192,26 @@ void PictureJson::ReadFillArc(PictureVisitor &vis)
 	vis.FillArc(center, radius, startTheta, arcTheta);
 }
 
-void PictureJson::ReadStrokeEllipse(PictureVisitor &vis)
+void PictureReaderJson::ReadStrokeEllipse(PictureVisitor &vis)
 {
 	BRect rect;
 	ReadRect(rect);
 	vis.StrokeEllipse(rect);
 }
 
-void PictureJson::ReadFillEllipse(PictureVisitor &vis)
+void PictureReaderJson::ReadFillEllipse(PictureVisitor &vis)
 {
 	BRect rect;
 	ReadRect(rect);
 	vis.FillEllipse(rect);
 }
 
-void PictureJson::ReadDrawStringLocations(PictureVisitor &vis)
+void PictureReaderJson::ReadDrawStringLocations(PictureVisitor &vis)
 {
 	RaiseUnimplemented();
 }
 
-void PictureJson::ReadStrokeRectGradient(PictureVisitor &vis)
+void PictureReaderJson::ReadStrokeRectGradient(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	BRect rect;
@@ -1239,7 +1239,7 @@ void PictureJson::ReadStrokeRectGradient(PictureVisitor &vis)
 	vis.StrokeRect(rect, *gradient.Get());
 }
 
-void PictureJson::ReadFillRectGradient(PictureVisitor &vis)
+void PictureReaderJson::ReadFillRectGradient(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	BRect rect;
@@ -1267,7 +1267,7 @@ void PictureJson::ReadFillRectGradient(PictureVisitor &vis)
 	vis.FillRect(rect, *gradient.Get());
 }
 
-void PictureJson::ReadStrokeRoundRectGradient(PictureVisitor &vis)
+void PictureReaderJson::ReadStrokeRoundRectGradient(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	BRect rect;
@@ -1302,7 +1302,7 @@ void PictureJson::ReadStrokeRoundRectGradient(PictureVisitor &vis)
 	vis.StrokeRoundRect(rect, radius, *gradient.Get());
 }
 
-void PictureJson::ReadFillRoundRectGradient(PictureVisitor &vis)
+void PictureReaderJson::ReadFillRoundRectGradient(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	BRect rect;
@@ -1337,7 +1337,7 @@ void PictureJson::ReadFillRoundRectGradient(PictureVisitor &vis)
 	vis.FillRoundRect(rect, radius, *gradient.Get());
 }
 
-void PictureJson::ReadStrokeBezierGradient(PictureVisitor &vis)
+void PictureReaderJson::ReadStrokeBezierGradient(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	BPoint points[4];
@@ -1369,7 +1369,7 @@ void PictureJson::ReadStrokeBezierGradient(PictureVisitor &vis)
 	vis.StrokeBezier(points, *gradient.Get());
 }
 
-void PictureJson::ReadFillBezierGradient(PictureVisitor &vis)
+void PictureReaderJson::ReadFillBezierGradient(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	BPoint points[4];
@@ -1401,7 +1401,7 @@ void PictureJson::ReadFillBezierGradient(PictureVisitor &vis)
 	vis.FillBezier(points, *gradient.Get());
 }
 
-void PictureJson::ReadStrokePolygonGradient(PictureVisitor &vis)
+void PictureReaderJson::ReadStrokePolygonGradient(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	std::vector<BPoint> points;
@@ -1442,7 +1442,7 @@ void PictureJson::ReadStrokePolygonGradient(PictureVisitor &vis)
 	vis.StrokePolygon(points.size(), points.data(), isClosed, *gradient.Get());
 }
 
-void PictureJson::ReadFillPolygonGradient(PictureVisitor &vis)
+void PictureReaderJson::ReadFillPolygonGradient(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	std::vector<BPoint> points;
@@ -1476,7 +1476,7 @@ void PictureJson::ReadFillPolygonGradient(PictureVisitor &vis)
 	vis.FillPolygon(points.size(), points.data(), *gradient.Get());
 }
 
-void PictureJson::ReadStrokeShapeGradient(PictureVisitor &vis)
+void PictureReaderJson::ReadStrokeShapeGradient(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	BShape shape;
@@ -1504,7 +1504,7 @@ void PictureJson::ReadStrokeShapeGradient(PictureVisitor &vis)
 	vis.StrokeShape(shape, *gradient.Get());
 }
 
-void PictureJson::ReadFillShapeGradient(PictureVisitor &vis)
+void PictureReaderJson::ReadFillShapeGradient(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	BShape shape;
@@ -1532,7 +1532,7 @@ void PictureJson::ReadFillShapeGradient(PictureVisitor &vis)
 	vis.FillShape(shape, *gradient.Get());
 }
 
-void PictureJson::ReadStrokeArcGradient(PictureVisitor &vis)
+void PictureReaderJson::ReadStrokeArcGradient(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	BPoint center;
@@ -1581,7 +1581,7 @@ void PictureJson::ReadStrokeArcGradient(PictureVisitor &vis)
 	vis.StrokeArc(center, radius, startTheta, arcTheta, *gradient.Get());
 }
 
-void PictureJson::ReadFillArcGradient(PictureVisitor &vis)
+void PictureReaderJson::ReadFillArcGradient(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	BPoint center;
@@ -1630,7 +1630,7 @@ void PictureJson::ReadFillArcGradient(PictureVisitor &vis)
 	vis.FillArc(center, radius, startTheta, arcTheta, *gradient.Get());
 }
 
-void PictureJson::ReadStrokeEllipseGradient(PictureVisitor &vis)
+void PictureReaderJson::ReadStrokeEllipseGradient(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	BRect rect;
@@ -1658,7 +1658,7 @@ void PictureJson::ReadStrokeEllipseGradient(PictureVisitor &vis)
 	vis.StrokeEllipse(rect, *gradient.Get());
 }
 
-void PictureJson::ReadFillEllipseGradient(PictureVisitor &vis)
+void PictureReaderJson::ReadFillEllipseGradient(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	BRect rect;
@@ -1686,14 +1686,14 @@ void PictureJson::ReadFillEllipseGradient(PictureVisitor &vis)
 	vis.FillEllipse(rect, *gradient.Get());
 }
 
-void PictureJson::ReadEnterStateChange(PictureVisitor &vis)
+void PictureReaderJson::ReadEnterStateChange(PictureVisitor &vis)
 {
 	vis.EnterStateChange();
 	ReadOps(vis);
 	vis.ExitStateChange();
 }
 
-void PictureJson::ReadSetClipping(PictureVisitor &vis)
+void PictureReaderJson::ReadSetClipping(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartArray); ReadToken();
 	BRegion region;
@@ -1706,7 +1706,7 @@ void PictureJson::ReadSetClipping(PictureVisitor &vis)
 	vis.SetClipping(region);
 }
 
-void PictureJson::ReadClipToPicture(PictureVisitor &vis)
+void PictureReaderJson::ReadClipToPicture(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	int32 token;
@@ -1741,21 +1741,21 @@ void PictureJson::ReadClipToPicture(PictureVisitor &vis)
 	vis.ClipToPicture(token, where, inverse);
 }
 
-void PictureJson::ReadGroup(PictureVisitor &vis)
+void PictureReaderJson::ReadGroup(PictureVisitor &vis)
 {
 	vis.PushState();
 	ReadOps(vis);
 	vis.PopState();
 }
 
-void PictureJson::ReadClearClipping(PictureVisitor &vis)
+void PictureReaderJson::ReadClearClipping(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
 	vis.ClearClipping();
 }
 
-void PictureJson::ReadClipToRect(PictureVisitor &vis)
+void PictureReaderJson::ReadClipToRect(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	bool inverse;
@@ -1783,7 +1783,7 @@ void PictureJson::ReadClipToRect(PictureVisitor &vis)
 	vis.ClipToRect(rect, inverse);
 }
 
-void PictureJson::ReadClipToShape(PictureVisitor &vis)
+void PictureReaderJson::ReadClipToShape(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	bool inverse;
@@ -1811,21 +1811,21 @@ void PictureJson::ReadClipToShape(PictureVisitor &vis)
 	vis.ClipToShape(shape, inverse);
 }
 
-void PictureJson::ReadSetOrigin(PictureVisitor &vis)
+void PictureReaderJson::ReadSetOrigin(PictureVisitor &vis)
 {
 	BPoint pt;
 	ReadPoint(pt);
 	vis.SetOrigin(pt);
 }
 
-void PictureJson::ReadSetPenLocation(PictureVisitor &vis)
+void PictureReaderJson::ReadSetPenLocation(PictureVisitor &vis)
 {
 	BPoint pt;
 	ReadPoint(pt);
 	vis.SetPenLocation(pt);
 }
 
-void PictureJson::ReadSetDrawingMode(PictureVisitor &vis)
+void PictureReaderJson::ReadSetDrawingMode(PictureVisitor &vis)
 {
 	drawing_mode mode;
 	AssumeToken(JsonTokenKind::String);
@@ -1858,7 +1858,7 @@ void PictureJson::ReadSetDrawingMode(PictureVisitor &vis)
 	vis.SetDrawingMode(mode);
 }
 
-void PictureJson::ReadSetLineMode(PictureVisitor &vis)
+void PictureReaderJson::ReadSetLineMode(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	cap_mode capMode;
@@ -1917,33 +1917,33 @@ void PictureJson::ReadSetLineMode(PictureVisitor &vis)
 	vis.SetLineMode(capMode, joinMode, miterLimit);
 }
 
-void PictureJson::ReadSetPenSize(PictureVisitor &vis)
+void PictureReaderJson::ReadSetPenSize(PictureVisitor &vis)
 {
 	float val = ReadReal();
 	vis.SetPenSize(val);
 }
 
-void PictureJson::ReadSetScale(PictureVisitor &vis)
+void PictureReaderJson::ReadSetScale(PictureVisitor &vis)
 {
 	float val = ReadReal();
 	vis.SetScale(val);
 }
 
-void PictureJson::ReadSetHighColor(PictureVisitor &vis)
+void PictureReaderJson::ReadSetHighColor(PictureVisitor &vis)
 {
 	rgb_color color;
 	ReadColor(color);
 	vis.SetHighColor(color);
 }
 
-void PictureJson::ReadSetLowColor(PictureVisitor &vis)
+void PictureReaderJson::ReadSetLowColor(PictureVisitor &vis)
 {
 	rgb_color color;
 	ReadColor(color);
 	vis.SetLowColor(color);
 }
 
-void PictureJson::ReadSetPattern(PictureVisitor &vis)
+void PictureReaderJson::ReadSetPattern(PictureVisitor &vis)
 {
 	::pattern pat;
 	if (fToken.kind == JsonTokenKind::String) {
@@ -1971,14 +1971,14 @@ void PictureJson::ReadSetPattern(PictureVisitor &vis)
 	vis.SetPattern(pat);
 }
 
-void PictureJson::ReadEnterFontState(PictureVisitor &vis)
+void PictureReaderJson::ReadEnterFontState(PictureVisitor &vis)
 {
 	vis.EnterFontState();
 	ReadOps(vis);
 	vis.ExitFontState();
 }
 
-void PictureJson::ReadSetBlendingMode(PictureVisitor &vis)
+void PictureReaderJson::ReadSetBlendingMode(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	source_alpha srcAlpha;
@@ -2046,7 +2046,7 @@ void PictureJson::ReadSetBlendingMode(PictureVisitor &vis)
 	vis.SetBlendingMode(srcAlpha, alphaFunc);
 }
 
-void PictureJson::ReadSetFillRule(PictureVisitor &vis)
+void PictureReaderJson::ReadSetFillRule(PictureVisitor &vis)
 {
 	int32 fillRule;
 	AssumeToken(JsonTokenKind::String);
@@ -2061,7 +2061,7 @@ void PictureJson::ReadSetFillRule(PictureVisitor &vis)
 	vis.SetFillRule(fillRule);
 }
 
-void PictureJson::ReadSetFontFamily(PictureVisitor &vis)
+void PictureReaderJson::ReadSetFontFamily(PictureVisitor &vis)
 {
 	font_family family;
 	AssumeToken(JsonTokenKind::String);
@@ -2071,7 +2071,7 @@ void PictureJson::ReadSetFontFamily(PictureVisitor &vis)
 	vis.SetFontFamily(family);
 }
 
-void PictureJson::ReadSetFontStyle(PictureVisitor &vis)
+void PictureReaderJson::ReadSetFontStyle(PictureVisitor &vis)
 {
 	font_style style;
 	AssumeToken(JsonTokenKind::String);
@@ -2081,7 +2081,7 @@ void PictureJson::ReadSetFontStyle(PictureVisitor &vis)
 	vis.SetFontStyle(style);
 }
 
-void PictureJson::ReadSetFontSpacing(PictureVisitor &vis)
+void PictureReaderJson::ReadSetFontSpacing(PictureVisitor &vis)
 {
 	int32 spacing;
 	AssumeToken(JsonTokenKind::String);
@@ -2100,7 +2100,7 @@ void PictureJson::ReadSetFontSpacing(PictureVisitor &vis)
 	vis.SetFontSpacing(spacing);
 }
 
-void PictureJson::ReadSetFontEncoding(PictureVisitor &vis)
+void PictureReaderJson::ReadSetFontEncoding(PictureVisitor &vis)
 {
 	int32 encoding;
 	AssumeToken(JsonTokenKind::String);
@@ -2135,7 +2135,7 @@ void PictureJson::ReadSetFontEncoding(PictureVisitor &vis)
 	vis.SetFontEncoding(encoding);
 }
 
-void PictureJson::ReadSetFontFlags(PictureVisitor &vis)
+void PictureReaderJson::ReadSetFontFlags(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartArray); ReadToken();
 	int32 flags = 0;
@@ -2153,31 +2153,31 @@ void PictureJson::ReadSetFontFlags(PictureVisitor &vis)
 	vis.SetFontFlags(flags);
 }
 
-void PictureJson::ReadSetFontSize(PictureVisitor &vis)
+void PictureReaderJson::ReadSetFontSize(PictureVisitor &vis)
 {
 	float size = ReadReal();
 	vis.SetFontSize(size);
 }
 
-void PictureJson::ReadSetFontRotation(PictureVisitor &vis)
+void PictureReaderJson::ReadSetFontRotation(PictureVisitor &vis)
 {
 	float rotation = ReadReal();
 	vis.SetFontRotation(rotation);
 }
 
-void PictureJson::ReadSetFontShear(PictureVisitor &vis)
+void PictureReaderJson::ReadSetFontShear(PictureVisitor &vis)
 {
 	float shear = ReadReal();
 	vis.SetFontShear(shear);
 }
 
-void PictureJson::ReadSetFontBpp(PictureVisitor &vis)
+void PictureReaderJson::ReadSetFontBpp(PictureVisitor &vis)
 {
 	int32 bpp = ReadInt32();
 	vis.SetFontBpp(bpp);
 }
 
-void PictureJson::ReadSetFontFace(PictureVisitor &vis)
+void PictureReaderJson::ReadSetFontFace(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartArray); ReadToken();
 	int32 face = 0;
@@ -2211,12 +2211,12 @@ void PictureJson::ReadSetFontFace(PictureVisitor &vis)
 	vis.SetFontFace(face);
 }
 
-void PictureJson::ReadSetTransform(PictureVisitor &vis)
+void PictureReaderJson::ReadSetTransform(PictureVisitor &vis)
 {
 	RaiseUnimplemented();
 }
 
-void PictureJson::ReadTranslateBy(PictureVisitor &vis)
+void PictureReaderJson::ReadTranslateBy(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	double x;
@@ -2244,7 +2244,7 @@ void PictureJson::ReadTranslateBy(PictureVisitor &vis)
 	vis.TranslateBy(x, y);
 }
 
-void PictureJson::ReadScaleBy(PictureVisitor &vis)
+void PictureReaderJson::ReadScaleBy(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	double x;
@@ -2272,13 +2272,13 @@ void PictureJson::ReadScaleBy(PictureVisitor &vis)
 	vis.ScaleBy(x, y);
 }
 
-void PictureJson::ReadRotateBy(PictureVisitor &vis)
+void PictureReaderJson::ReadRotateBy(PictureVisitor &vis)
 {
 	double rotation = ReadReal();
 	vis.RotateBy(rotation);
 }
 
-void PictureJson::ReadBlendLayer(PictureVisitor &vis)
+void PictureReaderJson::ReadBlendLayer(PictureVisitor &vis)
 {
 	RaiseUnimplemented();
 }

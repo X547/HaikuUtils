@@ -6,8 +6,8 @@ dep_rapidjson = dependency('RapidJSON')
 
 executable('PictureDumpJson',
 	'PictureDump.cpp',
-	'PictureBinary.cpp',
-	'PictureVisitorJson.cpp',
+	'PictureReaderBinary.cpp',
+	'PictureWriterJson.cpp',
 	dependencies: [
 		dep_libbe,
 		dep_rapidjson,
@@ -18,8 +18,8 @@ executable('PictureDumpJson',
 
 executable('PictureCompileJson',
 	'PictureCompile.cpp',
-	'PictureVisitorBinary.cpp',
-	'PictureJson.cpp',
+	'PictureWriterBinary.cpp',
+	'PictureReaderJson.cpp',
 	dependencies: [
 		dep_libbe,
 		dep_rapidjson,
@@ -30,8 +30,8 @@ executable('PictureCompileJson',
 
 executable('PictureJsonIdentity',
 	'PictureJsonIdentity.cpp',
-	'PictureVisitorJson.cpp',
-	'PictureJson.cpp',
+	'PictureWriterJson.cpp',
+	'PictureReaderJson.cpp',
 	dependencies: [
 		dep_libbe,
 		dep_rapidjson,

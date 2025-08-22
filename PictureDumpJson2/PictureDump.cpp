@@ -1,5 +1,5 @@
-#include "PictureBinary.h"
-#include "PictureVisitorJson.h"
+#include "PictureReaderBinary.h"
+#include "PictureWriterJson.h"
 
 #include <File.h>
 
@@ -17,10 +17,10 @@ int main(int argCnt, char **args)
 
 	rapidjson::OStreamWrapper os(std::cout);
 	JsonWriter wr(os);
-	PictureVisitorJson vis(wr);
+	PictureWriterJson vis(wr);
 
 	BFile file(args[1], B_READ_ONLY);
-	PictureBinary pict(file);
+	PictureReaderBinary pict(file);
 	pict.Accept(vis);
 	return 0;
 }

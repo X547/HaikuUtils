@@ -101,7 +101,7 @@ struct JsonToken {
 };
 
 
-class PictureJson {
+class PictureReaderJson {
 private:
 	rapidjson::IStreamWrapper fStream;
 	rapidjson::Reader fRd;
@@ -199,7 +199,7 @@ private:
 	void ReadBlendLayer(PictureVisitor &vis);
 
 public:
-	PictureJson();
+	PictureReaderJson();
 
 	void Accept(PictureVisitor &vis);
 };

@@ -1,4 +1,4 @@
-#include "PictureVisitorBinary.h"
+#include "PictureWriterBinary.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,46 +14,46 @@
 #include "PictureOpcodes.h"
 
 
-PictureVisitorBinary::PictureVisitorBinary(BPositionIO &wr):
+PictureWriterBinary::PictureWriterBinary(BPositionIO &wr):
 	fWr(wr)
 {
 }
 
 
-void PictureVisitorBinary::RaiseUnimplemented()
+void PictureWriterBinary::RaiseUnimplemented()
 {
 	fprintf(stderr, "[!] unimplemented\n");
 	abort();
 }
 
-void PictureVisitorBinary::RaiseError()
+void PictureWriterBinary::RaiseError()
 {
 	fprintf(stderr, "[!] error\n");
 	abort();
 }
 
-void PictureVisitorBinary::Check(bool cond)
+void PictureWriterBinary::Check(bool cond)
 {
 	if (!cond) {
 		RaiseError();
 	}
 }
 
-void PictureVisitorBinary::CheckStatus(status_t status)
+void PictureWriterBinary::CheckStatus(status_t status)
 {
 	if (status < B_OK) {
 		RaiseError();
 	}
 }
 
-void PictureVisitorBinary::BeginChunk(int16 op)
+void PictureWriterBinary::BeginChunk(int16 op)
 {
 	fChunkStack.push_back(fWr.Position());
 	Write16(op);
 	Write32(0);
 }
 
-void PictureVisitorBinary::EndChunk()
+void PictureWriterBinary::EndChunk()
 {
 	off_t pos = fWr.Position();
 	off_t startPos = fChunkStack.back();
@@ -63,7 +63,7 @@ void PictureVisitorBinary::EndChunk()
 	fWr.Seek(pos, SEEK_SET);
 }
 
-void PictureVisitorBinary::WriteColor(const rgb_color &c)
+void PictureWriterBinary::WriteColor(const rgb_color &c)
 {
 	Write8(c.red);
 	Write8(c.green);
@@ -71,13 +71,13 @@ void PictureVisitorBinary::WriteColor(const rgb_color &c)
 	Write8(c.alpha);
 }
 
-void PictureVisitorBinary::WriteString(std::string_view str)
+void PictureWriterBinary::WriteString(std::string_view str)
 {
 	Write32(str.size());
 	CheckStatus(fWr.WriteExactly(str.data(), str.size()));
 }
 
-void PictureVisitorBinary::WriteShape(const BShape &shape)
+void PictureWriterBinary::WriteShape(const BShape &shape)
 {
 	int32 opCount;
 	int32 ptCount;
@@ -92,7 +92,7 @@ void PictureVisitorBinary::WriteShape(const BShape &shape)
 	CheckStatus(fWr.WriteExactly(ptList, ptCount*sizeof(BPoint)));
 }
 
-void PictureVisitorBinary::WriteGradient(const BGradient &gradient)
+void PictureWriterBinary::WriteGradient(const BGradient &gradient)
 {
 	Write32(gradient.GetType());
 	for (int32 i = 0; i < gradient.CountColorStops(); i++) {
@@ -141,7 +141,7 @@ void PictureVisitorBinary::WriteGradient(const BGradient &gradient)
 
 // #pragma mark - Meta
 
-void PictureVisitorBinary::EnterPicture(int32 version, int32 unknown)
+void PictureWriterBinary::EnterPicture(int32 version, int32 unknown)
 {
 	if (!fPictureStack.empty()) {
 		PictureInfo &prevInfo = fPictureStack.back();
@@ -157,7 +157,7 @@ void PictureVisitorBinary::EnterPicture(int32 version, int32 unknown)
 	Write32(unknown);
 }
 
-void PictureVisitorBinary::ExitPicture()
+void PictureWriterBinary::ExitPicture()
 {
 	PictureInfo &info = fPictureStack.back();
 	if (!info.isSet.pictures) {
@@ -169,14 +169,14 @@ void PictureVisitorBinary::ExitPicture()
 	fPictureStack.pop_back();
 }
 
-void PictureVisitorBinary::EnterPictures(int32 count)
+void PictureWriterBinary::EnterPictures(int32 count)
 {
 	PictureInfo &info = fPictureStack.back();
 	Write32(0);
 	info.isSet.pictures = true;
 }
 
-void PictureVisitorBinary::ExitPictures()
+void PictureWriterBinary::ExitPictures()
 {
 	PictureInfo &info = fPictureStack.back();
 	off_t oldPos = fWr.Position();
@@ -185,7 +185,7 @@ void PictureVisitorBinary::ExitPictures()
 	fWr.Seek(oldPos, SEEK_SET);
 }
 
-void PictureVisitorBinary::EnterOps()
+void PictureWriterBinary::EnterOps()
 {
 	PictureInfo &info = fPictureStack.back();
 	if (!info.isSet.pictures) {
@@ -197,7 +197,7 @@ void PictureVisitorBinary::EnterOps()
 	info.isSet.ops = true;
 }
 
-void PictureVisitorBinary::ExitOps()
+void PictureWriterBinary::ExitOps()
 {
 	PictureInfo &info = fPictureStack.back();
 	off_t oldPos = fWr.Position();
@@ -207,33 +207,33 @@ void PictureVisitorBinary::ExitOps()
 }
 
 
-void PictureVisitorBinary::EnterStateChange()
+void PictureWriterBinary::EnterStateChange()
 {
 	BeginChunk(B_PIC_ENTER_STATE_CHANGE);
 }
 
-void PictureVisitorBinary::ExitStateChange()
+void PictureWriterBinary::ExitStateChange()
 {
 	EndChunk();
 }
 
-void PictureVisitorBinary::EnterFontState()
+void PictureWriterBinary::EnterFontState()
 {
 	BeginChunk(B_PIC_ENTER_FONT_STATE);
 }
 
-void PictureVisitorBinary::ExitFontState()
+void PictureWriterBinary::ExitFontState()
 {
 	EndChunk();
 }
 
-void PictureVisitorBinary::PushState()
+void PictureWriterBinary::PushState()
 {
 	BeginChunk(B_PIC_PUSH_STATE);
 	EndChunk();
 }
 
-void PictureVisitorBinary::PopState()
+void PictureWriterBinary::PopState()
 {
 	BeginChunk(B_PIC_POP_STATE);
 	EndChunk();
@@ -242,14 +242,14 @@ void PictureVisitorBinary::PopState()
 
 // #pragma mark - State Absolute
 
-void PictureVisitorBinary::SetDrawingMode(drawing_mode mode)
+void PictureWriterBinary::SetDrawingMode(drawing_mode mode)
 {
 	BeginChunk(B_PIC_SET_DRAWING_MODE);
 	Write16(mode);
 	EndChunk();
 }
 
-void PictureVisitorBinary::SetLineMode(
+void PictureWriterBinary::SetLineMode(
 	cap_mode cap,
 	join_mode join,
 	float miterLimit
@@ -262,35 +262,35 @@ void PictureVisitorBinary::SetLineMode(
 	EndChunk();
 }
 
-void PictureVisitorBinary::SetPenSize(float penSize)
+void PictureWriterBinary::SetPenSize(float penSize)
 {
 	BeginChunk(B_PIC_SET_PEN_SIZE);
 	WriteFloat(penSize);
 	EndChunk();
 }
 
-void PictureVisitorBinary::SetHighColor(const rgb_color& color)
+void PictureWriterBinary::SetHighColor(const rgb_color& color)
 {
 	BeginChunk(B_PIC_SET_FORE_COLOR);
 	WriteColor(color);
 	EndChunk();
 }
 
-void PictureVisitorBinary::SetLowColor(const rgb_color& color)
+void PictureWriterBinary::SetLowColor(const rgb_color& color)
 {
 	BeginChunk(B_PIC_SET_BACK_COLOR);
 	WriteColor(color);
 	EndChunk();
 }
 
-void PictureVisitorBinary::SetPattern(const ::pattern& pat)
+void PictureWriterBinary::SetPattern(const ::pattern& pat)
 {
 	BeginChunk(B_PIC_SET_STIPLE_PATTERN);
 	WritePattern(pat);
 	EndChunk();
 }
 
-void PictureVisitorBinary::SetBlendingMode(
+void PictureWriterBinary::SetBlendingMode(
 	source_alpha srcAlpha, alpha_function alphaFunc
 )
 {
@@ -300,7 +300,7 @@ void PictureVisitorBinary::SetBlendingMode(
 	EndChunk();
 }
 
-void PictureVisitorBinary::SetFillRule(int32 fillRule)
+void PictureWriterBinary::SetFillRule(int32 fillRule)
 {
 	BeginChunk(B_PIC_SET_FILL_RULE);
 	Write32(fillRule);
@@ -310,28 +310,28 @@ void PictureVisitorBinary::SetFillRule(int32 fillRule)
 
 // #pragma mark - State Relative
 
-void PictureVisitorBinary::SetOrigin(const BPoint& point)
+void PictureWriterBinary::SetOrigin(const BPoint& point)
 {
 	BeginChunk(B_PIC_SET_ORIGIN);
 	WritePoint(point);
 	EndChunk();
 }
 
-void PictureVisitorBinary::SetScale(float scale)
+void PictureWriterBinary::SetScale(float scale)
 {
 	BeginChunk(B_PIC_SET_SCALE);
 	WriteFloat(scale);
 	EndChunk();
 }
 
-void PictureVisitorBinary::SetPenLocation(const BPoint& point)
+void PictureWriterBinary::SetPenLocation(const BPoint& point)
 {
 	BeginChunk(B_PIC_SET_PEN_LOCATION);
 	WritePoint(point);
 	EndChunk();
 }
 
-void PictureVisitorBinary::SetTransform(const BAffineTransform& transform)
+void PictureWriterBinary::SetTransform(const BAffineTransform& transform)
 {
 	BeginChunk(B_PIC_SET_TRANSFORM);
 	WriteTransform(transform);
@@ -341,7 +341,7 @@ void PictureVisitorBinary::SetTransform(const BAffineTransform& transform)
 
 // #pragma mark - Clipping
 
-void PictureVisitorBinary::SetClipping(const BRegion& region)
+void PictureWriterBinary::SetClipping(const BRegion& region)
 {
 	BeginChunk(B_PIC_SET_CLIPPING_RECTS);
 	Write32(region.CountRects());
@@ -351,13 +351,13 @@ void PictureVisitorBinary::SetClipping(const BRegion& region)
 	EndChunk();
 }
 
-void PictureVisitorBinary::ClearClipping()
+void PictureWriterBinary::ClearClipping()
 {
 	BeginChunk(B_PIC_CLEAR_CLIPPING_RECTS);
 	EndChunk();
 }
 
-void PictureVisitorBinary::ClipToPicture(int32 pictureToken, const BPoint& origin, bool inverse)
+void PictureWriterBinary::ClipToPicture(int32 pictureToken, const BPoint& origin, bool inverse)
 {
 	BeginChunk(B_PIC_CLIP_TO_PICTURE);
 	Write32(pictureToken);
@@ -366,7 +366,7 @@ void PictureVisitorBinary::ClipToPicture(int32 pictureToken, const BPoint& origi
 	EndChunk();
 }
 
-void PictureVisitorBinary::ClipToRect(const BRect& rect, bool inverse)
+void PictureWriterBinary::ClipToRect(const BRect& rect, bool inverse)
 {
 	BeginChunk(B_PIC_CLIP_TO_RECT);
 	WriteBool(inverse);
@@ -374,7 +374,7 @@ void PictureVisitorBinary::ClipToRect(const BRect& rect, bool inverse)
 	EndChunk();
 }
 
-void PictureVisitorBinary::ClipToShape(const BShape& shape, bool inverse)
+void PictureWriterBinary::ClipToShape(const BShape& shape, bool inverse)
 {
 	BeginChunk(B_PIC_CLIP_TO_SHAPE);
 	WriteBool(inverse);
@@ -385,70 +385,70 @@ void PictureVisitorBinary::ClipToShape(const BShape& shape, bool inverse)
 
 // #pragma mark - Font
 
-void PictureVisitorBinary::SetFontFamily(const font_family family)
+void PictureWriterBinary::SetFontFamily(const font_family family)
 {
 	BeginChunk(B_PIC_SET_FONT_FAMILY);
 	WriteString(std::string_view(family, strlen(family) + 1));
 	EndChunk();
 }
 
-void PictureVisitorBinary::SetFontStyle(const font_style style)
+void PictureWriterBinary::SetFontStyle(const font_style style)
 {
 	BeginChunk(B_PIC_SET_FONT_STYLE);
 	WriteString(std::string_view(style, strlen(style) + 1));
 	EndChunk();
 }
 
-void PictureVisitorBinary::SetFontSpacing(int32 spacing)
+void PictureWriterBinary::SetFontSpacing(int32 spacing)
 {
 	BeginChunk(B_PIC_SET_FONT_SPACING);
 	Write32(spacing);
 	EndChunk();
 }
 
-void PictureVisitorBinary::SetFontSize(float size)
+void PictureWriterBinary::SetFontSize(float size)
 {
 	BeginChunk(B_PIC_SET_FONT_SIZE);
 	WriteFloat(size);
 	EndChunk();
 }
 
-void PictureVisitorBinary::SetFontRotation(float rotation)
+void PictureWriterBinary::SetFontRotation(float rotation)
 {
 	BeginChunk(B_PIC_SET_FONT_ROTATE);
 	WriteFloat(rotation);
 	EndChunk();
 }
 
-void PictureVisitorBinary::SetFontEncoding(int32 encoding)
+void PictureWriterBinary::SetFontEncoding(int32 encoding)
 {
 	BeginChunk(B_PIC_SET_FONT_ENCODING);
 	Write32(encoding);
 	EndChunk();
 }
 
-void PictureVisitorBinary::PictureVisitorBinary::SetFontFlags(int32 flags)
+void PictureWriterBinary::PictureWriterBinary::SetFontFlags(int32 flags)
 {
 	BeginChunk(B_PIC_SET_FONT_FLAGS);
 	Write32(flags);
 	EndChunk();
 }
 
-void PictureVisitorBinary::SetFontShear(float shear)
+void PictureWriterBinary::SetFontShear(float shear)
 {
 	BeginChunk(B_PIC_SET_FONT_SHEAR);
 	WriteFloat(shear);
 	EndChunk();
 }
 
-void PictureVisitorBinary::SetFontBpp(int32 bpp)
+void PictureWriterBinary::SetFontBpp(int32 bpp)
 {
 	BeginChunk(B_PIC_SET_FONT_BPP);
 	Write32(bpp);
 	EndChunk();
 }
 
-void PictureVisitorBinary::SetFontFace(int32 face)
+void PictureWriterBinary::SetFontFace(int32 face)
 {
 	BeginChunk(B_PIC_SET_FONT_FACE);
 	Write32(face);
@@ -458,7 +458,7 @@ void PictureVisitorBinary::SetFontFace(int32 face)
 
 // #pragma mark - State (delta)
 
-void PictureVisitorBinary::MovePenBy(float dx, float dy)
+void PictureWriterBinary::MovePenBy(float dx, float dy)
 {
 	BeginChunk(B_PIC_MOVE_PEN_BY);
 	WriteFloat(dx);
@@ -466,7 +466,7 @@ void PictureVisitorBinary::MovePenBy(float dx, float dy)
 	EndChunk();
 }
 
-void PictureVisitorBinary::TranslateBy(double x, double y)
+void PictureWriterBinary::TranslateBy(double x, double y)
 {
 	BeginChunk(B_PIC_AFFINE_TRANSLATE);
 	WriteDouble(x);
@@ -474,7 +474,7 @@ void PictureVisitorBinary::TranslateBy(double x, double y)
 	EndChunk();
 }
 
-void PictureVisitorBinary::ScaleBy(double x, double y)
+void PictureWriterBinary::ScaleBy(double x, double y)
 {
 	BeginChunk(B_PIC_AFFINE_SCALE);
 	WriteDouble(x);
@@ -482,7 +482,7 @@ void PictureVisitorBinary::ScaleBy(double x, double y)
 	EndChunk();
 }
 
-void PictureVisitorBinary::RotateBy(double angleRadians)
+void PictureWriterBinary::RotateBy(double angleRadians)
 {
 	BeginChunk(B_PIC_AFFINE_ROTATE);
 	WriteDouble(angleRadians);
@@ -492,7 +492,7 @@ void PictureVisitorBinary::RotateBy(double angleRadians)
 
 // #pragma mark - Geometry
 
-void PictureVisitorBinary::StrokeLine(const BPoint& start, const BPoint& end)
+void PictureWriterBinary::StrokeLine(const BPoint& start, const BPoint& end)
 {
 	BeginChunk(B_PIC_STROKE_LINE);
 	WritePoint(start);
@@ -501,21 +501,21 @@ void PictureVisitorBinary::StrokeLine(const BPoint& start, const BPoint& end)
 }
 
 
-void PictureVisitorBinary::StrokeRect(const BRect& rect)
+void PictureWriterBinary::StrokeRect(const BRect& rect)
 {
 	BeginChunk(B_PIC_STROKE_RECT);
 	WriteRect(rect);
 	EndChunk();
 }
 
-void PictureVisitorBinary::FillRect(const BRect& rect)
+void PictureWriterBinary::FillRect(const BRect& rect)
 {
 	BeginChunk(B_PIC_FILL_RECT);
 	WriteRect(rect);
 	EndChunk();
 }
 
-void PictureVisitorBinary::StrokeRect(const BRect& rect, const BGradient& gradient)
+void PictureWriterBinary::StrokeRect(const BRect& rect, const BGradient& gradient)
 {
 	BeginChunk(B_PIC_STROKE_RECT_GRADIENT);
 	WriteRect(rect);
@@ -523,7 +523,7 @@ void PictureVisitorBinary::StrokeRect(const BRect& rect, const BGradient& gradie
 	EndChunk();
 }
 
-void PictureVisitorBinary::FillRect(const BRect& rect, const BGradient& gradient)
+void PictureWriterBinary::FillRect(const BRect& rect, const BGradient& gradient)
 {
 	BeginChunk(B_PIC_FILL_RECT_GRADIENT);
 	WriteRect(rect);
@@ -532,7 +532,7 @@ void PictureVisitorBinary::FillRect(const BRect& rect, const BGradient& gradient
 }
 
 
-void PictureVisitorBinary::StrokeRoundRect(const BRect& rect, const BPoint& radius)
+void PictureWriterBinary::StrokeRoundRect(const BRect& rect, const BPoint& radius)
 {
 	BeginChunk(B_PIC_STROKE_ROUND_RECT);
 	WriteRect(rect);
@@ -540,7 +540,7 @@ void PictureVisitorBinary::StrokeRoundRect(const BRect& rect, const BPoint& radi
 	EndChunk();
 }
 
-void PictureVisitorBinary::FillRoundRect(const BRect& rect, const BPoint& radius)
+void PictureWriterBinary::FillRoundRect(const BRect& rect, const BPoint& radius)
 {
 	BeginChunk(B_PIC_FILL_ROUND_RECT);
 	WriteRect(rect);
@@ -548,7 +548,7 @@ void PictureVisitorBinary::FillRoundRect(const BRect& rect, const BPoint& radius
 	EndChunk();
 }
 
-void PictureVisitorBinary::StrokeRoundRect(
+void PictureWriterBinary::StrokeRoundRect(
 	const BRect& rect, const BPoint& radius, const BGradient& gradient
 )
 {
@@ -559,7 +559,7 @@ void PictureVisitorBinary::StrokeRoundRect(
 	EndChunk();
 }
 
-void PictureVisitorBinary::FillRoundRect(
+void PictureWriterBinary::FillRoundRect(
 	const BRect& rect, const BPoint& radius, const BGradient& gradient
 )
 {
@@ -571,7 +571,7 @@ void PictureVisitorBinary::FillRoundRect(
 }
 
 
-void PictureVisitorBinary::StrokeBezier(const BPoint points[4])
+void PictureWriterBinary::StrokeBezier(const BPoint points[4])
 {
 	BeginChunk(B_PIC_STROKE_BEZIER);
 	for (int32 i = 0; i < 4; i++) {
@@ -580,7 +580,7 @@ void PictureVisitorBinary::StrokeBezier(const BPoint points[4])
 	EndChunk();
 }
 
-void PictureVisitorBinary::FillBezier(const BPoint points[4])
+void PictureWriterBinary::FillBezier(const BPoint points[4])
 {
 	BeginChunk(B_PIC_FILL_BEZIER);
 	for (int32 i = 0; i < 4; i++) {
@@ -589,7 +589,7 @@ void PictureVisitorBinary::FillBezier(const BPoint points[4])
 	EndChunk();
 }
 
-void PictureVisitorBinary::StrokeBezier(const BPoint points[4], const BGradient& gradient)
+void PictureWriterBinary::StrokeBezier(const BPoint points[4], const BGradient& gradient)
 {
 	BeginChunk(B_PIC_STROKE_BEZIER_GRADIENT);
 	for (int32 i = 0; i < 4; i++) {
@@ -599,7 +599,7 @@ void PictureVisitorBinary::StrokeBezier(const BPoint points[4], const BGradient&
 	EndChunk();
 }
 
-void PictureVisitorBinary::FillBezier(const BPoint points[4], const BGradient& gradient)
+void PictureWriterBinary::FillBezier(const BPoint points[4], const BGradient& gradient)
 {
 	BeginChunk(B_PIC_FILL_BEZIER_GRADIENT);
 	for (int32 i = 0; i < 4; i++) {
@@ -610,7 +610,7 @@ void PictureVisitorBinary::FillBezier(const BPoint points[4], const BGradient& g
 }
 
 
-void PictureVisitorBinary::StrokePolygon(int32 numPoints, const BPoint* points, bool isClosed)
+void PictureWriterBinary::StrokePolygon(int32 numPoints, const BPoint* points, bool isClosed)
 {
 	BeginChunk(B_PIC_STROKE_POLYGON);
 	Write32(numPoints);
@@ -621,7 +621,7 @@ void PictureVisitorBinary::StrokePolygon(int32 numPoints, const BPoint* points, 
 	EndChunk();
 }
 
-void PictureVisitorBinary::FillPolygon(int32 numPoints, const BPoint* points)
+void PictureWriterBinary::FillPolygon(int32 numPoints, const BPoint* points)
 {
 	BeginChunk(B_PIC_FILL_POLYGON);
 	Write32(numPoints);
@@ -631,7 +631,7 @@ void PictureVisitorBinary::FillPolygon(int32 numPoints, const BPoint* points)
 	EndChunk();
 }
 
-void PictureVisitorBinary::StrokePolygon(int32 numPoints, const BPoint* points, bool isClosed, const BGradient& gradient)
+void PictureWriterBinary::StrokePolygon(int32 numPoints, const BPoint* points, bool isClosed, const BGradient& gradient)
 {
 	BeginChunk(B_PIC_STROKE_POLYGON_GRADIENT);
 	Write32(numPoints);
@@ -643,7 +643,7 @@ void PictureVisitorBinary::StrokePolygon(int32 numPoints, const BPoint* points, 
 	EndChunk();
 }
 
-void PictureVisitorBinary::FillPolygon(int32 numPoints, const BPoint* points, const BGradient& gradient)
+void PictureWriterBinary::FillPolygon(int32 numPoints, const BPoint* points, const BGradient& gradient)
 {
 	BeginChunk(B_PIC_FILL_POLYGON_GRADIENT);
 	Write32(numPoints);
@@ -655,21 +655,21 @@ void PictureVisitorBinary::FillPolygon(int32 numPoints, const BPoint* points, co
 }
 
 
-void PictureVisitorBinary::StrokeShape(const BShape& shape)
+void PictureWriterBinary::StrokeShape(const BShape& shape)
 {
 	BeginChunk(B_PIC_STROKE_SHAPE);
 	WriteShape(shape);
 	EndChunk();
 }
 
-void PictureVisitorBinary::FillShape(const BShape& shape)
+void PictureWriterBinary::FillShape(const BShape& shape)
 {
 	BeginChunk(B_PIC_FILL_SHAPE);
 	WriteShape(shape);
 	EndChunk();
 }
 
-void PictureVisitorBinary::StrokeShape(const BShape& shape, const BGradient& gradient)
+void PictureWriterBinary::StrokeShape(const BShape& shape, const BGradient& gradient)
 {
 	BeginChunk(B_PIC_STROKE_SHAPE_GRADIENT);
 	WriteShape(shape);
@@ -677,7 +677,7 @@ void PictureVisitorBinary::StrokeShape(const BShape& shape, const BGradient& gra
 	EndChunk();
 }
 
-void PictureVisitorBinary::FillShape(const BShape& shape, const BGradient& gradient)
+void PictureWriterBinary::FillShape(const BShape& shape, const BGradient& gradient)
 {
 	BeginChunk(B_PIC_FILL_SHAPE_GRADIENT);
 	WriteShape(shape);
@@ -686,7 +686,7 @@ void PictureVisitorBinary::FillShape(const BShape& shape, const BGradient& gradi
 }
 
 
-void PictureVisitorBinary::StrokeArc(
+void PictureWriterBinary::StrokeArc(
 	const BPoint& center,
 	const BPoint& radius,
 	float startTheta,
@@ -701,7 +701,7 @@ void PictureVisitorBinary::StrokeArc(
 	EndChunk();
 }
 
-void PictureVisitorBinary::FillArc(
+void PictureWriterBinary::FillArc(
 	const BPoint& center,
 	const BPoint& radius,
 	float startTheta,
@@ -716,7 +716,7 @@ void PictureVisitorBinary::FillArc(
 	EndChunk();
 }
 
-void PictureVisitorBinary::StrokeArc(
+void PictureWriterBinary::StrokeArc(
 	const BPoint& center,
 	const BPoint& radius,
 	float startTheta,
@@ -733,7 +733,7 @@ void PictureVisitorBinary::StrokeArc(
 	EndChunk();
 }
 
-void PictureVisitorBinary::FillArc(
+void PictureWriterBinary::FillArc(
 	const BPoint& center,
 	const BPoint& radius,
 	float startTheta,
@@ -751,21 +751,21 @@ void PictureVisitorBinary::FillArc(
 }
 
 
-void PictureVisitorBinary::StrokeEllipse(const BRect& rect)
+void PictureWriterBinary::StrokeEllipse(const BRect& rect)
 {
 	BeginChunk(B_PIC_STROKE_ELLIPSE);
 	WriteRect(rect);
 	EndChunk();
 }
 
-void PictureVisitorBinary::FillEllipse(const BRect& rect)
+void PictureWriterBinary::FillEllipse(const BRect& rect)
 {
 	BeginChunk(B_PIC_FILL_ELLIPSE);
 	WriteRect(rect);
 	EndChunk();
 }
 
-void PictureVisitorBinary::StrokeEllipse(const BRect& rect, const BGradient& gradient)
+void PictureWriterBinary::StrokeEllipse(const BRect& rect, const BGradient& gradient)
 {
 	BeginChunk(B_PIC_STROKE_ELLIPSE_GRADIENT);
 	WriteRect(rect);
@@ -773,7 +773,7 @@ void PictureVisitorBinary::StrokeEllipse(const BRect& rect, const BGradient& gra
 	EndChunk();
 }
 
-void PictureVisitorBinary::FillEllipse(const BRect& rect, const BGradient& gradient)
+void PictureWriterBinary::FillEllipse(const BRect& rect, const BGradient& gradient)
 {
 	BeginChunk(B_PIC_FILL_ELLIPSE_GRADIENT);
 	WriteRect(rect);
@@ -784,7 +784,7 @@ void PictureVisitorBinary::FillEllipse(const BRect& rect, const BGradient& gradi
 
 // #pragma mark - Draw
 
-void PictureVisitorBinary::DrawString(
+void PictureWriterBinary::DrawString(
 	const char* string, int32 length,
 	const escapement_delta& delta
 )
@@ -796,7 +796,7 @@ void PictureVisitorBinary::DrawString(
 	EndChunk();
 }
 
-void PictureVisitorBinary::DrawString(
+void PictureWriterBinary::DrawString(
 	const char* string, int32 length,
 	const BPoint* locations, int32 locationCount
 )
@@ -811,7 +811,7 @@ void PictureVisitorBinary::DrawString(
 }
 
 
-void PictureVisitorBinary::DrawBitmap(
+void PictureWriterBinary::DrawBitmap(
 	const BRect& srcRect,
 	const BRect& dstRect, int32 width,
 	int32 height,
@@ -833,7 +833,7 @@ void PictureVisitorBinary::DrawBitmap(
 	EndChunk();
 }
 
-void PictureVisitorBinary::DrawPicture(const BPoint& where, int32 token)
+void PictureWriterBinary::DrawPicture(const BPoint& where, int32 token)
 {
 	BeginChunk(B_PIC_DRAW_PICTURE);
 	WritePoint(where);
@@ -842,7 +842,7 @@ void PictureVisitorBinary::DrawPicture(const BPoint& where, int32 token)
 }
 
 
-void PictureVisitorBinary::BlendLayer(Layer* layer)
+void PictureWriterBinary::BlendLayer(Layer* layer)
 {
 	RaiseUnimplemented();
 }

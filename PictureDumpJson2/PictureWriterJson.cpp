@@ -1,4 +1,4 @@
-#include "PictureVisitorJson.h"
+#include "PictureWriterJson.h"
 
 #include <GradientLinear.h>
 #include <GradientRadial.h>
@@ -7,14 +7,14 @@
 #include <GradientDiamond.h>
 
 
-class PictureVisitorJson::ShapeIterator final: public BShapeIterator {
+class PictureWriterJson::ShapeIterator final: public BShapeIterator {
 private:
-	PictureVisitorJson &fBase;
+	PictureWriterJson &fBase;
 
 public:
 	virtual ~ShapeIterator() = default;
 
-	ShapeIterator(PictureVisitorJson &base): fBase(base) {}
+	ShapeIterator(PictureWriterJson &base): fBase(base) {}
 
 
 	status_t IterateMoveTo(BPoint* point) final
@@ -74,13 +74,13 @@ public:
 };
 
 
-PictureVisitorJson::PictureVisitorJson(JsonWriter &wr):
+PictureWriterJson::PictureWriterJson(JsonWriter &wr):
 	fWr(wr)
 {
 }
 
 
-void PictureVisitorJson::WriteColor(const rgb_color &c)
+void PictureWriterJson::WriteColor(const rgb_color &c)
 {
 	char buf[64];
 	sprintf(buf, "#%02x%02x%02x%02x",
@@ -92,7 +92,7 @@ void PictureVisitorJson::WriteColor(const rgb_color &c)
 	fWr.String(buf);
 }
 
-void PictureVisitorJson::WritePoint(const BPoint &pt)
+void PictureWriterJson::WritePoint(const BPoint &pt)
 {
 	fWr.StartObject();
 	fWr.Key("x"); fWr.Double(pt.x);
@@ -100,7 +100,7 @@ void PictureVisitorJson::WritePoint(const BPoint &pt)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::WriteRect(const BRect &rc)
+void PictureWriterJson::WriteRect(const BRect &rc)
 {
 	fWr.StartObject();
 	fWr.Key("left");   fWr.Double(rc.left);
@@ -110,13 +110,13 @@ void PictureVisitorJson::WriteRect(const BRect &rc)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::WriteShape(const BShape &shape)
+void PictureWriterJson::WriteShape(const BShape &shape)
 {
 	ShapeIterator iter(*this);
 	iter.Iterate(const_cast<BShape*>(&shape));
 }
 
-void PictureVisitorJson::WriteGradient(const BGradient &gradient)
+void PictureWriterJson::WriteGradient(const BGradient &gradient)
 {
 	fWr.StartObject();
 	switch (gradient.GetType()) {
@@ -188,7 +188,7 @@ void PictureVisitorJson::WriteGradient(const BGradient &gradient)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::WriteTransform(const BAffineTransform& tr)
+void PictureWriterJson::WriteTransform(const BAffineTransform& tr)
 {
 	fWr.StartObject();
 	fWr.Key("tx");  fWr.Double(tr.tx);
@@ -204,75 +204,75 @@ void PictureVisitorJson::WriteTransform(const BAffineTransform& tr)
 
 // #pragma mark - Meta
 
-void PictureVisitorJson::EnterPicture(int32 version, int32 unknown)
+void PictureWriterJson::EnterPicture(int32 version, int32 unknown)
 {
 	fWr.StartObject();
 	fWr.Key("version"); fWr.Int(version);
 	fWr.Key("unknown"); fWr.Int(unknown);
 }
 
-void PictureVisitorJson::ExitPicture()
+void PictureWriterJson::ExitPicture()
 {
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::EnterPictures(int32 count)
+void PictureWriterJson::EnterPictures(int32 count)
 {
 	fWr.Key("pictures");
 	fWr.StartArray();
 }
 
-void PictureVisitorJson::ExitPictures()
+void PictureWriterJson::ExitPictures()
 {
 	fWr.EndArray();
 }
 
-void PictureVisitorJson::EnterOps()
+void PictureWriterJson::EnterOps()
 {
 	fWr.Key("ops");
 	fWr.StartArray();
 }
 
-void PictureVisitorJson::ExitOps()
+void PictureWriterJson::ExitOps()
 {
 	fWr.EndArray();
 }
 
 
-void PictureVisitorJson::EnterStateChange()
+void PictureWriterJson::EnterStateChange()
 {
 	fWr.StartObject();
 	fWr.Key("ENTER_STATE_CHANGE");
 	fWr.StartArray();
 }
 
-void PictureVisitorJson::ExitStateChange()
+void PictureWriterJson::ExitStateChange()
 {
 	fWr.EndArray();
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::EnterFontState()
+void PictureWriterJson::EnterFontState()
 {
 	fWr.StartObject();
 	fWr.Key("ENTER_FONT_STATE");
 	fWr.StartArray();
 }
 
-void PictureVisitorJson::ExitFontState()
+void PictureWriterJson::ExitFontState()
 {
 	fWr.EndArray();
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::PushState()
+void PictureWriterJson::PushState()
 {
 	fWr.StartObject();
 	fWr.Key("GROUP");
 	fWr.StartArray();
 }
 
-void PictureVisitorJson::PopState()
+void PictureWriterJson::PopState()
 {
 	fWr.EndArray();
 	fWr.EndObject();
@@ -281,7 +281,7 @@ void PictureVisitorJson::PopState()
 
 // #pragma mark - State Absolute
 
-void PictureVisitorJson::SetDrawingMode(drawing_mode mode)
+void PictureWriterJson::SetDrawingMode(drawing_mode mode)
 {
 	fWr.StartObject();
 	fWr.Key("SET_DRAWING_MODE");
@@ -302,7 +302,7 @@ void PictureVisitorJson::SetDrawingMode(drawing_mode mode)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::SetLineMode(cap_mode cap,
+void PictureWriterJson::SetLineMode(cap_mode cap,
 							join_mode join,
 							float miterLimit)
 {
@@ -330,7 +330,7 @@ void PictureVisitorJson::SetLineMode(cap_mode cap,
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::SetPenSize(float penSize)
+void PictureWriterJson::SetPenSize(float penSize)
 {
 	fWr.StartObject();
 	fWr.Key("SET_PEN_SIZE");
@@ -338,7 +338,7 @@ void PictureVisitorJson::SetPenSize(float penSize)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::SetHighColor(const rgb_color& color)
+void PictureWriterJson::SetHighColor(const rgb_color& color)
 {
 	fWr.StartObject();
 	fWr.Key("SET_FORE_COLOR");
@@ -346,7 +346,7 @@ void PictureVisitorJson::SetHighColor(const rgb_color& color)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::SetLowColor(const rgb_color& color)
+void PictureWriterJson::SetLowColor(const rgb_color& color)
 {
 	fWr.StartObject();
 	fWr.Key("SET_BACK_COLOR");
@@ -354,7 +354,7 @@ void PictureVisitorJson::SetLowColor(const rgb_color& color)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::SetPattern(const ::pattern& pat)
+void PictureWriterJson::SetPattern(const ::pattern& pat)
 {
 	fWr.StartObject();
 	fWr.Key("SET_STIPLE_PATTERN");
@@ -374,7 +374,7 @@ void PictureVisitorJson::SetPattern(const ::pattern& pat)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::SetBlendingMode(source_alpha srcAlpha,
+void PictureWriterJson::SetBlendingMode(source_alpha srcAlpha,
 							alpha_function alphaFunc)
 {
 	fWr.StartObject();
@@ -408,7 +408,7 @@ void PictureVisitorJson::SetBlendingMode(source_alpha srcAlpha,
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::SetFillRule(int32 fillRule)
+void PictureWriterJson::SetFillRule(int32 fillRule)
 {
 	fWr.StartObject();
 	fWr.Key("SET_FILL_RULE");
@@ -423,7 +423,7 @@ void PictureVisitorJson::SetFillRule(int32 fillRule)
 
 // #pragma mark - State Relative
 
-void PictureVisitorJson::SetOrigin(const BPoint& point)
+void PictureWriterJson::SetOrigin(const BPoint& point)
 {
 	fWr.StartObject();
 	fWr.Key("SET_ORIGIN");
@@ -431,7 +431,7 @@ void PictureVisitorJson::SetOrigin(const BPoint& point)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::SetScale(float scale)
+void PictureWriterJson::SetScale(float scale)
 {
 	fWr.StartObject();
 	fWr.Key("SET_SCALE");
@@ -439,7 +439,7 @@ void PictureVisitorJson::SetScale(float scale)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::SetPenLocation(const BPoint& point)
+void PictureWriterJson::SetPenLocation(const BPoint& point)
 {
 	fWr.StartObject();
 	fWr.Key("SET_PEN_LOCATION");
@@ -447,7 +447,7 @@ void PictureVisitorJson::SetPenLocation(const BPoint& point)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::SetTransform(const BAffineTransform& transform)
+void PictureWriterJson::SetTransform(const BAffineTransform& transform)
 {
 	fWr.StartObject();
 	fWr.Key("SET_TRANSFORM");
@@ -458,7 +458,7 @@ void PictureVisitorJson::SetTransform(const BAffineTransform& transform)
 
 // #pragma mark - Clipping
 
-void PictureVisitorJson::SetClipping(const BRegion& region)
+void PictureWriterJson::SetClipping(const BRegion& region)
 {
 	fWr.StartObject();
 	fWr.Key("SET_CLIPPING_RECTS");
@@ -470,7 +470,7 @@ void PictureVisitorJson::SetClipping(const BRegion& region)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::ClearClipping()
+void PictureWriterJson::ClearClipping()
 {
 	fWr.StartObject();
 	fWr.Key("CLEAR_CLIPPING_RECTS");
@@ -479,7 +479,7 @@ void PictureVisitorJson::ClearClipping()
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::ClipToPicture(int32 pictureToken, const BPoint& origin, bool inverse)
+void PictureWriterJson::ClipToPicture(int32 pictureToken, const BPoint& origin, bool inverse)
 {
 	fWr.StartObject();
 	fWr.Key("CLIP_TO_PICTURE");
@@ -491,7 +491,7 @@ void PictureVisitorJson::ClipToPicture(int32 pictureToken, const BPoint& origin,
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::ClipToRect(const BRect& rect, bool inverse)
+void PictureWriterJson::ClipToRect(const BRect& rect, bool inverse)
 {
 	fWr.StartObject();
 	fWr.Key("CLIP_TO_RECT");
@@ -502,7 +502,7 @@ void PictureVisitorJson::ClipToRect(const BRect& rect, bool inverse)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::ClipToShape(const BShape& shape, bool inverse)
+void PictureWriterJson::ClipToShape(const BShape& shape, bool inverse)
 {
 	fWr.StartObject();
 	fWr.Key("CLIP_TO_SHAPE");
@@ -516,7 +516,7 @@ void PictureVisitorJson::ClipToShape(const BShape& shape, bool inverse)
 
 // #pragma mark - Font
 
-void PictureVisitorJson::SetFontFamily(const font_family family)
+void PictureWriterJson::SetFontFamily(const font_family family)
 {
 	fWr.StartObject();
 	fWr.Key("SET_FONT_FAMILY");
@@ -524,7 +524,7 @@ void PictureVisitorJson::SetFontFamily(const font_family family)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::SetFontStyle(const font_style style)
+void PictureWriterJson::SetFontStyle(const font_style style)
 {
 	fWr.StartObject();
 	fWr.Key("SET_FONT_STYLE");
@@ -532,7 +532,7 @@ void PictureVisitorJson::SetFontStyle(const font_style style)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::SetFontSpacing(int32 spacing)
+void PictureWriterJson::SetFontSpacing(int32 spacing)
 {
 	fWr.StartObject();
 	fWr.Key("SET_FONT_SPACING");
@@ -546,7 +546,7 @@ void PictureVisitorJson::SetFontSpacing(int32 spacing)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::SetFontSize(float size)
+void PictureWriterJson::SetFontSize(float size)
 {
 	fWr.StartObject();
 	fWr.Key("SET_FONT_SIZE");
@@ -554,7 +554,7 @@ void PictureVisitorJson::SetFontSize(float size)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::SetFontRotation(float rotation)
+void PictureWriterJson::SetFontRotation(float rotation)
 {
 	fWr.StartObject();
 	fWr.Key("SET_FONT_ROTATE");
@@ -562,7 +562,7 @@ void PictureVisitorJson::SetFontRotation(float rotation)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::SetFontEncoding(int32 encoding)
+void PictureWriterJson::SetFontEncoding(int32 encoding)
 {
 	fWr.StartObject();
 	fWr.Key("SET_FONT_ENCODING");
@@ -584,7 +584,7 @@ void PictureVisitorJson::SetFontEncoding(int32 encoding)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::PictureVisitorJson::SetFontFlags(int32 flags)
+void PictureWriterJson::PictureWriterJson::SetFontFlags(int32 flags)
 {
 	fWr.StartObject();
 	fWr.Key("SET_FONT_FLAGS");
@@ -602,7 +602,7 @@ void PictureVisitorJson::PictureVisitorJson::SetFontFlags(int32 flags)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::SetFontShear(float shear)
+void PictureWriterJson::SetFontShear(float shear)
 {
 	fWr.StartObject();
 	fWr.Key("SET_FONT_SHEAR");
@@ -610,7 +610,7 @@ void PictureVisitorJson::SetFontShear(float shear)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::SetFontBpp(int32 bpp)
+void PictureWriterJson::SetFontBpp(int32 bpp)
 {
 	fWr.StartObject();
 	fWr.Key("SET_FONT_BPP");
@@ -618,7 +618,7 @@ void PictureVisitorJson::SetFontBpp(int32 bpp)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::SetFontFace(int32 face)
+void PictureWriterJson::SetFontFace(int32 face)
 {
 	fWr.StartObject();
 	fWr.Key("SET_FONT_FACE");
@@ -647,7 +647,7 @@ void PictureVisitorJson::SetFontFace(int32 face)
 
 // #pragma mark - State (delta)
 
-void PictureVisitorJson::MovePenBy(float dx, float dy)
+void PictureWriterJson::MovePenBy(float dx, float dy)
 {
 	fWr.StartObject();
 	fWr.Key("MOVE_PEN_BY");
@@ -655,7 +655,7 @@ void PictureVisitorJson::MovePenBy(float dx, float dy)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::TranslateBy(double x, double y)
+void PictureWriterJson::TranslateBy(double x, double y)
 {
 	fWr.StartObject();
 	fWr.Key("AFFINE_TRANSLATE");
@@ -666,7 +666,7 @@ void PictureVisitorJson::TranslateBy(double x, double y)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::ScaleBy(double x, double y)
+void PictureWriterJson::ScaleBy(double x, double y)
 {
 	fWr.StartObject();
 	fWr.Key("AFFINE_SCALE");
@@ -677,7 +677,7 @@ void PictureVisitorJson::ScaleBy(double x, double y)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::RotateBy(double angleRadians)
+void PictureWriterJson::RotateBy(double angleRadians)
 {
 	fWr.StartObject();
 	fWr.Key("AFFINE_ROTATE");
@@ -688,7 +688,7 @@ void PictureVisitorJson::RotateBy(double angleRadians)
 
 // #pragma mark - Geometry
 
-void PictureVisitorJson::StrokeLine(const BPoint& start, const BPoint& end)
+void PictureWriterJson::StrokeLine(const BPoint& start, const BPoint& end)
 {
 	fWr.StartObject();
 	fWr.Key("STROKE_LINE");
@@ -700,7 +700,7 @@ void PictureVisitorJson::StrokeLine(const BPoint& start, const BPoint& end)
 }
 
 
-void PictureVisitorJson::StrokeRect(const BRect& rect)
+void PictureWriterJson::StrokeRect(const BRect& rect)
 {
 	fWr.StartObject();
 	fWr.Key("STROKE_RECT");
@@ -708,7 +708,7 @@ void PictureVisitorJson::StrokeRect(const BRect& rect)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::FillRect(const BRect& rect)
+void PictureWriterJson::FillRect(const BRect& rect)
 {
 	fWr.StartObject();
 	fWr.Key("FILL_RECT");
@@ -716,7 +716,7 @@ void PictureVisitorJson::FillRect(const BRect& rect)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::StrokeRect(const BRect& rect, const BGradient& gradient)
+void PictureWriterJson::StrokeRect(const BRect& rect, const BGradient& gradient)
 {
 	fWr.StartObject();
 	fWr.Key("STROKE_RECT_GRADIENT");
@@ -727,7 +727,7 @@ void PictureVisitorJson::StrokeRect(const BRect& rect, const BGradient& gradient
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::FillRect(const BRect& rect, const BGradient& gradient)
+void PictureWriterJson::FillRect(const BRect& rect, const BGradient& gradient)
 {
 	fWr.StartObject();
 	fWr.Key("FILL_RECT_GRADIENT");
@@ -739,7 +739,7 @@ void PictureVisitorJson::FillRect(const BRect& rect, const BGradient& gradient)
 }
 
 
-void PictureVisitorJson::StrokeRoundRect(const BRect& rect,
+void PictureWriterJson::StrokeRoundRect(const BRect& rect,
 							const BPoint& radius)
 {
 	fWr.StartObject();
@@ -751,7 +751,7 @@ void PictureVisitorJson::StrokeRoundRect(const BRect& rect,
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::FillRoundRect(const BRect& rect,
+void PictureWriterJson::FillRoundRect(const BRect& rect,
 							const BPoint& radius)
 {
 	fWr.StartObject();
@@ -763,7 +763,7 @@ void PictureVisitorJson::FillRoundRect(const BRect& rect,
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::StrokeRoundRect(const BRect& rect,
+void PictureWriterJson::StrokeRoundRect(const BRect& rect,
 							const BPoint& radius, const BGradient& gradient)
 {
 	fWr.StartObject();
@@ -776,7 +776,7 @@ void PictureVisitorJson::StrokeRoundRect(const BRect& rect,
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::FillRoundRect(const BRect& rect,
+void PictureWriterJson::FillRoundRect(const BRect& rect,
 							const BPoint& radius, const BGradient& gradient)
 {
 	fWr.StartObject();
@@ -790,7 +790,7 @@ void PictureVisitorJson::FillRoundRect(const BRect& rect,
 }
 
 
-void PictureVisitorJson::StrokeBezier(const BPoint points[4])
+void PictureWriterJson::StrokeBezier(const BPoint points[4])
 {
 	fWr.StartObject();
 	fWr.Key("STROKE_BEZIER");
@@ -802,7 +802,7 @@ void PictureVisitorJson::StrokeBezier(const BPoint points[4])
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::FillBezier(const BPoint points[4])
+void PictureWriterJson::FillBezier(const BPoint points[4])
 {
 	fWr.StartObject();
 	fWr.Key("FILL_BEZIER");
@@ -814,7 +814,7 @@ void PictureVisitorJson::FillBezier(const BPoint points[4])
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::StrokeBezier(const BPoint points[4], const BGradient& gradient)
+void PictureWriterJson::StrokeBezier(const BPoint points[4], const BGradient& gradient)
 {
 	fWr.StartObject();
 	fWr.Key("STROKE_BEZIER_GRADIENT");
@@ -830,7 +830,7 @@ void PictureVisitorJson::StrokeBezier(const BPoint points[4], const BGradient& g
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::FillBezier(const BPoint points[4], const BGradient& gradient)
+void PictureWriterJson::FillBezier(const BPoint points[4], const BGradient& gradient)
 {
 	fWr.StartObject();
 	fWr.Key("FILL_BEZIER_GRADIENT");
@@ -847,7 +847,7 @@ void PictureVisitorJson::FillBezier(const BPoint points[4], const BGradient& gra
 }
 
 
-void PictureVisitorJson::StrokePolygon(int32 numPoints, const BPoint* points, bool isClosed)
+void PictureWriterJson::StrokePolygon(int32 numPoints, const BPoint* points, bool isClosed)
 {
 	fWr.StartObject();
 	fWr.Key("STROKE_POLYGON");
@@ -863,7 +863,7 @@ void PictureVisitorJson::StrokePolygon(int32 numPoints, const BPoint* points, bo
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::FillPolygon(int32 numPoints, const BPoint* points)
+void PictureWriterJson::FillPolygon(int32 numPoints, const BPoint* points)
 {
 	fWr.StartObject();
 	fWr.Key("FILL_POLYGON");
@@ -875,7 +875,7 @@ void PictureVisitorJson::FillPolygon(int32 numPoints, const BPoint* points)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::StrokePolygon(int32 numPoints, const BPoint* points, bool isClosed, const BGradient& gradient)
+void PictureWriterJson::StrokePolygon(int32 numPoints, const BPoint* points, bool isClosed, const BGradient& gradient)
 {
 	fWr.StartObject();
 	fWr.Key("STROKE_POLYGON_GRADIENT");
@@ -892,7 +892,7 @@ void PictureVisitorJson::StrokePolygon(int32 numPoints, const BPoint* points, bo
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::FillPolygon(int32 numPoints, const BPoint* points, const BGradient& gradient)
+void PictureWriterJson::FillPolygon(int32 numPoints, const BPoint* points, const BGradient& gradient)
 {
 	fWr.StartObject();
 	fWr.Key("FILL_POLYGON_GRADIENT");
@@ -909,7 +909,7 @@ void PictureVisitorJson::FillPolygon(int32 numPoints, const BPoint* points, cons
 }
 
 
-void PictureVisitorJson::StrokeShape(const BShape& shape)
+void PictureWriterJson::StrokeShape(const BShape& shape)
 {
 	fWr.StartObject();
 	fWr.Key("STROKE_SHAPE");
@@ -917,7 +917,7 @@ void PictureVisitorJson::StrokeShape(const BShape& shape)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::FillShape(const BShape& shape)
+void PictureWriterJson::FillShape(const BShape& shape)
 {
 	fWr.StartObject();
 	fWr.Key("FILL_SHAPE");
@@ -925,7 +925,7 @@ void PictureVisitorJson::FillShape(const BShape& shape)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::StrokeShape(const BShape& shape, const BGradient& gradient)
+void PictureWriterJson::StrokeShape(const BShape& shape, const BGradient& gradient)
 {
 	fWr.StartObject();
 	fWr.Key("STROKE_SHAPE_GRADIENT");
@@ -936,7 +936,7 @@ void PictureVisitorJson::StrokeShape(const BShape& shape, const BGradient& gradi
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::FillShape(const BShape& shape, const BGradient& gradient)
+void PictureWriterJson::FillShape(const BShape& shape, const BGradient& gradient)
 {
 	fWr.StartObject();
 	fWr.Key("FILL_SHAPE_GRADIENT");
@@ -948,7 +948,7 @@ void PictureVisitorJson::FillShape(const BShape& shape, const BGradient& gradien
 }
 
 
-void PictureVisitorJson::StrokeArc(const BPoint& center,
+void PictureWriterJson::StrokeArc(const BPoint& center,
 							const BPoint& radius,
 							float startTheta,
 							float arcTheta)
@@ -964,7 +964,7 @@ void PictureVisitorJson::StrokeArc(const BPoint& center,
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::FillArc(const BPoint& center,
+void PictureWriterJson::FillArc(const BPoint& center,
 							const BPoint& radius,
 							float startTheta,
 							float arcTheta)
@@ -980,7 +980,7 @@ void PictureVisitorJson::FillArc(const BPoint& center,
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::StrokeArc(const BPoint& center,
+void PictureWriterJson::StrokeArc(const BPoint& center,
 							const BPoint& radius,
 							float startTheta,
 							float arcTheta,
@@ -998,7 +998,7 @@ void PictureVisitorJson::StrokeArc(const BPoint& center,
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::FillArc(const BPoint& center,
+void PictureWriterJson::FillArc(const BPoint& center,
 							const BPoint& radius,
 							float startTheta,
 							float arcTheta,
@@ -1017,7 +1017,7 @@ void PictureVisitorJson::FillArc(const BPoint& center,
 }
 
 
-void PictureVisitorJson::StrokeEllipse(const BRect& rect)
+void PictureWriterJson::StrokeEllipse(const BRect& rect)
 {
 	fWr.StartObject();
 	fWr.Key("STROKE_ELLIPSE");
@@ -1025,7 +1025,7 @@ void PictureVisitorJson::StrokeEllipse(const BRect& rect)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::FillEllipse(const BRect& rect)
+void PictureWriterJson::FillEllipse(const BRect& rect)
 {
 	fWr.StartObject();
 	fWr.Key("FILL_ELLIPSE");
@@ -1033,7 +1033,7 @@ void PictureVisitorJson::FillEllipse(const BRect& rect)
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::StrokeEllipse(const BRect& rect, const BGradient& gradient)
+void PictureWriterJson::StrokeEllipse(const BRect& rect, const BGradient& gradient)
 {
 	fWr.StartObject();
 	fWr.Key("STROKE_ELLIPSE_GRADIENT");
@@ -1044,7 +1044,7 @@ void PictureVisitorJson::StrokeEllipse(const BRect& rect, const BGradient& gradi
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::FillEllipse(const BRect& rect, const BGradient& gradient)
+void PictureWriterJson::FillEllipse(const BRect& rect, const BGradient& gradient)
 {
 	fWr.StartObject();
 	fWr.Key("FILL_ELLIPSE_GRADIENT");
@@ -1058,7 +1058,7 @@ void PictureVisitorJson::FillEllipse(const BRect& rect, const BGradient& gradien
 
 // #pragma mark - Draw
 
-void PictureVisitorJson::DrawString(
+void PictureWriterJson::DrawString(
 							const char* string, int32 length,
 							const escapement_delta& delta)
 {
@@ -1073,7 +1073,7 @@ void PictureVisitorJson::DrawString(
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::DrawString(const char* string,
+void PictureWriterJson::DrawString(const char* string,
 							int32 length, const BPoint* locations,
 							int32 locationCount)
 {
@@ -1092,7 +1092,7 @@ void PictureVisitorJson::DrawString(const char* string,
 }
 
 
-void PictureVisitorJson::DrawBitmap(const BRect& srcRect,
+void PictureWriterJson::DrawBitmap(const BRect& srcRect,
 							const BRect& dstRect, int32 width,
 							int32 height,
 							int32 bytesPerRow,
@@ -1120,7 +1120,7 @@ void PictureVisitorJson::DrawBitmap(const BRect& srcRect,
 	fWr.EndObject();
 }
 
-void PictureVisitorJson::DrawPicture(const BPoint& where,
+void PictureWriterJson::DrawPicture(const BPoint& where,
 							int32 token)
 {
 	fWr.StartObject();
@@ -1133,7 +1133,7 @@ void PictureVisitorJson::DrawPicture(const BPoint& where,
 }
 
 
-void PictureVisitorJson::BlendLayer(Layer* layer)
+void PictureWriterJson::BlendLayer(Layer* layer)
 {
 	fWr.StartObject();
 	fWr.Key("BLEND_LAYER");
