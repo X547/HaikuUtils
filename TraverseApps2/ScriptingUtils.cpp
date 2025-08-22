@@ -8,7 +8,7 @@
 
 void DumpMessenger(const BMessenger &handle)
 {
-	printf("(team: %d, token: %d)", BMessenger::Private((BMessenger&)handle).Team(), BMessenger::Private((BMessenger&)handle).Token());
+	printf("(team: %" B_PRId32 ", token: %" B_PRId32 ")", BMessenger::Private((BMessenger&)handle).Team(), BMessenger::Private((BMessenger&)handle).Token());
 }
 
 status_t SendScriptingMessage(const BMessenger &obj, BMessage &spec, BMessage &reply)
