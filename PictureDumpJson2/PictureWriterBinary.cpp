@@ -95,6 +95,7 @@ void PictureWriterBinary::WriteShape(const BShape &shape)
 void PictureWriterBinary::WriteGradient(const BGradient &gradient)
 {
 	Write32(gradient.GetType());
+	Write32(gradient.CountColorStops());
 	for (int32 i = 0; i < gradient.CountColorStops(); i++) {
 		BGradient::ColorStop *cs = gradient.ColorStopAt(i);
 		WriteColor(cs->color);

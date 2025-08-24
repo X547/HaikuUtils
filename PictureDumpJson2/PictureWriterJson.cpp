@@ -19,37 +19,45 @@ public:
 
 	status_t IterateMoveTo(BPoint* point) final
 	{
+		fBase.fWr.StartObject();
 		fBase.fWr.Key("MoveTo");
 		fBase.WritePoint(*point);
+		fBase.fWr.EndObject();
 		return B_OK;
 	}
 
 	status_t IterateLineTo(int32 lineCount, BPoint* linePoints) final
 	{
+		fBase.fWr.StartObject();
 		fBase.fWr.Key("LineTo");
 		fBase.fWr.StartArray();
 		for (int32 i = 0; i < lineCount; i++) {
 			fBase.WritePoint(linePoints[i]);
 		}
 		fBase.fWr.EndArray();
+		fBase.fWr.EndObject();
 		return B_OK;
 	}
 
 	status_t IterateBezierTo(int32 bezierCount, BPoint* bezierPoints) final
 	{
+		fBase.fWr.StartObject();
 		fBase.fWr.Key("BezierTo");
 		fBase.fWr.StartArray();
 		for (int32 i = 0; i < 3*bezierCount; i++) {
 			fBase.WritePoint(bezierPoints[i]);
 		}
 		fBase.fWr.EndArray();
+		fBase.fWr.EndObject();
 		return B_OK;
 	}
 
 	status_t IterateClose()
 	{
+		fBase.fWr.StartObject();
 		fBase.fWr.Key("Close");
 		fBase.fWr.StartObject();
+		fBase.fWr.EndObject();
 		fBase.fWr.EndObject();
 		return B_OK;
 	}
@@ -60,6 +68,7 @@ public:
 		bool counterClockWise, BPoint& point
 	)
 	{
+		fBase.fWr.StartObject();
 		fBase.fWr.Key("ArcTo");
 		fBase.fWr.StartObject();
 		fBase.fWr.Key("rx"); fBase.fWr.Double(rx);
@@ -68,6 +77,7 @@ public:
 		fBase.fWr.Key("largeArc"); fBase.fWr.Bool(largeArc);
 		fBase.fWr.Key("ccw"); fBase.fWr.Bool(counterClockWise);
 		fBase.fWr.Key("point"); fBase.WritePoint(point);
+		fBase.fWr.EndObject();
 		fBase.fWr.EndObject();
 		return B_OK;
 	}
@@ -113,7 +123,9 @@ void PictureWriterJson::WriteRect(const BRect &rc)
 void PictureWriterJson::WriteShape(const BShape &shape)
 {
 	ShapeIterator iter(*this);
+	fWr.StartArray();
 	iter.Iterate(const_cast<BShape*>(&shape));
+	fWr.EndArray();
 }
 
 void PictureWriterJson::WriteGradient(const BGradient &gradient)

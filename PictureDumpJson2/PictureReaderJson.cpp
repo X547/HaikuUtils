@@ -283,7 +283,98 @@ void PictureReaderJson::ReadRect(BRect &rect)
 
 void PictureReaderJson::ReadShape(BShape &shape)
 {
-	RaiseUnimplemented();
+	AssumeToken(JsonTokenKind::StartArray); ReadToken();
+	while (fToken.kind != JsonTokenKind::EndArray) {
+		AssumeToken(JsonTokenKind::StartObject); ReadToken();
+		AssumeToken(JsonTokenKind::Key);
+		if (fToken.strVal == "MoveTo") {
+			ReadToken();
+			BPoint pt;
+			ReadPoint(pt);
+			shape.MoveTo(pt);
+		} else if (fToken.strVal == "LineTo") {
+			ReadToken();
+			AssumeToken(JsonTokenKind::StartArray); ReadToken();
+			while (fToken.kind != JsonTokenKind::EndArray) {
+				BPoint pt;
+				ReadPoint(pt);
+				shape.LineTo(pt);
+			}
+			AssumeToken(JsonTokenKind::EndArray); ReadToken();
+		} else if (fToken.strVal == "BezierTo") {
+			ReadToken();
+			AssumeToken(JsonTokenKind::StartArray); ReadToken();
+			while (fToken.kind != JsonTokenKind::EndArray) {
+				BPoint pt1, pt2, pt3;
+				ReadPoint(pt1);
+				ReadPoint(pt2);
+				ReadPoint(pt3);
+				shape.BezierTo(pt1, pt2, pt3);
+			}
+			AssumeToken(JsonTokenKind::EndArray); ReadToken();
+		} else if (fToken.strVal == "Close") {
+			ReadToken();
+			AssumeToken(JsonTokenKind::StartObject); ReadToken();
+			AssumeToken(JsonTokenKind::EndObject); ReadToken();
+			shape.Close();
+		} else if (fToken.strVal == "ArcTo") {
+			ReadToken();
+			AssumeToken(JsonTokenKind::StartObject); ReadToken();
+			float rx;
+			float ry;
+			float angle;
+			bool largeArc;
+			bool ccw;
+			BPoint point;
+			struct {
+				bool rx: 1;
+				bool ry: 1;
+				bool angle: 1;
+				bool largeArc: 1;
+				bool ccw: 1;
+				bool point: 1;
+			} isSet {};
+			while (fToken.kind == JsonTokenKind::Key) {
+				if (fToken.strVal == "rx") {
+					ReadToken();
+					isSet.rx = true;
+					rx = ReadReal();
+				} else if (fToken.strVal == "ry") {
+					ReadToken();
+					isSet.ry = true;
+					ry = ReadReal();
+				} else if (fToken.strVal == "angle") {
+					ReadToken();
+					isSet.angle = true;
+					angle = ReadReal();
+				} else if (fToken.strVal == "largeArc") {
+					ReadToken();
+					isSet.largeArc = true;
+					largeArc = ReadBool();
+				} else if (fToken.strVal == "ccw") {
+					ReadToken();
+					isSet.ccw = true;
+					ccw = ReadBool();
+				} else if (fToken.strVal == "point") {
+					ReadToken();
+					isSet.point = true;
+					ReadPoint(point);
+				} else {
+					RaiseError();
+				}
+			}
+			Assume(isSet.rx);
+			Assume(isSet.ry);
+			Assume(isSet.angle);
+			Assume(isSet.largeArc);
+			Assume(isSet.ccw);
+			Assume(isSet.point);
+			AssumeToken(JsonTokenKind::EndObject); ReadToken();
+			shape.ArcTo(rx, ry, angle, largeArc, ccw, point);
+		}
+		AssumeToken(JsonTokenKind::EndObject); ReadToken();
+	}
+	AssumeToken(JsonTokenKind::EndArray); ReadToken();
 }
 
 void PictureReaderJson::ReadGradientStops(BGradient &gradient)
@@ -1964,7 +2055,7 @@ void PictureReaderJson::ReadSetPattern(PictureVisitor &vis)
 		for (int32 i = 0; i < 8; i++) {
 			pat.data[i] = ReadUint8();
 		}
-		AssumeToken(JsonTokenKind::EndObject); ReadToken();
+		AssumeToken(JsonTokenKind::EndArray); ReadToken();
 	} else {
 		RaiseError();
 	}
@@ -2213,7 +2304,53 @@ void PictureReaderJson::ReadSetFontFace(PictureVisitor &vis)
 
 void PictureReaderJson::ReadSetTransform(PictureVisitor &vis)
 {
-	RaiseUnimplemented();
+	AssumeToken(JsonTokenKind::StartObject); ReadToken();
+	BAffineTransform tr;
+	struct {
+		bool tx: 1;
+		bool ty: 1;
+		bool sx: 1;
+		bool sy: 1;
+		bool shy: 1;
+		bool shx: 1;
+	} isSet {};
+	while (fToken.kind == JsonTokenKind::Key) {
+		if (fToken.strVal == "tx") {
+			ReadToken();
+			isSet.tx = true;
+			tr.tx = ReadReal();
+		} else if (fToken.strVal == "ty") {
+			ReadToken();
+			isSet.ty = true;
+			tr.ty = ReadReal();
+		} else if (fToken.strVal == "sx") {
+			ReadToken();
+			isSet.sx = true;
+			tr.sx = ReadReal();
+		} else if (fToken.strVal == "sy") {
+			ReadToken();
+			isSet.sy = true;
+			tr.sy = ReadReal();
+		} else if (fToken.strVal == "shy") {
+			ReadToken();
+			isSet.shy = true;
+			tr.shy = ReadReal();
+		} else if (fToken.strVal == "shx") {
+			ReadToken();
+			isSet.shx = true;
+			tr.shx = ReadReal();
+		} else {
+			RaiseError();
+		}
+	}
+	Assume(isSet.tx);
+	Assume(isSet.ty);
+	Assume(isSet.sx);
+	Assume(isSet.sy);
+	Assume(isSet.shy);
+	Assume(isSet.shx);
+	AssumeToken(JsonTokenKind::EndObject); ReadToken();
+	vis.SetTransform(tr);
 }
 
 void PictureReaderJson::ReadTranslateBy(PictureVisitor &vis)
