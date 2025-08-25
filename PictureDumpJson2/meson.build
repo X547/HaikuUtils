@@ -40,6 +40,19 @@ executable('PictureCompileJson',
 	install: true
 )
 
+executable('PictureCompileViewJson',
+	'PictureCompile.cpp',
+	'PictureWriterBinary.cpp',
+	'PictureWriterView.cpp',
+	'PictureReaderJson.cpp',
+	dependencies: [
+		dep_libbe,
+		dep_rapidjson,
+	],
+	gnu_symbol_visibility: 'hidden',
+	install: true
+)
+
 executable('PictureJsonIdentity',
 	'PictureJsonIdentity.cpp',
 	'PictureWriterJson.cpp',
