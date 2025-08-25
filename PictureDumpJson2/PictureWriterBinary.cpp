@@ -345,9 +345,9 @@ void PictureWriterBinary::SetTransform(const BAffineTransform& transform)
 void PictureWriterBinary::SetClipping(const BRegion& region)
 {
 	BeginChunk(B_PIC_SET_CLIPPING_RECTS);
-	Write32(region.CountRects());
+	WriteRectInt(region.FrameInt());
 	for (int32 i = 0; i < region.CountRects(); i++) {
-		WriteRect(region.RectAt(i));
+		WriteRectInt(region.RectAtInt(i));
 	}
 	EndChunk();
 }

@@ -507,12 +507,23 @@ static void DumpOp(PictureVisitor &vis, BPositionIO &rd, int16 op, int32 opSize)
 	}
 	case B_PIC_SET_CLIPPING_RECTS: {
 		BRegion region;
-		int32 numRects;
-		Read32(rd, numRects);
-		for (int32 i = 0; i < numRects; i++) {
-			BRect rc;
-			ReadRect(rd, rc);
-			region.Include(rc);
+		clipping_rect bounds;
+		Read32(rd, bounds.left);
+		Read32(rd, bounds.top);
+		Read32(rd, bounds.right);
+		Read32(rd, bounds.bottom);
+		int32 numRects = opSize / sizeof(clipping_rect);
+		if (numRects >= 2) {
+			for (int32 i = 1; i < numRects; i++) {
+				clipping_rect rc;
+				Read32(rd, rc.left);
+				Read32(rd, rc.top);
+				Read32(rd, rc.right);
+				Read32(rd, rc.bottom);
+				region.Include(rc);
+			}
+		} else {
+			region.Include(bounds);
 		}
 		vis.SetClipping(region);
 		break;

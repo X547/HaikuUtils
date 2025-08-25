@@ -40,6 +40,7 @@ private:
 	void WriteDouble(double val) {CheckStatus(fWr.WriteExactly(&val, sizeof(val)));}
 	void WritePoint(const BPoint &val) {CheckStatus(fWr.WriteExactly(&val, sizeof(val)));}
 	void WriteRect(const BRect &val) {CheckStatus(fWr.WriteExactly(&val, sizeof(val)));}
+	void WriteRectInt(const clipping_rect &val) {CheckStatus(fWr.WriteExactly(&val, sizeof(val)));}
 	void WriteTransform(const BAffineTransform& val) {CheckStatus(fWr.WriteExactly(&val, sizeof(val)));}
 	void WritePattern(const pattern& val) {CheckStatus(fWr.WriteExactly(&val, sizeof(val)));}
 
