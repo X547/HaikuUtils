@@ -1,0 +1,31 @@
+#include "PictureReaderPlay.h"
+#include "PictureWriterJson.h"
+
+#include <Application.h>
+#include <File.h>
+#include <BufferIO.h>
+
+#include <iostream>
+#include <rapidjson/writer.h>
+#include <rapidjson/ostreamwrapper.h>
+
+using JsonWriter = rapidjson::Writer<rapidjson::OStreamWrapper>;
+
+
+int main(int argCnt, char **args)
+{
+	if (argCnt < 2)
+		return 1;
+
+	BApplication app("application/x-vnd.Test.PictureDumpPlayJson");
+
+	rapidjson::OStreamWrapper os(std::cout);
+	JsonWriter wr(os);
+	PictureWriterJson vis(wr);
+
+	BFile file(args[1], B_READ_ONLY);
+	BBufferIO buf(&file, 65536, false);
+	PictureReaderPlay pict(buf);
+	pict.Accept(vis);
+	return 0;
+}
