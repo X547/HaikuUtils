@@ -2,6 +2,7 @@
 #include "PictureWriterBinary.h"
 
 #include <File.h>
+//#include <BufferIO.h>
 
 #include <iostream>
 #include <rapidjson/writer.h>
@@ -16,6 +17,7 @@ int main(int argCnt, char **args)
 	PictureReaderJson pict;
 
 	BFile file(args[1], B_READ_WRITE | B_CREATE_FILE | B_ERASE_FILE);
+	//BBufferIO buf(&file, 65536, false);
 	PictureWriterBinary vis(file);
 	pict.Accept(vis);
 
