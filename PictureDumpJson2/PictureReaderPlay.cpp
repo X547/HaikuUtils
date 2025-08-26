@@ -105,31 +105,31 @@ static void	_FillEllipse(void *p, BPoint center, BPoint radii)
 	vis.FillEllipse(rect);
 }
 
-static void	_StrokePolygon(void *p, int32 numPoints, BPoint *points, bool isClosed)
+static void	_StrokePolygon(void *p, int32 numPoints, const BPoint *points, bool isClosed)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
 	vis.StrokePolygon(numPoints, points, isClosed);
 }
 
-static void	_FillPolygon(void *p, int32 numPoints, BPoint *points, bool isClosed)
+static void	_FillPolygon(void *p, int32 numPoints, const BPoint *points, bool isClosed)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
 	vis.FillPolygon(numPoints, points);
 }
 
-static void	_StrokeShape(void * p, BShape *shape)
+static void	_StrokeShape(void * p, const BShape *shape)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
 	vis.StrokeShape(*shape);
 }
 
-static void	_FillShape(void * p, BShape *shape)
+static void	_FillShape(void * p, const BShape *shape)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
 	vis.FillShape(*shape);
 }
 
-static void	_DrawString(void *p, char *string, float deltaSpace, float deltaNonSpace)
+static void	_DrawString(void *p, const char *string, float deltaSpace, float deltaNonSpace)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
 	escapement_delta delta {
@@ -148,7 +148,7 @@ static void	_DrawPixels(
 	int32 bytesPerRow,
 	int32 pixelFormat,
 	int32 flags,
-	void *data
+	const void *data
 )
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
@@ -165,7 +165,7 @@ static void	_DrawPixels(
 	);
 }
 
-static void	_SetClippingRects(void *p, BRect *rects, uint32 numRects)
+static void	_SetClippingRects(void *p, const BRect *rects, uint32 numRects)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
 	BRegion region;
@@ -271,7 +271,7 @@ static void	_SetScale(void *p, float scale)
 	vis.SetScale(scale);
 }
 
-static void	_SetFontFamily(void *p, char *inFamily)
+static void	_SetFontFamily(void *p, const char *inFamily)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
 
@@ -283,7 +283,7 @@ static void	_SetFontFamily(void *p, char *inFamily)
 	vis.SetFontFamily(family);
 }
 
-static void	_SetFontStyle(void *p, char *inStyle)
+static void	_SetFontStyle(void *p, const char *inStyle)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
 
@@ -339,7 +339,6 @@ static void	_SetFontFace(void * p, int32 flags)
 
 static void	_op0(void * p)
 {
-	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
 	fprintf(stderr, "_op0\n");
 }
 
@@ -351,7 +350,6 @@ static void	_DrawPicture(void * p, BPoint where, int32 token)
 
 static void	_op45(void * p)
 {
-	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
 	fprintf(stderr, "_op45\n");
 }
 
@@ -405,94 +403,114 @@ static void	_ClipToShape(void * p, int32 opCount, const uint32* opList, int32 pt
 	vis.ClipToShape(shape, inverse);
 }
 
-static void	_op55(void * p)
+static void	_DrawStringLocations(void * p, const char* string, const BPoint* locations, size_t locationCount)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	fprintf(stderr, "_op55\n");
+	vis.DrawString(string, strlen(string), locations, locationCount);
 }
 
-static void	_op56(void * p)
+static void	_FillRectGradient(void * p, BRect rect, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	fprintf(stderr, "_op56\n");
+	vis.FillRect(rect, gradient);
 }
 
-static void	_op57(void * p)
+static void	_StrokeRectGradient(void * p, BRect rect, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	fprintf(stderr, "_op57\n");
+	vis.StrokeRect(rect, gradient);
 }
 
-static void	_op58(void * p)
+static void	_FillRoundRectGradient(void * p, BRect rect, BPoint radii, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	fprintf(stderr, "_op58\n");
+	vis.FillRoundRect(rect, radii, gradient);
 }
 
-static void	_op59(void * p)
+static void	_StrokeRoundRectGradient(void * p, BRect rect, BPoint radii, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	fprintf(stderr, "_op59\n");
+	vis.StrokeRoundRect(rect, radii, gradient);
 }
 
-static void	_op60(void * p)
+static void	_FillBezierGradient(void * p, const BPoint* points, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	fprintf(stderr, "_op60\n");
+	vis.FillBezier(points, gradient);
 }
 
-static void	_op61(void * p)
+static void	_StrokeBezierGradient(void * p, const BPoint* points, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	fprintf(stderr, "_op61\n");
+	vis.StrokeBezier(points, gradient);
 }
 
-static void	_op62(void * p)
+static void	_FillArcGradient(void * p, BPoint center, BPoint radii, float startTheta, float arcTheta, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	fprintf(stderr, "_op62\n");
+	vis.FillArc(
+		center,
+		radii,
+		startTheta,
+		arcTheta,
+		gradient
+	);
 }
 
-static void	_op63(void * p)
+static void	_StrokeArcGradient(void * p, BPoint center, BPoint radii, float startTheta, float arcTheta, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	fprintf(stderr, "_op63\n");
+	vis.StrokeArc(
+		center,
+		radii,
+		startTheta,
+		arcTheta,
+		gradient
+	);
 }
 
-static void	_op64(void * p)
+static void	_FillEllipseGradient(void * p, BPoint center, BPoint radii, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	fprintf(stderr, "_op64\n");
+	// TODO: check if +-1 is needed
+	vis.FillEllipse(
+		BRect(center.x - radii.x, center.y - radii.y, center.x + radii.x, center.y + radii.y),
+		gradient
+	);
 }
 
-static void	_op65(void * p)
+static void	_StrokeEllipseGradient(void * p, BPoint center, BPoint radii, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	fprintf(stderr, "_op65\n");
+	// TODO: check if +-1 is needed
+	vis.StrokeEllipse(
+		BRect(center.x - radii.x, center.y - radii.y, center.x + radii.x, center.y + radii.y),
+		gradient
+	);
 }
 
-static void	_op66(void * p)
+static void	_FillPolygonGradient(void * p, int32 numPoints, const BPoint* points, bool isClosed, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	fprintf(stderr, "_op66\n");
+	vis.FillPolygon(numPoints, points, gradient);
 }
 
-static void	_op67(void * p)
+static void	_StrokePolygonGradient(void * p, int32 numPoints, const BPoint* points, bool isClosed, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	fprintf(stderr, "_op67\n");
+	vis.StrokePolygon(numPoints, points, isClosed, gradient);
 }
 
-static void	_op68(void * p)
+static void	_FillShapeGradient(void * p, BShape shape, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	fprintf(stderr, "_op68\n");
+	vis.FillShape(shape);
 }
 
-static void	_op69(void * p)
+static void	_StrokeShapeGradient(void * p, BShape shape, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	fprintf(stderr, "_op69\n");
+	vis.StrokeShape(shape);
 }
 
 static void	_SetFillRule(void * p, int32 fillRule)
@@ -518,13 +536,13 @@ struct picture_player_callbacks {
 	void (*fill_ellipse)(void* user, BPoint center, BPoint radii);
 	void (*stroke_polygon)(void* user, int32 numPoints, const BPoint* points, bool isClosed);
 	void (*fill_polygon)(void* user, int32 numPoints, const BPoint* points, bool isClosed);
-	void (*op15)(void* user);
-	void (*op16)(void* user);
+	void (*stroke_shape)(void* user, const BShape *shape);
+	void (*fill_shape)(void* user, const BShape *shape);
 	void (*draw_string)(void* user, const char* string, float deltax, float deltay);
 	void (*draw_pixels)(void* user, BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, const void* data);
-	void (*op19)(void* user); // draw_picture
+	void (*draw_picture)(void* user, BPoint where, int32 token);
 	void (*set_clipping_rects)(void* user, const BRect* rects, uint32 numRects);
-	void (*op21)(void* user); // clip_to_picture
+	void (*clip_to_picture)(void* user, BPicture *picture, BPoint point, bool clip_to_inverse_picture);
 	void (*push_state)(void* user);
 	void (*pop_state)(void* user);
 	void (*enter_state_change)(void* user);
@@ -555,6 +573,7 @@ struct picture_player_callbacks {
 	void (*set_blending_mode)(void* user, source_alpha alphaSrcMode, alpha_function alphaFncMode);
 	void (*set_transform)(void* user, const BAffineTransform& transform);
 	void (*translate_by)(void* user, double x, double y);
+	void (*scale_by)(void* user, double x, double y);
 	void (*rotate_by)(void* user, double angleRadians);
 	void (*blend_layer)(void* user, class Layer* layer); // broken when saved to file
 	void (*clip_to_rect)(void* user, const BRect& rect, bool inverse);
@@ -580,81 +599,81 @@ struct picture_player_callbacks {
 };
 
 
-static void *
-playbackHandlers[] = {
-	(void *)_op0,					// 0	no operation
-	(void *)_MovePenBy,				// 1	MovePenBy(void *user, BPoint delta)
-	(void *)_StrokeLine,			// 2	StrokeLine(void *user, BPoint start, BPoint end)
-	(void *)_StrokeRect,			// 3	StrokeRect(void *user, BRect rect)
-	(void *)_FillRect,				// 4	FillRect(void *user, BRect rect)
-	(void *)_StrokeRoundRect,		// 5	StrokeRoundRect(void *user, BRect rect, BPoint radii)
-	(void *)_FillRoundRect,			// 6	FillRoundRect(void *user, BRect rect, BPoint radii)
-	(void *)_StrokeBezier,			// 7	StrokeBezier(void *user, BPoint *control)
-	(void *)_FillBezier,			// 8	FillBezier(void *user, BPoint *control)
-	(void *)_StrokeArc,				// 9	StrokeArc(void *user, BPoint center, BPoint radii, float startTheta, float arcTheta)
-	(void *)_FillArc,				// 10	FillArc(void *user, BPoint center, BPoint radii, float startTheta, float arcTheta)
-	(void *)_StrokeEllipse,			// 11	StrokeEllipse(void *user, BPoint center, BPoint radii)
-	(void *)_FillEllipse,			// 12	FillEllipse(void *user, BPoint center, BPoint radii)
-	(void *)_StrokePolygon,			// 13	StrokePolygon(void *user, int32 numPoints, BPoint *points, bool isClosed)
-	(void *)_FillPolygon,			// 14	FillPolygon(void *user, int32 numPoints, BPoint *points, bool isClosed)
-	(void *)_StrokeShape,			// 15	StrokeShape(void *user, BShape *shape)
-	(void *)_FillShape,				// 16	FillShape(void *user, BShape *shape)
-	(void *)_DrawString,			// 17	DrawString(void *user, char *string, float deltax, float deltay)
-	(void *)_DrawPixels,			// 18	DrawPixels(void *user, BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data)
-	(void *)_DrawPicture,			// 19	*reserved*
-	(void *)_SetClippingRects,		// 20	SetClippingRects(void *user, BRect *rects, uint32 numRects)
-	(void *)_ClipToPicture,			// 21	ClipToPicture(void *user, BPicture *picture, BPoint pt, bool clip_to_inverse_picture)
-	(void *)_PushState,				// 22	PushState(void *user)
-	(void *)_PopState,				// 23	PopState(void *user)
-	(void *)_EnterStateChange,		// 24	EnterStateChange(void *user)
-	(void *)_ExitStateChange,		// 25	ExitStateChange(void *user)
-	(void *)_EnterFontState,		// 26	EnterFontState(void *user)
-	(void *)_ExitFontState,			// 27	ExitFontState(void *user)
-	(void *)_SetOrigin,				// 28	SetOrigin(void *user, BPoint pt)
-	(void *)_SetPenLocation,		// 29	SetPenLocation(void *user, BPoint pt)
-	(void *)_SetDrawingMode,		// 30	SetDrawingMode(void *user, drawing_mode mode)
-	(void *)_SetLineMode,			// 31	SetLineMode(void *user, cap_mode capMode, join_mode joinMode, float miterLimit)
-	(void *)_SetPenSize,			// 32	SetPenSize(void *user, float size)
-	(void *)_SetForeColor,			// 33	SetForeColor(void *user, rgb_color color)
-	(void *)_SetBackColor,			// 34	SetBackColor(void *user, rgb_color color)
-	(void *)_SetStipplePattern,		// 35	SetStipplePattern(void *user, pattern p)
-	(void *)_SetScale,				// 36	SetScale(void *user, float scale)
-	(void *)_SetFontFamily,			// 37	SetFontFamily(void *user, char *family)
-	(void *)_SetFontStyle,			// 38	SetFontStyle(void *user, char *style)
-	(void *)_SetFontSpacing,		// 39	SetFontSpacing(void *user, int32 spacing)
-	(void *)_SetFontSize,			// 40	SetFontSize(void *user, float size)
-	(void *)_SetFontRotate,			// 41	SetFontRotate(void *user, float rotation)
-	(void *)_SetFontEncoding,		// 42	SetFontEncoding(void *user, int32 encoding)
-	(void *)_SetFontFlags,			// 43	SetFontFlags(void *user, int32 flags)
-	(void *)_SetFontShear,			// 44	SetFontShear(void *user, float shear)
-	(void *)_op45,					// 45	*reserved*
-	(void *)_SetFontFace,			// 46	SetFontFace(void *user, int32 flags)
-	(void *)_SetBlendingMode,       // 47
-	(void *)_SetTransform,          // 48
-	(void *)_TranslateBy,           // 49
-	(void *)_ScaleBy,				// 50
-	(void *)_RotateBy,				// 51
-	(void *)_BlendLayer,			// 52
-	(void *)_ClipToRect,			// 53
-	(void *)_ClipToShape,			// 54
-	(void *)_op55,					// 55
-	(void *)_op56,					// 56
-	(void *)_op57,					// 57
-	(void *)_op58,					// 58
-	(void *)_op59,					// 59
-	(void *)_op60,					// 60
-	(void *)_op61,					// 61
-	(void *)_op62,					// 62
-	(void *)_op63,					// 63
-	(void *)_op64,					// 64
-	(void *)_op65,					// 65
-	(void *)_op66,					// 66
-	(void *)_op67,					// 67
-	(void *)_op68,					// 68
-	(void *)_op69,					// 69
-	(void *)_SetFillRule,			// 70
+static picture_player_callbacks
+playbackHandlers = {
+	.nop = _op0,								// 0	no operation
+	.move_pen_by = _MovePenBy,					// 1	MovePenBy(void *user, BPoint delta)
+	.stroke_line = _StrokeLine,					// 2	StrokeLine(void *user, BPoint start, BPoint end)
+	.stroke_rect = _StrokeRect,					// 3	StrokeRect(void *user, BRect rect)
+	.fill_rect = _FillRect,						// 4	FillRect(void *user, BRect rect)
+	.stroke_round_rect = _StrokeRoundRect,		// 5	StrokeRoundRect(void *user, BRect rect, BPoint radii)
+	.fill_round_rect = _FillRoundRect,			// 6	FillRoundRect(void *user, BRect rect, BPoint radii)
+	.stroke_bezier = _StrokeBezier,				// 7	StrokeBezier(void *user, BPoint *control)
+	.fill_bezier = _FillBezier,					// 8	FillBezier(void *user, BPoint *control)
+	.stroke_arc = _StrokeArc,					// 9	StrokeArc(void *user, BPoint center, BPoint radii, float startTheta, float arcTheta)
+	.fill_arc = _FillArc,						// 10	FillArc(void *user, BPoint center, BPoint radii, float startTheta, float arcTheta)
+	.stroke_ellipse = _StrokeEllipse,			// 11	StrokeEllipse(void *user, BPoint center, BPoint radii)
+	.fill_ellipse = _FillEllipse,				// 12	FillEllipse(void *user, BPoint center, BPoint radii)
+	.stroke_polygon = _StrokePolygon,			// 13	StrokePolygon(void *user, int32 numPoints, BPoint *points, bool isClosed)
+	.fill_polygon = _FillPolygon,				// 14	FillPolygon(void *user, int32 numPoints, BPoint *points, bool isClosed)
+	.stroke_shape = _StrokeShape,				// 15	StrokeShape(void *user, BShape *shape)
+	.fill_shape = _FillShape,					// 16	FillShape(void *user, BShape *shape)
+	.draw_string = _DrawString,					// 17	DrawString(void *user, char *string, float deltax, float deltay)
+	.draw_pixels = _DrawPixels,					// 18	DrawPixels(void *user, BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data)
+	.draw_picture = _DrawPicture,				// 19	*reserved*
+	.set_clipping_rects = _SetClippingRects,	// 20	SetClippingRects(void *user, BRect *rects, uint32 numRects)
+	.clip_to_picture = _ClipToPicture,			// 21	ClipToPicture(void *user, BPicture *picture, BPoint pt, bool clip_to_inverse_picture)
+	.push_state = _PushState,					// 22	PushState(void *user)
+	.pop_state = _PopState,						// 23	PopState(void *user)
+	.enter_state_change = _EnterStateChange,	// 24	EnterStateChange(void *user)
+	.exit_state_change = _ExitStateChange,		// 25	ExitStateChange(void *user)
+	.enter_font_state = _EnterFontState,		// 26	EnterFontState(void *user)
+	.exit_font_state = _ExitFontState,			// 27	ExitFontState(void *user)
+	.set_origin = _SetOrigin,					// 28	SetOrigin(void *user, BPoint pt)
+	.set_pen_location = _SetPenLocation,		// 29	SetPenLocation(void *user, BPoint pt)
+	.set_drawing_mode = _SetDrawingMode,		// 30	SetDrawingMode(void *user, drawing_mode mode)
+	.set_line_mode = _SetLineMode,				// 31	SetLineMode(void *user, cap_mode capMode, join_mode joinMode, float miterLimit)
+	.set_pen_size = _SetPenSize,				// 32	SetPenSize(void *user, float size)
+	.set_fore_color = _SetForeColor,			// 33	SetForeColor(void *user, rgb_color color)
+	.set_back_color = _SetBackColor,			// 34	SetBackColor(void *user, rgb_color color)
+	.set_stipple_pattern = _SetStipplePattern,	// 35	SetStipplePattern(void *user, pattern p)
+	.set_scale = _SetScale,						// 36	SetScale(void *user, float scale)
+	.set_font_family = _SetFontFamily,			// 37	SetFontFamily(void *user, char *family)
+	.set_font_style = _SetFontStyle,			// 38	SetFontStyle(void *user, char *style)
+	.set_font_spacing = _SetFontSpacing,		// 39	SetFontSpacing(void *user, int32 spacing)
+	.set_font_size = _SetFontSize,				// 40	SetFontSize(void *user, float size)
+	.set_font_rotate = _SetFontRotate,			// 41	SetFontRotate(void *user, float rotation)
+	.set_font_encoding = _SetFontEncoding,		// 42	SetFontEncoding(void *user, int32 encoding)
+	.set_font_flags = _SetFontFlags,			// 43	SetFontFlags(void *user, int32 flags)
+	.set_font_shear = _SetFontShear,			// 44	SetFontShear(void *user, float shear)
+	.op45 = _op45,								// 45	*reserved*
+	.set_font_face = _SetFontFace,				// 46	SetFontFace(void *user, int32 flags)
 
-	NULL
+	.set_blending_mode = _SetBlendingMode,      	// 47
+	.set_transform = _SetTransform,         		// 48
+	.translate_by = _TranslateBy,					// 49
+	.scale_by = _ScaleBy,							// 50
+	.rotate_by = _RotateBy,							// 51
+	.blend_layer = _BlendLayer,						// 52
+	.clip_to_rect = _ClipToRect,					// 53
+	.clip_to_shape = _ClipToShape,					// 54
+	.draw_string_locations = _DrawStringLocations,	// 55
+
+	.fill_rect_gradient = _FillRectGradient,				// 56
+	.stroke_rect_gradient = _StrokeRectGradient,			// 57
+	.fill_round_rect_gradient = _FillRoundRectGradient,		// 58
+	.stroke_round_rect_gradient = _StrokeRoundRectGradient,	// 59
+	.fill_bezier_gradient = _FillBezierGradient,			// 60
+	.stroke_bezier_gradient = _StrokeBezierGradient,		// 61
+	.fill_arc_gradient = _FillArcGradient,					// 62
+	.stroke_arc_gradient = _StrokeArcGradient,				// 63
+	.fill_ellipse_gradient = _FillEllipseGradient,			// 64
+	.stroke_ellipse_gradient = _StrokeEllipseGradient,		// 65
+	.fill_polygon_gradient = _FillPolygonGradient,			// 66
+	.stroke_polygon_gradient = _StrokePolygonGradient,		// 67
+	.fill_shape_gradient = _FillShapeGradient,				// 68
+	.stroke_shape_gradient = _StrokeShapeGradient,			// 69
+	.set_fill_rule = _SetFillRule,							// 70
 };
 
 
@@ -679,7 +698,7 @@ status_t PictureReaderPlay::Accept(PictureVisitor &vis) const
 
 	vis.EnterPicture(2, 0);
 	vis.EnterOps();
-	pict.Play(playbackHandlers, 71, &vis);
+	pict.Play((void**)&playbackHandlers, sizeof(playbackHandlers) / sizeof(void*), &vis);
 	vis.ExitOps();
 	vis.ExitPicture();
 
