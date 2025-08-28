@@ -706,10 +706,8 @@ public:
 		return BApplication::GetSupportedSuites(data);
 	}
 
-	status_t HandleScript(BMessage &message, BMessage &reply, int32 index, BMessage &specifier, int32 what, const char* property)
+	status_t HandleScript(BMessage& specifier, int32 what, int32 propIdx)
 	{
-		BPropertyInfo propInfo(gProperties);
-		int32 propIdx = propInfo.FindMatch(&message, index, &specifier, what, property);
 		switch (propIdx) {
 		case 0: // Team: Execute
 		case 1: // Image: Execute
@@ -719,6 +717,7 @@ public:
 		case 5: // Sem: Execute
 			switch (what) {
 			case B_INDEX_SPECIFIER: {
+				int32 index;
 				CheckRet(specifier.FindInt32("index", &index));
 				BRect frame = fWnd->Frame();
 				BPoint center((frame.left + frame.right)/2, (frame.top + frame.bottom)/2);
@@ -779,8 +778,13 @@ public:
 		const char* property;
 
 		if (msg->HasSpecifiers() && msg->GetCurrentSpecifier(&index, &specifier, &what, &property) >= B_OK) {
+			BPropertyInfo propInfo(gProperties);
+			int32 propIdx = propInfo.FindMatch(msg, index, &specifier, what, property);
+			if (propIdx == B_ERROR)
+				return BApplication::MessageReceived(msg);
+
 			BMessage reply(B_REPLY);
-			status_t res = HandleScript(*msg, reply, index, specifier, what, property);
+			status_t res = HandleScript(specifier, what, propIdx);
 			if (res != B_OK) {
 				reply.what = B_MESSAGE_NOT_UNDERSTOOD;
 				reply.AddString("message", strerror(res));
