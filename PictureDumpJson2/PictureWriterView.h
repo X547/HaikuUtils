@@ -85,64 +85,19 @@ public:
 	void			RotateBy(double angleRadians) final;
 
 	// Geometry
-	void			StrokeLine(const BPoint& start, const BPoint& end) final;
-
-	void			StrokeRect(const BRect& rect) final;
-	void			FillRect(const BRect& rect) final;
-	void			StrokeRect(const BRect& rect, const BGradient& gradient) final;
-	void			FillRect(const BRect& rect, const BGradient& gradient) final;
-
-	void			StrokeRoundRect(const BRect& rect,
-								const BPoint& radius) final;
-	void			FillRoundRect(const BRect& rect,
-								const BPoint& radius) final;
-	void			StrokeRoundRect(const BRect& rect,
-								const BPoint& radius, const BGradient& gradient) final;
-	void			FillRoundRect(const BRect& rect,
-								const BPoint& radius, const BGradient& gradient) final;
-
-	void			StrokeBezier(const BPoint points[4]) final;
-	void			FillBezier(const BPoint points[4]) final;
-	void			StrokeBezier(const BPoint points[4], const BGradient& gradient) final;
-	void			FillBezier(const BPoint points[4], const BGradient& gradient) final;
-
-	void			StrokePolygon(int32 numPoints,
-								const BPoint* points, bool isClosed) final;
-	void			FillPolygon(int32 numPoints,
-								const BPoint* points) final;
-	void			StrokePolygon(int32 numPoints,
-								const BPoint* points, bool isClosed, const BGradient& gradient) final;
-	void			FillPolygon(int32 numPoints,
-								const BPoint* points, const BGradient& gradient) final;
-
-	void			StrokeShape(const BShape& shape) final;
-	void			FillShape(const BShape& shape) final;
-	void			StrokeShape(const BShape& shape, const BGradient& gradient) final;
-	void			FillShape(const BShape& shape, const BGradient& gradient) final;
-
-	void			StrokeArc(const BPoint& center,
-								const BPoint& radius,
-								float startTheta,
-								float arcTheta) final;
-	void			FillArc(const BPoint& center,
-								const BPoint& radius,
-								float startTheta,
-								float arcTheta) final;
-	void			StrokeArc(const BPoint& center,
+	void			DrawLine(const BPoint& start, const BPoint& end, const DrawGeometryInfo &drawInfo) final;
+	void			DrawRect(const BRect& rect, const DrawGeometryInfo &drawInfo) final;
+	void			DrawRoundRect(const BRect& rect, const BPoint& radius, const DrawGeometryInfo &drawInfo) final;
+	void			DrawBezier(const BPoint points[4], const DrawGeometryInfo &drawInfo) final;
+	void			DrawPolygon(int32 numPoints,
+								const BPoint* points, bool isClosed, const DrawGeometryInfo &drawInfo) final;
+	void			DrawShape(const BShape& shape, const DrawGeometryInfo &drawInfo) final;
+	void			DrawArc(const BPoint& center,
 								const BPoint& radius,
 								float startTheta,
 								float arcTheta,
-								const BGradient& gradient) final;
-	void			FillArc(const BPoint& center,
-								const BPoint& radius,
-								float startTheta,
-								float arcTheta,
-								const BGradient& gradient) final;
-
-	void			StrokeEllipse(const BRect& rect) final;
-	void			FillEllipse(const BRect& rect) final;
-	void			StrokeEllipse(const BRect& rect, const BGradient& gradient) final;
-	void			FillEllipse(const BRect& rect, const BGradient& gradient) final;
+								const DrawGeometryInfo &drawInfo) final;
+	void			DrawEllipse(const BRect& rect, const DrawGeometryInfo &drawInfo) final;
 
 	// Draw
 	void			DrawString(const char* string, int32 length,

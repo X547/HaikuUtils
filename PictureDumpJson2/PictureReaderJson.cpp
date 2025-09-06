@@ -890,21 +890,21 @@ void PictureReaderJson::ReadStrokeLine(PictureVisitor &vis)
 	Assume(isSet.start);
 	Assume(isSet.end);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.StrokeLine(start, end);
+	vis.DrawLine(start, end, {.isStroke = true});
 }
 
 void PictureReaderJson::ReadStrokeRect(PictureVisitor &vis)
 {
 	BRect rect;
 	ReadRect(rect);
-	vis.StrokeRect(rect);
+	vis.DrawRect(rect, {.isStroke = true});
 }
 
 void PictureReaderJson::ReadFillRect(PictureVisitor &vis)
 {
 	BRect rect;
 	ReadRect(rect);
-	vis.FillRect(rect);
+	vis.DrawRect(rect, {.isStroke = false});
 }
 
 void PictureReaderJson::ReadStrokeRoundRect(PictureVisitor &vis)
@@ -932,7 +932,7 @@ void PictureReaderJson::ReadStrokeRoundRect(PictureVisitor &vis)
 	Assume(isSet.rect);
 	Assume(isSet.radius);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.StrokeRoundRect(rect, radius);
+	vis.DrawRoundRect(rect, radius, {.isStroke = true});
 }
 
 void PictureReaderJson::ReadFillRoundRect(PictureVisitor &vis)
@@ -960,7 +960,7 @@ void PictureReaderJson::ReadFillRoundRect(PictureVisitor &vis)
 	Assume(isSet.rect);
 	Assume(isSet.radius);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.FillRoundRect(rect, radius);
+	vis.DrawRoundRect(rect, radius, {.isStroke = false});
 }
 
 void PictureReaderJson::ReadStrokeBezier(PictureVisitor &vis)
@@ -971,7 +971,7 @@ void PictureReaderJson::ReadStrokeBezier(PictureVisitor &vis)
 		ReadPoint(points[i]);
 	}
 	AssumeToken(JsonTokenKind::EndArray); ReadToken();
-	vis.StrokeBezier(points);
+	vis.DrawBezier(points, {.isStroke = true});
 }
 
 void PictureReaderJson::ReadFillBezier(PictureVisitor &vis)
@@ -982,7 +982,7 @@ void PictureReaderJson::ReadFillBezier(PictureVisitor &vis)
 		ReadPoint(points[i]);
 	}
 	AssumeToken(JsonTokenKind::EndArray); ReadToken();
-	vis.FillBezier(points);
+	vis.DrawBezier(points, {.isStroke = false});
 }
 
 void PictureReaderJson::ReadStrokePolygon(PictureVisitor &vis)
@@ -1016,7 +1016,7 @@ void PictureReaderJson::ReadStrokePolygon(PictureVisitor &vis)
 	Assume(isSet.points);
 	Assume(isSet.isClosed);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.StrokePolygon(points.size(), points.data(), isClosed);
+	vis.DrawPolygon(points.size(), points.data(), isClosed, {.isStroke = true});
 }
 
 void PictureReaderJson::ReadFillPolygon(PictureVisitor &vis)
@@ -1029,21 +1029,21 @@ void PictureReaderJson::ReadFillPolygon(PictureVisitor &vis)
 		points.push_back(pt);
 	}
 	AssumeToken(JsonTokenKind::EndArray); ReadToken();
-	vis.FillPolygon(points.size(), points.data());
+	vis.DrawPolygon(points.size(), points.data(), true, {.isStroke = false});
 }
 
 void PictureReaderJson::ReadStrokeShape(PictureVisitor &vis)
 {
 	BShape shape;
 	ReadShape(shape);
-	vis.StrokeShape(shape);
+	vis.DrawShape(shape, {.isStroke = true});
 }
 
 void PictureReaderJson::ReadFillShape(PictureVisitor &vis)
 {
 	BShape shape;
 	ReadShape(shape);
-	vis.FillShape(shape);
+	vis.DrawShape(shape, {.isStroke = false});
 }
 
 void PictureReaderJson::ReadDrawString(PictureVisitor &vis)
@@ -1238,7 +1238,7 @@ void PictureReaderJson::ReadStrokeArc(PictureVisitor &vis)
 	Assume(isSet.startTheta);
 	Assume(isSet.arcTheta);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.StrokeArc(center, radius, startTheta, arcTheta);
+	vis.DrawArc(center, radius, startTheta, arcTheta, {.isStroke = true});
 }
 
 void PictureReaderJson::ReadFillArc(PictureVisitor &vis)
@@ -1280,21 +1280,21 @@ void PictureReaderJson::ReadFillArc(PictureVisitor &vis)
 	Assume(isSet.startTheta);
 	Assume(isSet.arcTheta);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.FillArc(center, radius, startTheta, arcTheta);
+	vis.DrawArc(center, radius, startTheta, arcTheta, {.isStroke = false});
 }
 
 void PictureReaderJson::ReadStrokeEllipse(PictureVisitor &vis)
 {
 	BRect rect;
 	ReadRect(rect);
-	vis.StrokeEllipse(rect);
+	vis.DrawEllipse(rect, {.isStroke = true});
 }
 
 void PictureReaderJson::ReadFillEllipse(PictureVisitor &vis)
 {
 	BRect rect;
 	ReadRect(rect);
-	vis.FillEllipse(rect);
+	vis.DrawEllipse(rect, {.isStroke = false});
 }
 
 void PictureReaderJson::ReadDrawStringLocations(PictureVisitor &vis)
@@ -1327,7 +1327,7 @@ void PictureReaderJson::ReadStrokeRectGradient(PictureVisitor &vis)
 	Assume(isSet.rect);
 	Assume(isSet.gradient);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.StrokeRect(rect, *gradient.Get());
+	vis.DrawRect(rect, {.isStroke = true, .gradient = gradient.Get()});
 }
 
 void PictureReaderJson::ReadFillRectGradient(PictureVisitor &vis)
@@ -1355,7 +1355,7 @@ void PictureReaderJson::ReadFillRectGradient(PictureVisitor &vis)
 	Assume(isSet.rect);
 	Assume(isSet.gradient);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.FillRect(rect, *gradient.Get());
+	vis.DrawRect(rect, {.isStroke = false, .gradient = gradient.Get()});
 }
 
 void PictureReaderJson::ReadStrokeRoundRectGradient(PictureVisitor &vis)
@@ -1390,7 +1390,7 @@ void PictureReaderJson::ReadStrokeRoundRectGradient(PictureVisitor &vis)
 	Assume(isSet.radius);
 	Assume(isSet.gradient);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.StrokeRoundRect(rect, radius, *gradient.Get());
+	vis.DrawRoundRect(rect, radius, {.isStroke = true, .gradient = gradient.Get()});
 }
 
 void PictureReaderJson::ReadFillRoundRectGradient(PictureVisitor &vis)
@@ -1425,7 +1425,7 @@ void PictureReaderJson::ReadFillRoundRectGradient(PictureVisitor &vis)
 	Assume(isSet.radius);
 	Assume(isSet.gradient);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.FillRoundRect(rect, radius, *gradient.Get());
+	vis.DrawRoundRect(rect, radius, {.isStroke = false, .gradient = gradient.Get()});
 }
 
 void PictureReaderJson::ReadStrokeBezierGradient(PictureVisitor &vis)
@@ -1457,7 +1457,7 @@ void PictureReaderJson::ReadStrokeBezierGradient(PictureVisitor &vis)
 	Assume(isSet.points);
 	Assume(isSet.gradient);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.StrokeBezier(points, *gradient.Get());
+	vis.DrawBezier(points, {.isStroke = true, .gradient = gradient.Get()});
 }
 
 void PictureReaderJson::ReadFillBezierGradient(PictureVisitor &vis)
@@ -1489,7 +1489,7 @@ void PictureReaderJson::ReadFillBezierGradient(PictureVisitor &vis)
 	Assume(isSet.points);
 	Assume(isSet.gradient);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.FillBezier(points, *gradient.Get());
+	vis.DrawBezier(points, {.isStroke = false, .gradient = gradient.Get()});
 }
 
 void PictureReaderJson::ReadStrokePolygonGradient(PictureVisitor &vis)
@@ -1530,7 +1530,7 @@ void PictureReaderJson::ReadStrokePolygonGradient(PictureVisitor &vis)
 	Assume(isSet.isClosed);
 	Assume(isSet.gradient);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.StrokePolygon(points.size(), points.data(), isClosed, *gradient.Get());
+	vis.DrawPolygon(points.size(), points.data(), isClosed, {.isStroke = true, .gradient = gradient.Get()});
 }
 
 void PictureReaderJson::ReadFillPolygonGradient(PictureVisitor &vis)
@@ -1564,7 +1564,7 @@ void PictureReaderJson::ReadFillPolygonGradient(PictureVisitor &vis)
 	Assume(isSet.points);
 	Assume(isSet.gradient);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.FillPolygon(points.size(), points.data(), *gradient.Get());
+	vis.DrawPolygon(points.size(), points.data(), true, {.isStroke = false, .gradient = gradient.Get()});
 }
 
 void PictureReaderJson::ReadStrokeShapeGradient(PictureVisitor &vis)
@@ -1592,7 +1592,7 @@ void PictureReaderJson::ReadStrokeShapeGradient(PictureVisitor &vis)
 	Assume(isSet.shape);
 	Assume(isSet.gradient);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.StrokeShape(shape, *gradient.Get());
+	vis.DrawShape(shape, {.isStroke = true, .gradient = gradient.Get()});
 }
 
 void PictureReaderJson::ReadFillShapeGradient(PictureVisitor &vis)
@@ -1620,7 +1620,7 @@ void PictureReaderJson::ReadFillShapeGradient(PictureVisitor &vis)
 	Assume(isSet.shape);
 	Assume(isSet.gradient);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.FillShape(shape, *gradient.Get());
+	vis.DrawShape(shape, {.isStroke = false, .gradient = gradient.Get()});
 }
 
 void PictureReaderJson::ReadStrokeArcGradient(PictureVisitor &vis)
@@ -1669,7 +1669,7 @@ void PictureReaderJson::ReadStrokeArcGradient(PictureVisitor &vis)
 	Assume(isSet.arcTheta);
 	Assume(isSet.gradient);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.StrokeArc(center, radius, startTheta, arcTheta, *gradient.Get());
+	vis.DrawArc(center, radius, startTheta, arcTheta, {.isStroke = true, .gradient = gradient.Get()});
 }
 
 void PictureReaderJson::ReadFillArcGradient(PictureVisitor &vis)
@@ -1718,7 +1718,7 @@ void PictureReaderJson::ReadFillArcGradient(PictureVisitor &vis)
 	Assume(isSet.arcTheta);
 	Assume(isSet.gradient);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.FillArc(center, radius, startTheta, arcTheta, *gradient.Get());
+	vis.DrawArc(center, radius, startTheta, arcTheta, {.isStroke = false, .gradient = gradient.Get()});
 }
 
 void PictureReaderJson::ReadStrokeEllipseGradient(PictureVisitor &vis)
@@ -1746,7 +1746,7 @@ void PictureReaderJson::ReadStrokeEllipseGradient(PictureVisitor &vis)
 	Assume(isSet.rect);
 	Assume(isSet.gradient);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.StrokeEllipse(rect, *gradient.Get());
+	vis.DrawEllipse(rect, {.isStroke = true, .gradient = gradient.Get()});
 }
 
 void PictureReaderJson::ReadFillEllipseGradient(PictureVisitor &vis)
@@ -1774,7 +1774,7 @@ void PictureReaderJson::ReadFillEllipseGradient(PictureVisitor &vis)
 	Assume(isSet.rect);
 	Assume(isSet.gradient);
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
-	vis.FillEllipse(rect, *gradient.Get());
+	vis.DrawEllipse(rect, {.isStroke = false, .gradient = gradient.Get()});
 }
 
 void PictureReaderJson::ReadEnterStateChange(PictureVisitor &vis)

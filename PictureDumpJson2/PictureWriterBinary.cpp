@@ -493,292 +493,130 @@ void PictureWriterBinary::RotateBy(double angleRadians)
 
 // #pragma mark - Geometry
 
-void PictureWriterBinary::StrokeLine(const BPoint& start, const BPoint& end)
+void PictureWriterBinary::DrawLine(const BPoint& start, const BPoint& end, const DrawGeometryInfo &drawInfo)
 {
-	BeginChunk(B_PIC_STROKE_LINE);
+	BeginChunk(drawInfo.gradient ? B_PIC_STROKE_LINE_GRADIENT : B_PIC_STROKE_LINE);
 	WritePoint(start);
 	WritePoint(end);
-	EndChunk();
-}
-
-
-void PictureWriterBinary::StrokeRect(const BRect& rect)
-{
-	BeginChunk(B_PIC_STROKE_RECT);
-	WriteRect(rect);
-	EndChunk();
-}
-
-void PictureWriterBinary::FillRect(const BRect& rect)
-{
-	BeginChunk(B_PIC_FILL_RECT);
-	WriteRect(rect);
-	EndChunk();
-}
-
-void PictureWriterBinary::StrokeRect(const BRect& rect, const BGradient& gradient)
-{
-	BeginChunk(B_PIC_STROKE_RECT_GRADIENT);
-	WriteRect(rect);
-	WriteGradient(gradient);
-	EndChunk();
-}
-
-void PictureWriterBinary::FillRect(const BRect& rect, const BGradient& gradient)
-{
-	BeginChunk(B_PIC_FILL_RECT_GRADIENT);
-	WriteRect(rect);
-	WriteGradient(gradient);
-	EndChunk();
-}
-
-
-void PictureWriterBinary::StrokeRoundRect(const BRect& rect, const BPoint& radius)
-{
-	BeginChunk(B_PIC_STROKE_ROUND_RECT);
-	WriteRect(rect);
-	WritePoint(radius);
-	EndChunk();
-}
-
-void PictureWriterBinary::FillRoundRect(const BRect& rect, const BPoint& radius)
-{
-	BeginChunk(B_PIC_FILL_ROUND_RECT);
-	WriteRect(rect);
-	WritePoint(radius);
-	EndChunk();
-}
-
-void PictureWriterBinary::StrokeRoundRect(
-	const BRect& rect, const BPoint& radius, const BGradient& gradient
-)
-{
-	BeginChunk(B_PIC_STROKE_ROUND_RECT_GRADIENT);
-	WriteRect(rect);
-	WritePoint(radius);
-	WriteGradient(gradient);
-	EndChunk();
-}
-
-void PictureWriterBinary::FillRoundRect(
-	const BRect& rect, const BPoint& radius, const BGradient& gradient
-)
-{
-	BeginChunk(B_PIC_FILL_ROUND_RECT_GRADIENT);
-	WriteRect(rect);
-	WritePoint(radius);
-	WriteGradient(gradient);
-	EndChunk();
-}
-
-
-void PictureWriterBinary::StrokeBezier(const BPoint points[4])
-{
-	BeginChunk(B_PIC_STROKE_BEZIER);
-	for (int32 i = 0; i < 4; i++) {
-		WritePoint(points[i]);
+	if (drawInfo.gradient != NULL) {
+		WriteGradient(*drawInfo.gradient);
 	}
 	EndChunk();
 }
 
-void PictureWriterBinary::FillBezier(const BPoint points[4])
+void PictureWriterBinary::DrawRect(const BRect& rect, const DrawGeometryInfo &drawInfo)
 {
-	BeginChunk(B_PIC_FILL_BEZIER);
-	for (int32 i = 0; i < 4; i++) {
-		WritePoint(points[i]);
+	BeginChunk(drawInfo.gradient == NULL ? (
+		drawInfo.isStroke ? B_PIC_STROKE_RECT : B_PIC_FILL_RECT
+	) : (
+		drawInfo.isStroke ? B_PIC_STROKE_RECT_GRADIENT : B_PIC_FILL_RECT_GRADIENT
+	));
+	WriteRect(rect);
+	if (drawInfo.gradient != NULL) {
+		WriteGradient(*drawInfo.gradient);
 	}
 	EndChunk();
 }
 
-void PictureWriterBinary::StrokeBezier(const BPoint points[4], const BGradient& gradient)
+void PictureWriterBinary::DrawRoundRect(const BRect& rect, const BPoint& radius, const DrawGeometryInfo &drawInfo)
 {
-	BeginChunk(B_PIC_STROKE_BEZIER_GRADIENT);
-	for (int32 i = 0; i < 4; i++) {
-		WritePoint(points[i]);
+	BeginChunk(drawInfo.gradient == NULL ? (
+		drawInfo.isStroke ? B_PIC_STROKE_ROUND_RECT : B_PIC_FILL_ROUND_RECT
+	) : (
+		drawInfo.isStroke ? B_PIC_STROKE_ROUND_RECT_GRADIENT : B_PIC_FILL_ROUND_RECT_GRADIENT
+	));
+	WriteRect(rect);
+	WritePoint(radius);
+	if (drawInfo.gradient != NULL) {
+		WriteGradient(*drawInfo.gradient);
 	}
-	WriteGradient(gradient);
 	EndChunk();
 }
 
-void PictureWriterBinary::FillBezier(const BPoint points[4], const BGradient& gradient)
+void PictureWriterBinary::DrawBezier(const BPoint points[4], const DrawGeometryInfo &drawInfo)
 {
-	BeginChunk(B_PIC_FILL_BEZIER_GRADIENT);
+	BeginChunk(drawInfo.gradient == NULL ? (
+		drawInfo.isStroke ? B_PIC_STROKE_BEZIER : B_PIC_FILL_BEZIER
+	) : (
+		drawInfo.isStroke ? B_PIC_STROKE_BEZIER_GRADIENT : B_PIC_FILL_BEZIER_GRADIENT
+	));
 	for (int32 i = 0; i < 4; i++) {
 		WritePoint(points[i]);
 	}
-	WriteGradient(gradient);
+	if (drawInfo.gradient != NULL) {
+		WriteGradient(*drawInfo.gradient);
+	}
 	EndChunk();
 }
 
-
-void PictureWriterBinary::StrokePolygon(int32 numPoints, const BPoint* points, bool isClosed)
+void PictureWriterBinary::DrawPolygon(int32 numPoints, const BPoint* points, bool isClosed, const DrawGeometryInfo &drawInfo)
 {
-	BeginChunk(B_PIC_STROKE_POLYGON);
+	BeginChunk(drawInfo.gradient == NULL ? (
+		drawInfo.isStroke ? B_PIC_STROKE_POLYGON : B_PIC_FILL_POLYGON
+	) : (
+		drawInfo.isStroke ? B_PIC_STROKE_POLYGON_GRADIENT : B_PIC_FILL_POLYGON_GRADIENT
+	));
 	Write32(numPoints);
 	for (int32 i = 0; i < numPoints; i++) {
 		WritePoint(points[i]);
 	}
-	WriteBool(isClosed);
-	EndChunk();
-}
-
-void PictureWriterBinary::FillPolygon(int32 numPoints, const BPoint* points)
-{
-	BeginChunk(B_PIC_FILL_POLYGON);
-	Write32(numPoints);
-	for (int32 i = 0; i < numPoints; i++) {
-		WritePoint(points[i]);
+	if (drawInfo.isStroke) {
+		WriteBool(isClosed);
+	}
+	if (drawInfo.gradient != NULL) {
+		WriteGradient(*drawInfo.gradient);
 	}
 	EndChunk();
 }
 
-void PictureWriterBinary::StrokePolygon(int32 numPoints, const BPoint* points, bool isClosed, const BGradient& gradient)
+void PictureWriterBinary::DrawShape(const BShape& shape, const DrawGeometryInfo &drawInfo)
 {
-	BeginChunk(B_PIC_STROKE_POLYGON_GRADIENT);
-	Write32(numPoints);
-	for (int32 i = 0; i < numPoints; i++) {
-		WritePoint(points[i]);
+	BeginChunk(drawInfo.gradient == NULL ? (
+		drawInfo.isStroke ? B_PIC_STROKE_SHAPE : B_PIC_FILL_SHAPE
+	) : (
+		drawInfo.isStroke ? B_PIC_STROKE_SHAPE_GRADIENT : B_PIC_FILL_SHAPE_GRADIENT
+	));
+	WriteShape(shape);
+	if (drawInfo.gradient != NULL) {
+		WriteGradient(*drawInfo.gradient);
 	}
-	WriteBool(isClosed);
-	WriteGradient(gradient);
 	EndChunk();
 }
 
-void PictureWriterBinary::FillPolygon(int32 numPoints, const BPoint* points, const BGradient& gradient)
-{
-	BeginChunk(B_PIC_FILL_POLYGON_GRADIENT);
-	Write32(numPoints);
-	for (int32 i = 0; i < numPoints; i++) {
-		WritePoint(points[i]);
-	}
-	WriteGradient(gradient);
-	EndChunk();
-}
-
-
-void PictureWriterBinary::StrokeShape(const BShape& shape)
-{
-	BeginChunk(B_PIC_STROKE_SHAPE);
-	WriteShape(shape);
-	EndChunk();
-}
-
-void PictureWriterBinary::FillShape(const BShape& shape)
-{
-	BeginChunk(B_PIC_FILL_SHAPE);
-	WriteShape(shape);
-	EndChunk();
-}
-
-void PictureWriterBinary::StrokeShape(const BShape& shape, const BGradient& gradient)
-{
-	BeginChunk(B_PIC_STROKE_SHAPE_GRADIENT);
-	WriteShape(shape);
-	WriteGradient(gradient);
-	EndChunk();
-}
-
-void PictureWriterBinary::FillShape(const BShape& shape, const BGradient& gradient)
-{
-	BeginChunk(B_PIC_FILL_SHAPE_GRADIENT);
-	WriteShape(shape);
-	WriteGradient(gradient);
-	EndChunk();
-}
-
-
-void PictureWriterBinary::StrokeArc(
-	const BPoint& center,
-	const BPoint& radius,
-	float startTheta,
-	float arcTheta
-)
-{
-	BeginChunk(B_PIC_STROKE_ARC);
-	WritePoint(center);
-	WritePoint(radius);
-	WriteFloat(startTheta);
-	WriteFloat(arcTheta);
-	EndChunk();
-}
-
-void PictureWriterBinary::FillArc(
-	const BPoint& center,
-	const BPoint& radius,
-	float startTheta,
-	float arcTheta
-)
-{
-	BeginChunk(B_PIC_FILL_ARC);
-	WritePoint(center);
-	WritePoint(radius);
-	WriteFloat(startTheta);
-	WriteFloat(arcTheta);
-	EndChunk();
-}
-
-void PictureWriterBinary::StrokeArc(
+void PictureWriterBinary::DrawArc(
 	const BPoint& center,
 	const BPoint& radius,
 	float startTheta,
 	float arcTheta,
-	const BGradient& gradient
+	const DrawGeometryInfo &drawInfo
 )
 {
-	BeginChunk(B_PIC_STROKE_ARC_GRADIENT);
+	BeginChunk(drawInfo.gradient == NULL ? (
+		drawInfo.isStroke ? B_PIC_STROKE_ARC : B_PIC_FILL_ARC
+	) : (
+		drawInfo.isStroke ? B_PIC_STROKE_ARC_GRADIENT : B_PIC_FILL_ARC_GRADIENT
+	));
 	WritePoint(center);
 	WritePoint(radius);
 	WriteFloat(startTheta);
 	WriteFloat(arcTheta);
-	WriteGradient(gradient);
+	if (drawInfo.gradient != NULL) {
+		WriteGradient(*drawInfo.gradient);
+	}
 	EndChunk();
 }
 
-void PictureWriterBinary::FillArc(
-	const BPoint& center,
-	const BPoint& radius,
-	float startTheta,
-	float arcTheta,
-	const BGradient& gradient
-)
+void PictureWriterBinary::DrawEllipse(const BRect& rect, const DrawGeometryInfo &drawInfo)
 {
-	BeginChunk(B_PIC_FILL_ARC_GRADIENT);
-	WritePoint(center);
-	WritePoint(radius);
-	WriteFloat(startTheta);
-	WriteFloat(arcTheta);
-	WriteGradient(gradient);
-	EndChunk();
-}
-
-
-void PictureWriterBinary::StrokeEllipse(const BRect& rect)
-{
-	BeginChunk(B_PIC_STROKE_ELLIPSE);
+	BeginChunk(drawInfo.gradient == NULL ? (
+		drawInfo.isStroke ? B_PIC_STROKE_ELLIPSE : B_PIC_FILL_ELLIPSE
+	) : (
+		drawInfo.isStroke ? B_PIC_STROKE_ELLIPSE_GRADIENT : B_PIC_FILL_ELLIPSE_GRADIENT
+	));
 	WriteRect(rect);
-	EndChunk();
-}
-
-void PictureWriterBinary::FillEllipse(const BRect& rect)
-{
-	BeginChunk(B_PIC_FILL_ELLIPSE);
-	WriteRect(rect);
-	EndChunk();
-}
-
-void PictureWriterBinary::StrokeEllipse(const BRect& rect, const BGradient& gradient)
-{
-	BeginChunk(B_PIC_STROKE_ELLIPSE_GRADIENT);
-	WriteRect(rect);
-	WriteGradient(gradient);
-	EndChunk();
-}
-
-void PictureWriterBinary::FillEllipse(const BRect& rect, const BGradient& gradient)
-{
-	BeginChunk(B_PIC_FILL_ELLIPSE_GRADIENT);
-	WriteRect(rect);
-	WriteGradient(gradient);
+	if (drawInfo.gradient != NULL) {
+		WriteGradient(*drawInfo.gradient);
+	}
 	EndChunk();
 }
 

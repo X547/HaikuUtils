@@ -9,6 +9,11 @@
 
 class Layer;
 
+struct DrawGeometryInfo {
+	bool isStroke;
+	const BGradient *gradient;
+};
+
 class PictureVisitor {
 public:
 	// Meta
@@ -71,63 +76,18 @@ public:
 	virtual void			RotateBy(double angleRadians) {}
 
 	// Geometry
-	virtual void			StrokeLine(const BPoint& start, const BPoint& end) {}
-
-	virtual void			StrokeRect(const BRect& rect) {}
-	virtual void			FillRect(const BRect& rect) {}
-	virtual void			StrokeRect(const BRect& rect, const BGradient& gradient) {}
-	virtual void			FillRect(const BRect& rect, const BGradient& gradient) {}
-
-	virtual void			StrokeRoundRect(const BRect& rect, const BPoint& radius) {}
-	virtual void			FillRoundRect(const BRect& rect,
-								const BPoint& radius) {}
-	virtual void			StrokeRoundRect(const BRect& rect,
-								const BPoint& radius, const BGradient& gradient) {}
-	virtual void			FillRoundRect(const BRect& rect,
-								const BPoint& radius, const BGradient& gradient) {}
-
-	virtual void			StrokeBezier(const BPoint points[4]) {}
-	virtual void			FillBezier(const BPoint points[4]) {}
-	virtual void			StrokeBezier(const BPoint points[4], const BGradient& gradient) {}
-	virtual void			FillBezier(const BPoint points[4], const BGradient& gradient) {}
-
-	virtual void			StrokePolygon(int32 numPoints,
-								const BPoint* points, bool isClosed) {}
-	virtual void			FillPolygon(int32 numPoints,
-								const BPoint* points) {}
-	virtual void			StrokePolygon(int32 numPoints,
-								const BPoint* points, bool isClosed, const BGradient& gradient) {}
-	virtual void			FillPolygon(int32 numPoints,
-								const BPoint* points, const BGradient& gradient) {}
-
-	virtual void			StrokeShape(const BShape& shape) {}
-	virtual void			FillShape(const BShape& shape) {}
-	virtual void			StrokeShape(const BShape& shape, const BGradient& gradient) {}
-	virtual void			FillShape(const BShape& shape, const BGradient& gradient) {}
-
-	virtual void			StrokeArc(const BPoint& center,
-								const BPoint& radius,
-								float startTheta,
-								float arcTheta) {}
-	virtual void			FillArc(const BPoint& center,
-								const BPoint& radius,
-								float startTheta,
-								float arcTheta) {}
-	virtual void			StrokeArc(const BPoint& center,
+	virtual void			DrawLine(const BPoint& start, const BPoint& end, const DrawGeometryInfo &drawInfo) {}
+	virtual void			DrawRect(const BRect& rect, const DrawGeometryInfo &drawInfo) {}
+	virtual void			DrawRoundRect(const BRect& rect, const BPoint& radius, const DrawGeometryInfo &drawInfo) {}
+	virtual void			DrawBezier(const BPoint points[4], const DrawGeometryInfo &drawInfo) {}
+	virtual void			DrawPolygon(int32 numPoints, const BPoint* points, bool isClosed, const DrawGeometryInfo &drawInfo) {}
+	virtual void			DrawShape(const BShape& shape, const DrawGeometryInfo &drawInfo) {}
+	virtual void			DrawArc(const BPoint& center,
 								const BPoint& radius,
 								float startTheta,
 								float arcTheta,
-								const BGradient& gradient) {}
-	virtual void			FillArc(const BPoint& center,
-								const BPoint& radius,
-								float startTheta,
-								float arcTheta,
-								const BGradient& gradient) {}
-
-	virtual void			StrokeEllipse(const BRect& rect) {}
-	virtual void			FillEllipse(const BRect& rect) {}
-	virtual void			StrokeEllipse(const BRect& rect, const BGradient& gradient) {}
-	virtual void			FillEllipse(const BRect& rect, const BGradient& gradient) {}
+								const DrawGeometryInfo &drawInfo) {}
+	virtual void			DrawEllipse(const BRect& rect, const DrawGeometryInfo &drawInfo) {}
 
 	// Draw
 	virtual void			DrawString(const char* string, int32 length,

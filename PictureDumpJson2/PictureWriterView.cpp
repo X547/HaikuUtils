@@ -293,189 +293,138 @@ void PictureWriterView::RotateBy(double angleRadians)
 
 // #pragma mark - Geometry
 
-void PictureWriterView::StrokeLine(const BPoint& start, const BPoint& end)
+void PictureWriterView::DrawLine(const BPoint& start, const BPoint& end, const DrawGeometryInfo &drawInfo)
 {
-	fView.StrokeLine(start, end, fPattern);
+	if (drawInfo.gradient == NULL) {
+		fView.StrokeLine(start, end, fPattern);
+	} else {
+		fView.StrokeLine(start, end, *drawInfo.gradient);
+	}
 }
 
-
-void PictureWriterView::StrokeRect(const BRect& rect)
+void PictureWriterView::DrawRect(const BRect& rect, const DrawGeometryInfo &drawInfo)
 {
-	fView.StrokeRect(rect, fPattern);
+	if (drawInfo.gradient == NULL) {
+		if (drawInfo.isStroke) {
+			fView.StrokeRect(rect, fPattern);
+		} else {
+			fView.FillRect(rect, fPattern);
+		}
+	} else {
+		if (drawInfo.isStroke) {
+			fView.StrokeRect(rect, *drawInfo.gradient);
+		} else {
+			fView.FillRect(rect, *drawInfo.gradient);
+		}
+	}
 }
 
-void PictureWriterView::FillRect(const BRect& rect)
+void PictureWriterView::DrawRoundRect(const BRect& rect, const BPoint& radius, const DrawGeometryInfo &drawInfo)
 {
-	fView.FillRect(rect, fPattern);
+	if (drawInfo.gradient == NULL) {
+		if (drawInfo.isStroke) {
+			fView.StrokeRoundRect(rect, radius.x, radius.y, fPattern);
+		} else {
+			fView.FillRoundRect(rect, radius.x, radius.y, fPattern);
+		}
+	} else {
+		if (drawInfo.isStroke) {
+			fView.StrokeRoundRect(rect, radius.x, radius.y, *drawInfo.gradient);
+		} else {
+			fView.FillRoundRect(rect, radius.x, radius.y, *drawInfo.gradient);
+		}
+	}
 }
 
-void PictureWriterView::StrokeRect(const BRect& rect, const BGradient& gradient)
+void PictureWriterView::DrawBezier(const BPoint points[4], const DrawGeometryInfo &drawInfo)
 {
-	RaiseUnimplemented();
-	//fView.StrokeRect(rect, gradient);
+	if (drawInfo.gradient == NULL) {
+		if (drawInfo.isStroke) {
+			fView.StrokeBezier(const_cast<BPoint*>(points), fPattern);
+		} else {
+			fView.FillBezier(const_cast<BPoint*>(points), fPattern);
+		}
+	} else {
+		if (drawInfo.isStroke) {
+			fView.StrokeBezier(const_cast<BPoint*>(points), *drawInfo.gradient);
+		} else {
+			fView.FillBezier(const_cast<BPoint*>(points), *drawInfo.gradient);
+		}
+	}
 }
 
-void PictureWriterView::FillRect(const BRect& rect, const BGradient& gradient)
+void PictureWriterView::DrawPolygon(int32 numPoints, const BPoint* points, bool isClosed, const DrawGeometryInfo &drawInfo)
 {
-	fView.FillRect(rect, gradient);
+	if (drawInfo.gradient == NULL) {
+		if (drawInfo.isStroke) {
+			fView.StrokePolygon(points, numPoints, isClosed, fPattern);
+		} else {
+			fView.FillPolygon(points, numPoints, fPattern);
+		}
+	} else {
+		if (drawInfo.isStroke) {
+			fView.StrokePolygon(points, numPoints, isClosed, *drawInfo.gradient);
+		} else {
+			fView.FillPolygon(points, numPoints, *drawInfo.gradient);
+		}
+	}
 }
 
-
-void PictureWriterView::StrokeRoundRect(const BRect& rect, const BPoint& radius)
+void PictureWriterView::DrawShape(const BShape& shape, const DrawGeometryInfo &drawInfo)
 {
-	fView.StrokeRoundRect(rect, radius.x, radius.y, fPattern);
+	if (drawInfo.gradient == NULL) {
+		if (drawInfo.isStroke) {
+			fView.StrokeShape(const_cast<BShape*>(&shape), fPattern);
+		} else {
+			fView.FillShape(const_cast<BShape*>(&shape), fPattern);
+		}
+	} else {
+		if (drawInfo.isStroke) {
+			fView.StrokeShape(const_cast<BShape*>(&shape), *drawInfo.gradient);
+		} else {
+			fView.FillShape(const_cast<BShape*>(&shape), *drawInfo.gradient);
+		}
+	}
 }
 
-void PictureWriterView::FillRoundRect(const BRect& rect, const BPoint& radius)
-{
-	fView.FillRoundRect(rect, radius.x, radius.y, fPattern);
-}
-
-void PictureWriterView::StrokeRoundRect(
-	const BRect& rect, const BPoint& radius, const BGradient& gradient
-)
-{
-	RaiseUnimplemented();
-	//fView.StrokeRoundRect(rect, radius.x, radius.y, gradient);
-}
-
-void PictureWriterView::FillRoundRect(
-	const BRect& rect, const BPoint& radius, const BGradient& gradient
-)
-{
-	fView.FillRoundRect(rect, radius.x, radius.y, gradient);
-}
-
-
-void PictureWriterView::StrokeBezier(const BPoint points[4])
-{
-	fView.StrokeBezier(const_cast<BPoint*>(points), fPattern);
-}
-
-void PictureWriterView::FillBezier(const BPoint points[4])
-{
-	fView.FillBezier(const_cast<BPoint*>(points), fPattern);
-}
-
-void PictureWriterView::StrokeBezier(const BPoint points[4], const BGradient& gradient)
-{
-	RaiseUnimplemented();
-	//fView.StrokeBezier(const_cast<BPoint*>(points), gradient);
-}
-
-void PictureWriterView::FillBezier(const BPoint points[4], const BGradient& gradient)
-{
-	fView.FillBezier(const_cast<BPoint*>(points), gradient);
-}
-
-
-void PictureWriterView::StrokePolygon(int32 numPoints, const BPoint* points, bool isClosed)
-{
-	fView.StrokePolygon(points, numPoints, isClosed, fPattern);
-}
-
-void PictureWriterView::FillPolygon(int32 numPoints, const BPoint* points)
-{
-	fView.FillPolygon(points, numPoints, fPattern);
-}
-
-void PictureWriterView::StrokePolygon(int32 numPoints, const BPoint* points, bool isClosed, const BGradient& gradient)
-{
-	RaiseUnimplemented();
-	//fView.StrokePolygon(points, numPoints, isClosed, gradient);
-}
-
-void PictureWriterView::FillPolygon(int32 numPoints, const BPoint* points, const BGradient& gradient)
-{
-	fView.FillPolygon(points, numPoints, gradient);
-}
-
-
-void PictureWriterView::StrokeShape(const BShape& shape)
-{
-	fView.StrokeShape(const_cast<BShape*>(&shape), fPattern);
-}
-
-void PictureWriterView::FillShape(const BShape& shape)
-{
-	fView.FillShape(const_cast<BShape*>(&shape), fPattern);
-}
-
-void PictureWriterView::StrokeShape(const BShape& shape, const BGradient& gradient)
-{
-	RaiseUnimplemented();
-	//fView.StrokeShape(const_cast<BShape*>(&shape), gradient);
-}
-
-void PictureWriterView::FillShape(const BShape& shape, const BGradient& gradient)
-{
-	fView.FillShape(const_cast<BShape*>(&shape), gradient);
-}
-
-
-void PictureWriterView::StrokeArc(
-	const BPoint& center,
-	const BPoint& radius,
-	float startTheta,
-	float arcTheta
-)
-{
-	fView.StrokeArc(center, radius.x, radius.y, startTheta, arcTheta, fPattern);
-}
-
-void PictureWriterView::FillArc(
-	const BPoint& center,
-	const BPoint& radius,
-	float startTheta,
-	float arcTheta
-)
-{
-	fView.FillArc(center, radius.x, radius.y, startTheta, arcTheta, fPattern);
-}
-
-void PictureWriterView::StrokeArc(
+void PictureWriterView::DrawArc(
 	const BPoint& center,
 	const BPoint& radius,
 	float startTheta,
 	float arcTheta,
-	const BGradient& gradient
+	const DrawGeometryInfo &drawInfo
 )
 {
-	RaiseUnimplemented();
-	//fView.StrokeArc(center, radius.x, radius.y, startTheta, arcTheta, gradient);
+	if (drawInfo.gradient == NULL) {
+		if (drawInfo.isStroke) {
+			fView.StrokeArc(center, radius.x, radius.y, startTheta, arcTheta, fPattern);
+		} else {
+			fView.FillArc(center, radius.x, radius.y, startTheta, arcTheta, fPattern);
+		}
+	} else {
+		if (drawInfo.isStroke) {
+			fView.StrokeArc(center, radius.x, radius.y, startTheta, arcTheta, *drawInfo.gradient);
+		} else {
+			fView.FillArc(center, radius.x, radius.y, startTheta, arcTheta, *drawInfo.gradient);
+		}
+	}
 }
 
-void PictureWriterView::FillArc(
-	const BPoint& center,
-	const BPoint& radius,
-	float startTheta,
-	float arcTheta,
-	const BGradient& gradient
-)
+void PictureWriterView::DrawEllipse(const BRect& rect, const DrawGeometryInfo &drawInfo)
 {
-	fView.FillArc(center, radius.x, radius.y, startTheta, arcTheta, gradient);
-}
-
-
-void PictureWriterView::StrokeEllipse(const BRect& rect)
-{
-	fView.StrokeEllipse(rect, fPattern);
-}
-
-void PictureWriterView::FillEllipse(const BRect& rect)
-{
-	fView.FillEllipse(rect, fPattern);
-}
-
-void PictureWriterView::StrokeEllipse(const BRect& rect, const BGradient& gradient)
-{
-	RaiseUnimplemented();
-	//fView.StrokeEllipse(rect, gradient);
-}
-
-void PictureWriterView::FillEllipse(const BRect& rect, const BGradient& gradient)
-{
-	fView.FillEllipse(rect, gradient);
+	if (drawInfo.gradient == NULL) {
+		if (drawInfo.isStroke) {
+			fView.StrokeEllipse(rect, fPattern);
+		} else {
+			fView.FillEllipse(rect, fPattern);
+		}
+	} else {
+		if (drawInfo.isStroke) {
+			fView.StrokeEllipse(rect, *drawInfo.gradient);
+		} else {
+			fView.FillEllipse(rect, *drawInfo.gradient);
+		}
+	}
 }
 
 

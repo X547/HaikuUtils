@@ -700,370 +700,169 @@ void PictureWriterJson::RotateBy(double angleRadians)
 
 // #pragma mark - Geometry
 
-void PictureWriterJson::StrokeLine(const BPoint& start, const BPoint& end)
+void PictureWriterJson::DrawLine(const BPoint& start, const BPoint& end, const DrawGeometryInfo &drawInfo)
 {
 	fWr.StartObject();
-	fWr.Key("STROKE_LINE");
+	fWr.Key(drawInfo.gradient == NULL ? "STROKE_LINE" : "STROKE_LINE_GRADIENT");
 	fWr.StartObject();
 	fWr.Key("start"); WritePoint(start);
 	fWr.Key("end"); WritePoint(end);
+	if (drawInfo.gradient != NULL) {
+		fWr.Key("gradient"); WriteGradient(*drawInfo.gradient);
+	}
 	fWr.EndObject();
 	fWr.EndObject();
 }
 
 
-void PictureWriterJson::StrokeRect(const BRect& rect)
+void PictureWriterJson::DrawRect(const BRect& rect, const DrawGeometryInfo &drawInfo)
 {
 	fWr.StartObject();
-	fWr.Key("STROKE_RECT");
-	WriteRect(rect);
+	if (drawInfo.gradient == NULL) {
+		fWr.Key(drawInfo.isStroke ? "STROKE_RECT" : "FILL_RECT");
+		WriteRect(rect);
+	} else {
+		fWr.Key(drawInfo.isStroke ? "STROKE_RECT_GRADIENT" : "FILL_RECT_GRADIENT");
+		fWr.StartObject();
+		fWr.Key("rect"); WriteRect(rect);
+		fWr.Key("gradient"); WriteGradient(*drawInfo.gradient);
+		fWr.EndObject();
+	}
 	fWr.EndObject();
 }
 
-void PictureWriterJson::FillRect(const BRect& rect)
+void PictureWriterJson::DrawRoundRect(const BRect& rect, const BPoint& radius, const DrawGeometryInfo &drawInfo)
 {
 	fWr.StartObject();
-	fWr.Key("FILL_RECT");
-	WriteRect(rect);
-	fWr.EndObject();
-}
-
-void PictureWriterJson::StrokeRect(const BRect& rect, const BGradient& gradient)
-{
-	fWr.StartObject();
-	fWr.Key("STROKE_RECT_GRADIENT");
-	fWr.StartObject();
-	fWr.Key("rect"); WriteRect(rect);
-	fWr.Key("gradient"); WriteGradient(gradient);
-	fWr.EndObject();
-	fWr.EndObject();
-}
-
-void PictureWriterJson::FillRect(const BRect& rect, const BGradient& gradient)
-{
-	fWr.StartObject();
-	fWr.Key("FILL_RECT_GRADIENT");
-	fWr.StartObject();
-	fWr.Key("rect"); WriteRect(rect);
-	fWr.Key("gradient"); WriteGradient(gradient);
-	fWr.EndObject();
-	fWr.EndObject();
-}
-
-
-void PictureWriterJson::StrokeRoundRect(const BRect& rect,
-							const BPoint& radius)
-{
-	fWr.StartObject();
-	fWr.Key("STROKE_ROUND_RECT");
+	if (drawInfo.gradient == NULL) {
+		fWr.Key(drawInfo.isStroke ? "STROKE_ROUND_RECT" : "FILL_ROUND_RECT");
+	} else {
+		fWr.Key(drawInfo.isStroke ? "STROKE_ROUND_RECT_GRADIENT" : "FILL_ROUND_RECT_GRADIENT");
+	}
 	fWr.StartObject();
 	fWr.Key("rect"); WriteRect(rect);
 	fWr.Key("radius"); WritePoint(radius);
-	fWr.EndObject();
-	fWr.EndObject();
-}
-
-void PictureWriterJson::FillRoundRect(const BRect& rect,
-							const BPoint& radius)
-{
-	fWr.StartObject();
-	fWr.Key("FILL_ROUND_RECT");
-	fWr.StartObject();
-	fWr.Key("rect"); WriteRect(rect);
-	fWr.Key("radius"); WritePoint(radius);
-	fWr.EndObject();
-	fWr.EndObject();
-}
-
-void PictureWriterJson::StrokeRoundRect(const BRect& rect,
-							const BPoint& radius, const BGradient& gradient)
-{
-	fWr.StartObject();
-	fWr.Key("STROKE_ROUND_RECT_GRADIENT");
-	fWr.StartObject();
-	fWr.Key("rect"); WriteRect(rect);
-	fWr.Key("radius"); WritePoint(radius);
-	fWr.Key("gradient"); WriteGradient(gradient);
-	fWr.EndObject();
-	fWr.EndObject();
-}
-
-void PictureWriterJson::FillRoundRect(const BRect& rect,
-							const BPoint& radius, const BGradient& gradient)
-{
-	fWr.StartObject();
-	fWr.Key("FILL_ROUND_RECT_GRADIENT");
-	fWr.StartObject();
-	fWr.Key("rect"); WriteRect(rect);
-	fWr.Key("radius"); WritePoint(radius);
-	fWr.Key("gradient"); WriteGradient(gradient);
-	fWr.EndObject();
-	fWr.EndObject();
-}
-
-
-void PictureWriterJson::StrokeBezier(const BPoint points[4])
-{
-	fWr.StartObject();
-	fWr.Key("STROKE_BEZIER");
-	fWr.StartArray();
-	for (int32 i = 0; i < 4; i++) {
-		WritePoint(points[i]);
+	if (drawInfo.gradient != NULL) {
+		fWr.Key("gradient"); WriteGradient(*drawInfo.gradient);
 	}
-	fWr.EndArray();
+	fWr.EndObject();
 	fWr.EndObject();
 }
 
-void PictureWriterJson::FillBezier(const BPoint points[4])
+void PictureWriterJson::DrawBezier(const BPoint points[4], const DrawGeometryInfo &drawInfo)
 {
 	fWr.StartObject();
-	fWr.Key("FILL_BEZIER");
-	fWr.StartArray();
-	for (int32 i = 0; i < 4; i++) {
-		WritePoint(points[i]);
+	if (drawInfo.gradient == NULL) {
+		fWr.Key(drawInfo.isStroke ? "STROKE_BEZIER" : "FILL_BEZIER");
+		fWr.StartArray();
+		for (int32 i = 0; i < 4; i++) {
+			WritePoint(points[i]);
+		}
+		fWr.EndArray();
+	} else {
+		fWr.Key(drawInfo.isStroke ? "STROKE_BEZIER_GRADIENT" : "FILL_BEZIER_GRADIENT");
+		fWr.StartObject();
+		fWr.Key("points");
+		fWr.StartArray();
+		for (int32 i = 0; i < 4; i++) {
+			WritePoint(points[i]);
+		}
+		fWr.EndArray();
+		fWr.Key("gradient"); WriteGradient(*drawInfo.gradient);
+		fWr.EndObject();
 	}
-	fWr.EndArray();
 	fWr.EndObject();
 }
 
-void PictureWriterJson::StrokeBezier(const BPoint points[4], const BGradient& gradient)
+void PictureWriterJson::DrawPolygon(int32 numPoints, const BPoint* points, bool isClosed, const DrawGeometryInfo &drawInfo)
 {
 	fWr.StartObject();
-	fWr.Key("STROKE_BEZIER_GRADIENT");
-	fWr.StartObject();
-	fWr.Key("points");
-	fWr.StartArray();
-	for (int32 i = 0; i < 4; i++) {
-		WritePoint(points[i]);
+	if (drawInfo.gradient == NULL) {
+		fWr.Key(drawInfo.isStroke ? "STROKE_POLYGON" : "FILL_POLYGON");
+	} else {
+		fWr.Key(drawInfo.isStroke ? "STROKE_POLYGON_GRADIENT" : "FILL_POLYGON_GRADIENT");
 	}
-	fWr.EndArray();
-	fWr.Key("gradient"); WriteGradient(gradient);
-	fWr.EndObject();
-	fWr.EndObject();
-}
-
-void PictureWriterJson::FillBezier(const BPoint points[4], const BGradient& gradient)
-{
-	fWr.StartObject();
-	fWr.Key("FILL_BEZIER_GRADIENT");
-	fWr.StartObject();
-	fWr.Key("points");
-	fWr.StartArray();
-	for (int32 i = 0; i < 4; i++) {
-		WritePoint(points[i]);
+	if (drawInfo.isStroke || drawInfo.gradient != NULL) {
+		fWr.StartObject();
+		fWr.Key("points");
+		fWr.StartArray();
+		for (int32 i = 0; i < numPoints; i++) {
+			WritePoint(points[i]);
+		}
+		fWr.EndArray();
+		if (drawInfo.isStroke) {
+			fWr.Key("isClosed"); fWr.Bool(isClosed);
+		}
+		if (drawInfo.gradient != NULL) {
+			fWr.Key("gradient"); WriteGradient(*drawInfo.gradient);
+		}
+		fWr.EndObject();
+	} else {
+		fWr.StartArray();
+		for (int32 i = 0; i < numPoints; i++) {
+			WritePoint(points[i]);
+		}
+		fWr.EndArray();
 	}
-	fWr.EndArray();
-	fWr.Key("gradient"); WriteGradient(gradient);
-	fWr.EndObject();
 	fWr.EndObject();
 }
 
-
-void PictureWriterJson::StrokePolygon(int32 numPoints, const BPoint* points, bool isClosed)
+void PictureWriterJson::DrawShape(const BShape& shape, const DrawGeometryInfo &drawInfo)
 {
 	fWr.StartObject();
-	fWr.Key("STROKE_POLYGON");
-	fWr.StartObject();
-	fWr.Key("points");
-	fWr.StartArray();
-	for (int32 i = 0; i < numPoints; i++) {
-		WritePoint(points[i]);
+	if (drawInfo.gradient == NULL) {
+		fWr.Key(drawInfo.isStroke ? "STROKE_SHAPE" : "FILL_SHAPE");
+		WriteShape(shape);
+	} else {
+		fWr.Key(drawInfo.isStroke ? "STROKE_SHAPE_GRADIENT" : "FILL_SHAPE_GRADIENT");
+		fWr.StartObject();
+		fWr.Key("shape"); WriteShape(shape);
+		fWr.Key("gradient"); WriteGradient(*drawInfo.gradient);
+		fWr.EndObject();
 	}
-	fWr.EndArray();
-	fWr.Key("isClosed"); fWr.Bool(isClosed);
-	fWr.EndObject();
 	fWr.EndObject();
 }
 
-void PictureWriterJson::FillPolygon(int32 numPoints, const BPoint* points)
+void PictureWriterJson::DrawArc(
+	const BPoint& center,
+	const BPoint& radius,
+	float startTheta,
+	float arcTheta,
+	const DrawGeometryInfo &drawInfo
+)
 {
 	fWr.StartObject();
-	fWr.Key("FILL_POLYGON");
-	fWr.StartArray();
-	for (int32 i = 0; i < numPoints; i++) {
-		WritePoint(points[i]);
+	if (drawInfo.gradient == NULL) {
+		fWr.Key(drawInfo.isStroke ? "STROKE_ARC" : "FILL_ARC");
+	} else {
+		fWr.Key(drawInfo.isStroke ? "STROKE_ARC_GRADIENT" : "FILL_ARC_GRADIENT");
 	}
-	fWr.EndArray();
-	fWr.EndObject();
-}
-
-void PictureWriterJson::StrokePolygon(int32 numPoints, const BPoint* points, bool isClosed, const BGradient& gradient)
-{
-	fWr.StartObject();
-	fWr.Key("STROKE_POLYGON_GRADIENT");
-	fWr.StartObject();
-	fWr.Key("points");
-	fWr.StartArray();
-	for (int32 i = 0; i < numPoints; i++) {
-		WritePoint(points[i]);
-	}
-	fWr.EndArray();
-	fWr.Key("isClosed"); fWr.Bool(isClosed);
-	fWr.Key("gradient"); WriteGradient(gradient);
-	fWr.EndObject();
-	fWr.EndObject();
-}
-
-void PictureWriterJson::FillPolygon(int32 numPoints, const BPoint* points, const BGradient& gradient)
-{
-	fWr.StartObject();
-	fWr.Key("FILL_POLYGON_GRADIENT");
-	fWr.StartObject();
-	fWr.Key("points");
-	fWr.StartArray();
-	for (int32 i = 0; i < numPoints; i++) {
-		WritePoint(points[i]);
-	}
-	fWr.EndArray();
-	fWr.Key("gradient"); WriteGradient(gradient);
-	fWr.EndObject();
-	fWr.EndObject();
-}
-
-
-void PictureWriterJson::StrokeShape(const BShape& shape)
-{
-	fWr.StartObject();
-	fWr.Key("STROKE_SHAPE");
-	WriteShape(shape);
-	fWr.EndObject();
-}
-
-void PictureWriterJson::FillShape(const BShape& shape)
-{
-	fWr.StartObject();
-	fWr.Key("FILL_SHAPE");
-	WriteShape(shape);
-	fWr.EndObject();
-}
-
-void PictureWriterJson::StrokeShape(const BShape& shape, const BGradient& gradient)
-{
-	fWr.StartObject();
-	fWr.Key("STROKE_SHAPE_GRADIENT");
-	fWr.StartObject();
-	fWr.Key("shape"); WriteShape(shape);
-	fWr.Key("gradient"); WriteGradient(gradient);
-	fWr.EndObject();
-	fWr.EndObject();
-}
-
-void PictureWriterJson::FillShape(const BShape& shape, const BGradient& gradient)
-{
-	fWr.StartObject();
-	fWr.Key("FILL_SHAPE_GRADIENT");
-	fWr.StartObject();
-	fWr.Key("shape"); WriteShape(shape);
-	fWr.Key("gradient"); WriteGradient(gradient);
-	fWr.EndObject();
-	fWr.EndObject();
-}
-
-
-void PictureWriterJson::StrokeArc(const BPoint& center,
-							const BPoint& radius,
-							float startTheta,
-							float arcTheta)
-{
-	fWr.StartObject();
 	fWr.Key("STROKE_ARC");
 	fWr.StartObject();
 	fWr.Key("center"); WritePoint(center);
 	fWr.Key("radius"); WritePoint(radius);
 	fWr.Key("startTheta"); fWr.Double(startTheta);
 	fWr.Key("arcTheta"); fWr.Double(arcTheta);
+	if (drawInfo.gradient != NULL) {
+		fWr.Key("gradient"); WriteGradient(*drawInfo.gradient);
+	}
 	fWr.EndObject();
 	fWr.EndObject();
 }
 
-void PictureWriterJson::FillArc(const BPoint& center,
-							const BPoint& radius,
-							float startTheta,
-							float arcTheta)
+void PictureWriterJson::DrawEllipse(const BRect& rect, const DrawGeometryInfo &drawInfo)
 {
 	fWr.StartObject();
-	fWr.Key("FILL_ARC");
-	fWr.StartObject();
-	fWr.Key("center"); WritePoint(center);
-	fWr.Key("radius"); WritePoint(radius);
-	fWr.Key("startTheta"); fWr.Double(startTheta);
-	fWr.Key("arcTheta"); fWr.Double(arcTheta);
-	fWr.EndObject();
-	fWr.EndObject();
-}
-
-void PictureWriterJson::StrokeArc(const BPoint& center,
-							const BPoint& radius,
-							float startTheta,
-							float arcTheta,
-							const BGradient& gradient)
-{
-	fWr.StartObject();
-	fWr.Key("STROKE_ARC_GRADIENT");
-	fWr.StartObject();
-	fWr.Key("center"); WritePoint(center);
-	fWr.Key("radius"); WritePoint(radius);
-	fWr.Key("startTheta"); fWr.Double(startTheta);
-	fWr.Key("arcTheta"); fWr.Double(arcTheta);
-	fWr.Key("gradient"); WriteGradient(gradient);
-	fWr.EndObject();
-	fWr.EndObject();
-}
-
-void PictureWriterJson::FillArc(const BPoint& center,
-							const BPoint& radius,
-							float startTheta,
-							float arcTheta,
-							const BGradient& gradient)
-{
-	fWr.StartObject();
-	fWr.Key("FILL_ARC_GRADIENT");
-	fWr.StartObject();
-	fWr.Key("center"); WritePoint(center);
-	fWr.Key("radius"); WritePoint(radius);
-	fWr.Key("startTheta"); fWr.Double(startTheta);
-	fWr.Key("arcTheta"); fWr.Double(arcTheta);
-	fWr.Key("gradient"); WriteGradient(gradient);
-	fWr.EndObject();
-	fWr.EndObject();
-}
-
-
-void PictureWriterJson::StrokeEllipse(const BRect& rect)
-{
-	fWr.StartObject();
-	fWr.Key("STROKE_ELLIPSE");
-	WriteRect(rect);
-	fWr.EndObject();
-}
-
-void PictureWriterJson::FillEllipse(const BRect& rect)
-{
-	fWr.StartObject();
-	fWr.Key("FILL_ELLIPSE");
-	WriteRect(rect);
-	fWr.EndObject();
-}
-
-void PictureWriterJson::StrokeEllipse(const BRect& rect, const BGradient& gradient)
-{
-	fWr.StartObject();
-	fWr.Key("STROKE_ELLIPSE_GRADIENT");
-	fWr.StartObject();
-	fWr.Key("rect"); WriteRect(rect);
-	fWr.Key("gradient"); WriteGradient(gradient);
-	fWr.EndObject();
-	fWr.EndObject();
-}
-
-void PictureWriterJson::FillEllipse(const BRect& rect, const BGradient& gradient)
-{
-	fWr.StartObject();
-	fWr.Key("FILL_ELLIPSE_GRADIENT");
-	fWr.StartObject();
-	fWr.Key("rect"); WriteRect(rect);
-	fWr.Key("gradient"); WriteGradient(gradient);
-	fWr.EndObject();
+	if (drawInfo.gradient == NULL) {
+		fWr.Key(drawInfo.isStroke ? "STROKE_ELLIPSE" : "FILL_ELLIPSE");
+		WriteRect(rect);
+	} else {
+		fWr.Key(drawInfo.isStroke ? "STROKE_ELLIPSE_GRADIENT" : "FILL_ELLIPSE_GRADIENT");
+		fWr.StartObject();
+		fWr.Key("rect"); WriteRect(rect);
+		fWr.Key("gradient"); WriteGradient(*drawInfo.gradient);
+		fWr.EndObject();
+	}
 	fWr.EndObject();
 }
 

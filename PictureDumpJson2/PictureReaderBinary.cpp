@@ -161,93 +161,144 @@ static void DumpOp(PictureVisitor &vis, BPositionIO &rd, int16 op, int32 opSize)
 		vis.MovePenBy(dx, dy);
 		break;
 	}
-	case B_PIC_STROKE_LINE: {
+	case B_PIC_STROKE_LINE:
+	case B_PIC_STROKE_LINE_GRADIENT: {
+		bool isGradient = op == B_PIC_STROKE_LINE_GRADIENT;
 		BPoint start, end;
+		ObjectDeleter<BGradient> gradient;
 		ReadPoint(rd, start);
 		ReadPoint(rd, end);
-		vis.StrokeLine(start, end);
+		if (isGradient) {
+			ReadGradient(rd, gradient);
+		}
+		vis.DrawLine(start, end, {.isStroke = true, .gradient = gradient.Get()});
 		break;
 	}
-	case B_PIC_STROKE_RECT: {
+	case B_PIC_STROKE_RECT:
+	case B_PIC_FILL_RECT:
+	case B_PIC_STROKE_RECT_GRADIENT:
+	case B_PIC_FILL_RECT_GRADIENT: {
+		bool isStroke = op == B_PIC_STROKE_RECT || op == B_PIC_STROKE_RECT_GRADIENT;
+		bool isGradient = op == B_PIC_STROKE_RECT_GRADIENT || op == B_PIC_FILL_RECT_GRADIENT;
 		BRect rect;
+		ObjectDeleter<BGradient> gradient;
 		ReadRect(rd, rect);
-		vis.StrokeRect(rect);
+		if (isGradient) {
+			ReadGradient(rd, gradient);
+		}
+		vis.DrawRect(rect, {.isStroke = isStroke, .gradient = gradient.Get()});
 		break;
 	}
-	case B_PIC_FILL_RECT: {
-		BRect rect;
-		ReadRect(rd, rect);
-		vis.FillRect(rect);
-		break;
-	}
-	case B_PIC_STROKE_ROUND_RECT: {
+	case B_PIC_STROKE_ROUND_RECT:
+	case B_PIC_FILL_ROUND_RECT:
+	case B_PIC_STROKE_ROUND_RECT_GRADIENT:
+	case B_PIC_FILL_ROUND_RECT_GRADIENT: {
+		bool isStroke = op == B_PIC_STROKE_ROUND_RECT || op == B_PIC_STROKE_ROUND_RECT_GRADIENT;
+		bool isGradient = op == B_PIC_STROKE_ROUND_RECT_GRADIENT || op == B_PIC_FILL_ROUND_RECT_GRADIENT;
 		BRect rect;
 		BPoint radius;
+		ObjectDeleter<BGradient> gradient;
 		ReadRect(rd, rect);
 		ReadPoint(rd, radius);
-		vis.StrokeRoundRect(rect, radius);
+		if (isGradient) {
+			ReadGradient(rd, gradient);
+		}
+		vis.DrawRoundRect(rect, radius, {.isStroke = isStroke, .gradient = gradient.Get()});
 		break;
 	}
-	case B_PIC_FILL_ROUND_RECT: {
-		BRect rect;
-		BPoint radius;
-		ReadRect(rd, rect);
-		ReadPoint(rd, radius);
-		vis.FillRoundRect(rect, radius);
-		break;
-	}
-	case B_PIC_STROKE_BEZIER: {
+	case B_PIC_STROKE_BEZIER:
+	case B_PIC_FILL_BEZIER:
+	case B_PIC_STROKE_BEZIER_GRADIENT:
+	case B_PIC_FILL_BEZIER_GRADIENT: {
+		bool isStroke = op == B_PIC_STROKE_BEZIER || op == B_PIC_STROKE_BEZIER_GRADIENT;
+		bool isGradient = op == B_PIC_STROKE_BEZIER_GRADIENT || op == B_PIC_FILL_BEZIER_GRADIENT;
 		BPoint points[4];
+		ObjectDeleter<BGradient> gradient;
 		for (int32 i = 0; i < 4; i++) {
 			ReadPoint(rd, points[i]);
 		}
-		vis.StrokeBezier(points);
-		break;
-	}
-	case B_PIC_FILL_BEZIER: {
-		BPoint points[4];
-		for (int32 i = 0; i < 4; i++) {
-			ReadPoint(rd, points[i]);
+		if (isGradient) {
+			ReadGradient(rd, gradient);
 		}
-		vis.FillBezier(points);
+		vis.DrawBezier(points, {.isStroke = isStroke, .gradient = gradient.Get()});
 		break;
 	}
-	case B_PIC_STROKE_POLYGON: {
+	case B_PIC_STROKE_POLYGON:
+	case B_PIC_FILL_POLYGON:
+	case B_PIC_STROKE_POLYGON_GRADIENT:
+	case B_PIC_FILL_POLYGON_GRADIENT: {
+		bool isStroke = op == B_PIC_STROKE_POLYGON || op == B_PIC_STROKE_POLYGON_GRADIENT;
+		bool isGradient = op == B_PIC_STROKE_POLYGON_GRADIENT || op == B_PIC_FILL_POLYGON_GRADIENT;
 		std::vector<BPoint> points;
 		int32 numPoints;
 		bool isClosed;
+		ObjectDeleter<BGradient> gradient;
 		Read32(rd, numPoints);
 		for (int32 i = 0; i < numPoints; i++) {
 			BPoint point;
 			ReadPoint(rd, point);
 			points.push_back(point);
 		}
-		ReadBool(rd, isClosed);
-		vis.StrokePolygon(numPoints, points.data(), isClosed);
-		break;
-	}
-	case B_PIC_FILL_POLYGON: {
-		std::vector<BPoint> points;
-		int32 numPoints;
-		Read32(rd, numPoints);
-		for (int32 i = 0; i < numPoints; i++) {
-			BPoint point;
-			ReadPoint(rd, point);
-			points.push_back(point);
+		if (isStroke) {
+			ReadBool(rd, isClosed);
+		} else {
+			isClosed = true;
 		}
-		vis.FillPolygon(numPoints, points.data());
+		if (isGradient) {
+			ReadGradient(rd, gradient);
+		}
+		vis.DrawPolygon(numPoints, points.data(), isClosed, {.isStroke = isStroke, .gradient = gradient.Get()});
 		break;
 	}
-	case B_PIC_STROKE_SHAPE: {
+	case B_PIC_STROKE_SHAPE:
+	case B_PIC_FILL_SHAPE:
+	case B_PIC_STROKE_SHAPE_GRADIENT:
+	case B_PIC_FILL_SHAPE_GRADIENT: {
+		bool isStroke = op == B_PIC_STROKE_SHAPE || op == B_PIC_STROKE_SHAPE_GRADIENT;
+		bool isGradient = op == B_PIC_STROKE_SHAPE_GRADIENT || op == B_PIC_FILL_SHAPE_GRADIENT;
 		BShape shape;
+		ObjectDeleter<BGradient> gradient;
 		ReadShape(rd, shape);
-		vis.StrokeShape(shape);
+		if (isGradient) {
+			ReadGradient(rd, gradient);
+		}
+		vis.DrawShape(shape, {.isStroke = isStroke, .gradient = gradient.Get()});
 		break;
 	}
-	case B_PIC_FILL_SHAPE: {
-		BShape shape;
-		ReadShape(rd, shape);
-		vis.FillShape(shape);
+	case B_PIC_STROKE_ARC:
+	case B_PIC_FILL_ARC:
+	case B_PIC_STROKE_ARC_GRADIENT:
+	case B_PIC_FILL_ARC_GRADIENT: {
+		bool isStroke = op == B_PIC_STROKE_ARC || op == B_PIC_STROKE_ARC_GRADIENT;
+		bool isGradient = op == B_PIC_STROKE_ARC_GRADIENT || op == B_PIC_FILL_ARC_GRADIENT;
+		BPoint center;
+		BPoint radius;
+		float startTheta;
+		float arcTheta;
+		ObjectDeleter<BGradient> gradient;
+		ReadPoint(rd, center);
+		ReadPoint(rd, radius);
+		ReadFloat(rd, startTheta);
+		ReadFloat(rd, arcTheta);
+		if (isGradient) {
+			ReadGradient(rd, gradient);
+		}
+		vis.DrawArc(center, radius, startTheta, arcTheta, {.isStroke = isStroke, .gradient = gradient.Get()});
+		break;
+	}
+	case B_PIC_STROKE_ELLIPSE:
+	case B_PIC_FILL_ELLIPSE:
+	case B_PIC_STROKE_ELLIPSE_GRADIENT:
+	case B_PIC_FILL_ELLIPSE_GRADIENT: {
+		bool isStroke = op == B_PIC_STROKE_ELLIPSE || op == B_PIC_STROKE_ELLIPSE_GRADIENT;
+		bool isGradient = op == B_PIC_STROKE_ELLIPSE_GRADIENT || op == B_PIC_FILL_ELLIPSE_GRADIENT;
+		BRect rect;
+		ObjectDeleter<BGradient> gradient;
+		ReadRect(rd, rect);
+		if (isGradient) {
+			ReadGradient(rd, gradient);
+		}
+		vis.DrawEllipse(rect, {.isStroke = isStroke, .gradient = gradient.Get()});
 		break;
 	}
 	case B_PIC_DRAW_STRING: {
@@ -292,42 +343,6 @@ static void DumpOp(PictureVisitor &vis, BPositionIO &rd, int16 op, int32 opSize)
 		vis.DrawPicture(where, token);
 		break;
 	}
-	case B_PIC_STROKE_ARC: {
-		BPoint center;
-		BPoint radius;
-		float startTheta;
-		float arcTheta;
-		ReadPoint(rd, center);
-		ReadPoint(rd, radius);
-		ReadFloat(rd, startTheta);
-		ReadFloat(rd, arcTheta);
-		vis.StrokeArc(center, radius, startTheta, arcTheta);
-		break;
-	}
-	case B_PIC_FILL_ARC: {
-		BPoint center;
-		BPoint radius;
-		float startTheta;
-		float arcTheta;
-		ReadPoint(rd, center);
-		ReadPoint(rd, radius);
-		ReadFloat(rd, startTheta);
-		ReadFloat(rd, arcTheta);
-		vis.FillArc(center, radius, startTheta, arcTheta);
-		break;
-	}
-	case B_PIC_STROKE_ELLIPSE: {
-		BRect rect;
-		ReadRect(rd, rect);
-		vis.StrokeEllipse(rect);
-		break;
-	}
-	case B_PIC_FILL_ELLIPSE: {
-		BRect rect;
-		ReadRect(rd, rect);
-		vis.FillEllipse(rect);
-		break;
-	}
 	case B_PIC_DRAW_STRING_LOCATIONS: {
 		BString string;
 		int32 pointCount;
@@ -339,163 +354,6 @@ static void DumpOp(PictureVisitor &vis, BPositionIO &rd, int16 op, int32 opSize)
 		ReadString(rd, string);
 
 		vis.DrawString(string.String(), string.Length(), &locations[0], pointCount);
-		break;
-	}
-
-	case B_PIC_STROKE_RECT_GRADIENT: {
-		BRect rect;
-		ObjectDeleter<BGradient> gradient;
-
-		ReadRect(rd, rect);
-		ReadGradient(rd, gradient);
-
-		vis.StrokeRect(rect, *gradient.Get());
-		break;
-	}
-	case B_PIC_FILL_RECT_GRADIENT: {
-		BRect rect;
-		ObjectDeleter<BGradient> gradient;
-
-		ReadRect(rd, rect);
-		ReadGradient(rd, gradient);
-
-		vis.FillRect(rect, *gradient.Get());
-		break;
-	}
-	case B_PIC_STROKE_ROUND_RECT_GRADIENT: {
-		BRect rect;
-		BPoint radius;
-		ObjectDeleter<BGradient> gradient;
-
-		ReadRect(rd, rect);
-		ReadPoint(rd, radius);
-		ReadGradient(rd, gradient);
-
-		vis.StrokeRoundRect(rect, radius, *gradient.Get());
-		break;
-	}
-	case B_PIC_FILL_ROUND_RECT_GRADIENT: {
-		BRect rect;
-		BPoint radius;
-		ObjectDeleter<BGradient> gradient;
-
-		ReadRect(rd, rect);
-		ReadPoint(rd, radius);
-		ReadGradient(rd, gradient);
-
-		vis.FillRoundRect(rect, radius, *gradient.Get());
-		break;
-	}
-	case B_PIC_STROKE_BEZIER_GRADIENT: {
-		BPoint points[4];
-		ObjectDeleter<BGradient> gradient;
-
-		rd.Read(points, 4*sizeof(BPoint));
-		ReadGradient(rd, gradient);
-
-		vis.StrokeBezier(points, *gradient.Get());
-		break;
-	}
-	case B_PIC_FILL_BEZIER_GRADIENT: {
-		BPoint points[4];
-		ObjectDeleter<BGradient> gradient;
-
-		rd.Read(points, 4*sizeof(BPoint));
-		ReadGradient(rd, gradient);
-
-		vis.FillBezier(points, *gradient.Get());
-		break;
-	}
-	case B_PIC_STROKE_POLYGON_GRADIENT: {
-		int32 numPoints;
-		ArrayDeleter<BPoint> points;
-		bool isClosed;
-		ObjectDeleter<BGradient> gradient;
-
-		Read32(rd, numPoints);
-		points.SetTo(new BPoint[numPoints]);
-		rd.Read(points.Get(), numPoints*sizeof(BPoint));
-		ReadBool(rd, isClosed);
-		ReadGradient(rd, gradient);
-
-		vis.StrokePolygon(numPoints, &points[0], isClosed, *gradient.Get());
-		break;
-	}
-	case B_PIC_FILL_POLYGON_GRADIENT: {
-		int32 numPoints;
-		ArrayDeleter<BPoint> points;
-		ObjectDeleter<BGradient> gradient;
-
-		Read32(rd, numPoints);
-		points.SetTo(new BPoint[numPoints]);
-		rd.Read(points.Get(), numPoints*sizeof(BPoint));
-		ReadGradient(rd, gradient);
-
-		vis.FillPolygon(numPoints, &points[0], *gradient.Get());
-		break;
-	}
-	case B_PIC_STROKE_SHAPE_GRADIENT: {
-		BShape shape;
-		ObjectDeleter<BGradient> gradient;
-
-		ReadShape(rd, shape);
-		ReadGradient(rd, gradient);
-
-		vis.StrokeShape(shape, *gradient.Get());
-		break;
-	}
-	case B_PIC_FILL_SHAPE_GRADIENT: {
-		BShape shape;
-		ObjectDeleter<BGradient> gradient;
-
-		ReadShape(rd, shape);
-		ReadGradient(rd, gradient);
-
-		vis.FillShape(shape, *gradient.Get());
-		break;
-	}
-	case B_PIC_STROKE_ARC_GRADIENT: {
-		BPoint center;
-		BPoint radius;
-		float startTheta;
-		float arcTheta;
-		ObjectDeleter<BGradient> gradient;
-		ReadPoint(rd, center);
-		ReadPoint(rd, radius);
-		ReadFloat(rd, startTheta);
-		ReadFloat(rd, arcTheta);
-		ReadGradient(rd, gradient);
-		vis.StrokeArc(center, radius, startTheta, arcTheta, *gradient.Get());
-		break;
-	}
-	case B_PIC_FILL_ARC_GRADIENT: {
-		BPoint center;
-		BPoint radius;
-		float startTheta;
-		float arcTheta;
-		ObjectDeleter<BGradient> gradient;
-		ReadPoint(rd, center);
-		ReadPoint(rd, radius);
-		ReadFloat(rd, startTheta);
-		ReadFloat(rd, arcTheta);
-		ReadGradient(rd, gradient);
-		vis.FillArc(center, radius, startTheta, arcTheta, *gradient.Get());
-		break;
-	}
-	case B_PIC_STROKE_ELLIPSE_GRADIENT: {
-		BRect rect;
-		ObjectDeleter<BGradient> gradient;
-		ReadRect(rd, rect);
-		ReadGradient(rd, gradient);
-		vis.StrokeEllipse(rect, *gradient.Get());
-		break;
-	}
-	case B_PIC_FILL_ELLIPSE_GRADIENT: {
-		BRect rect;
-		ObjectDeleter<BGradient> gradient;
-		ReadRect(rd, rect);
-		ReadGradient(rd, gradient);
-		vis.FillEllipse(rect, *gradient.Get());
 		break;
 	}
 

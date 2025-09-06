@@ -28,55 +28,55 @@ static void	_MovePenBy(void *p, BPoint delta)
 static void	_StrokeLine(void *p, BPoint start, BPoint end)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.StrokeLine(start, end);
+	vis.DrawLine(start, end, {.isStroke = true});
 }
 
 static void	_StrokeRect(void *p, BRect rect)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.StrokeRect(rect);
+	vis.DrawRect(rect, {.isStroke = true});
 }
 
 static void	_FillRect(void *p, BRect rect)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.FillRect(rect);
+	vis.DrawRect(rect, {.isStroke = false});
 }
 
 static void	_StrokeRoundRect(void *p, BRect rect, BPoint radii)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.StrokeRoundRect(rect, radii);
+	vis.DrawRoundRect(rect, radii, {.isStroke = true});
 }
 
 static void	_FillRoundRect(void *p, BRect rect, BPoint radii)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.FillRoundRect(rect, radii);
+	vis.DrawRoundRect(rect, radii, {.isStroke = false});
 }
 
 static void	_StrokeBezier(void *p, BPoint *control)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.StrokeBezier(control);
+	vis.DrawBezier(control, {.isStroke = true});
 }
 
 static void	_FillBezier(void *p, BPoint *control)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.FillBezier(control);
+	vis.DrawBezier(control, {.isStroke = false});
 }
 
 static void	_StrokeArc(void *p, BPoint center, BPoint radii, float startTheta, float arcTheta)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.StrokeArc(center, radii, startTheta, arcTheta);
+	vis.DrawArc(center, radii, startTheta, arcTheta, {.isStroke = true});
 }
 
 static void	_FillArc(void *p, BPoint center, BPoint radii, float startTheta, float arcTheta)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.FillArc(center, radii, startTheta, arcTheta);
+	vis.DrawArc(center, radii, startTheta, arcTheta, {.isStroke = false});
 }
 
 static void	_StrokeEllipse(void *p, BPoint center, BPoint radii)
@@ -89,7 +89,7 @@ static void	_StrokeEllipse(void *p, BPoint center, BPoint radii)
 		center.x + radii.x,
 		center.y + radii.y
 	);
-	vis.StrokeEllipse(rect);
+	vis.DrawEllipse(rect, {.isStroke = true});
 }
 
 static void	_FillEllipse(void *p, BPoint center, BPoint radii)
@@ -102,31 +102,31 @@ static void	_FillEllipse(void *p, BPoint center, BPoint radii)
 		center.x + radii.x,
 		center.y + radii.y
 	);
-	vis.FillEllipse(rect);
+	vis.DrawEllipse(rect, {.isStroke = false});
 }
 
 static void	_StrokePolygon(void *p, int32 numPoints, const BPoint *points, bool isClosed)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.StrokePolygon(numPoints, points, isClosed);
+	vis.DrawPolygon(numPoints, points, isClosed, {.isStroke = true});
 }
 
 static void	_FillPolygon(void *p, int32 numPoints, const BPoint *points, bool isClosed)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.FillPolygon(numPoints, points);
+	vis.DrawPolygon(numPoints, points, true, {.isStroke = false});
 }
 
 static void	_StrokeShape(void * p, const BShape *shape)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.StrokeShape(*shape);
+	vis.DrawShape(*shape, {.isStroke = true});
 }
 
 static void	_FillShape(void * p, const BShape *shape)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.FillShape(*shape);
+	vis.DrawShape(*shape, {.isStroke = false});
 }
 
 static void	_DrawString(void *p, const char *string, float deltaSpace, float deltaNonSpace)
@@ -412,60 +412,60 @@ static void	_DrawStringLocations(void * p, const char* string, const BPoint* loc
 static void	_FillRectGradient(void * p, BRect rect, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.FillRect(rect, gradient);
+	vis.DrawRect(rect, {.isStroke = false, .gradient = &gradient});
 }
 
 static void	_StrokeRectGradient(void * p, BRect rect, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.StrokeRect(rect, gradient);
+	vis.DrawRect(rect, {.isStroke = true, .gradient = &gradient});
 }
 
 static void	_FillRoundRectGradient(void * p, BRect rect, BPoint radii, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.FillRoundRect(rect, radii, gradient);
+	vis.DrawRoundRect(rect, radii, {.isStroke = false, .gradient = &gradient});
 }
 
 static void	_StrokeRoundRectGradient(void * p, BRect rect, BPoint radii, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.StrokeRoundRect(rect, radii, gradient);
+	vis.DrawRoundRect(rect, radii, {.isStroke = true, .gradient = &gradient});
 }
 
 static void	_FillBezierGradient(void * p, const BPoint* points, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.FillBezier(points, gradient);
+	vis.DrawBezier(points, {.isStroke = false, .gradient = &gradient});
 }
 
 static void	_StrokeBezierGradient(void * p, const BPoint* points, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.StrokeBezier(points, gradient);
+	vis.DrawBezier(points, {.isStroke = true, .gradient = &gradient});
 }
 
 static void	_FillArcGradient(void * p, BPoint center, BPoint radii, float startTheta, float arcTheta, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.FillArc(
+	vis.DrawArc(
 		center,
 		radii,
 		startTheta,
 		arcTheta,
-		gradient
+		{.isStroke = false, .gradient = &gradient}
 	);
 }
 
 static void	_StrokeArcGradient(void * p, BPoint center, BPoint radii, float startTheta, float arcTheta, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.StrokeArc(
+	vis.DrawArc(
 		center,
 		radii,
 		startTheta,
 		arcTheta,
-		gradient
+		{.isStroke = true, .gradient = &gradient}
 	);
 }
 
@@ -473,9 +473,9 @@ static void	_FillEllipseGradient(void * p, BPoint center, BPoint radii, const BG
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
 	// TODO: check if +-1 is needed
-	vis.FillEllipse(
+	vis.DrawEllipse(
 		BRect(center.x - radii.x, center.y - radii.y, center.x + radii.x, center.y + radii.y),
-		gradient
+		{.isStroke = false, .gradient = &gradient}
 	);
 }
 
@@ -483,34 +483,34 @@ static void	_StrokeEllipseGradient(void * p, BPoint center, BPoint radii, const 
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
 	// TODO: check if +-1 is needed
-	vis.StrokeEllipse(
+	vis.DrawEllipse(
 		BRect(center.x - radii.x, center.y - radii.y, center.x + radii.x, center.y + radii.y),
-		gradient
+		{.isStroke = true, .gradient = &gradient}
 	);
 }
 
 static void	_FillPolygonGradient(void * p, int32 numPoints, const BPoint* points, bool isClosed, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.FillPolygon(numPoints, points, gradient);
+	vis.DrawPolygon(numPoints, points, true, {.isStroke = false, .gradient = &gradient});
 }
 
 static void	_StrokePolygonGradient(void * p, int32 numPoints, const BPoint* points, bool isClosed, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.StrokePolygon(numPoints, points, isClosed, gradient);
+	vis.DrawPolygon(numPoints, points, isClosed, {.isStroke = false, .gradient = &gradient});
 }
 
 static void	_FillShapeGradient(void * p, BShape shape, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.FillShape(shape);
+	vis.DrawShape(shape, {.isStroke = false, .gradient = &gradient});
 }
 
 static void	_StrokeShapeGradient(void * p, BShape shape, const BGradient& gradient)
 {
 	PictureVisitor &vis = *static_cast<PictureVisitor*>(p);
-	vis.StrokeShape(shape);
+	vis.DrawShape(shape, {.isStroke = true, .gradient = &gradient});
 }
 
 static void	_SetFillRule(void * p, int32 fillRule)
