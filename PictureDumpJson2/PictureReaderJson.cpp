@@ -109,8 +109,8 @@ public:
 };
 
 
-PictureReaderJson::PictureReaderJson():
-	fStream(std::cin)
+PictureReaderJson::PictureReaderJson(std::istream &is):
+	fStream(is)
 {
 }
 

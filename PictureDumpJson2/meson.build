@@ -3,14 +3,19 @@ project('PictureDumpJson', 'cpp')
 cpp = meson.get_compiler('cpp')
 dep_libbe = cpp.find_library('be')
 dep_rapidjson = dependency('RapidJSON')
+dep_yamp_cpp = dependency('yaml-cpp')
 
 executable('PictureDumpJson',
 	'PictureDump.cpp',
 	'PictureReaderBinary.cpp',
+	'PictureReaderJson.cpp',
+	'PictureWriterBinary.cpp',
 	'PictureWriterJson.cpp',
+	'PictureWriterYaml.cpp',
 	dependencies: [
 		dep_libbe,
 		dep_rapidjson,
+		dep_yamp_cpp,
 	],
 	gnu_symbol_visibility: 'hidden',
 	install: true

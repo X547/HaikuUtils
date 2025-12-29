@@ -199,7 +199,7 @@ private:
 	void ReadBlendLayer(PictureVisitor &vis);
 
 public:
-	PictureReaderJson();
+	PictureReaderJson(std::istream &is);
 
 	void Accept(PictureVisitor &vis);
 };

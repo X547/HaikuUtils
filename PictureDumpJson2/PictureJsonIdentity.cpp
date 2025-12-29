@@ -16,7 +16,7 @@ int main(int argCnt, char **args)
 	JsonWriter wr(os);
 	PictureWriterJson vis(wr);
 
-	PictureReaderJson pict;
+	PictureReaderJson pict(std::cin);
 	pict.Accept(vis);
 	return 0;
 }
