@@ -594,10 +594,10 @@ void PictureReaderJson::ReadGradient(ObjectDeleter<BGradient> &outGradient)
 void PictureReaderJson::ReadPicture(PictureVisitor &vis)
 {
 	int32 version = 2;
-	int32 unknown = 0;
+	int32 endian = 0;
 	struct {
 		bool version: 1;
-		bool unknown: 1;
+		bool endian: 1;
 	} isSet {};
 
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
@@ -607,17 +607,17 @@ void PictureReaderJson::ReadPicture(PictureVisitor &vis)
 			ReadToken();
 			isSet.version = true;
 			version = ReadInt32();
-		} else if (fToken.strVal == "unknown") {
+		} else if (fToken.strVal == "endian") {
 			ReadToken();
-			isSet.unknown = true;
-			unknown = ReadInt32();
+			isSet.endian = true;
+			endian = ReadInt32();
 		} else {
 			break;
 		}
 	}
 	Assume(isSet.version);
-	// Assume(isSet.unknown);
-	vis.EnterPicture(version, unknown);
+	// Assume(isSet.endian);
+	vis.EnterPicture(version, endian);
 
 	if (fToken.kind == JsonTokenKind::Key && fToken.strVal == "pictures") {
 		ReadToken();

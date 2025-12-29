@@ -627,12 +627,12 @@ static void DumpOps(PictureVisitor &vis, BPositionIO &rd, int32 size)
 status_t PictureReaderBinary::Accept(PictureVisitor &vis) const
 {
 	int32 version;
-	int32 unknown;
+	int32 endian;
 	int32 count;
 	int32 size;
 	Read32(fRd, version);
-	Read32(fRd, unknown);
-	vis.EnterPicture(version, unknown);
+	Read32(fRd, endian);
+	vis.EnterPicture(version, endian);
 	Read32(fRd, count);
 	if (count > 0) {
 		vis.EnterPictures(count);

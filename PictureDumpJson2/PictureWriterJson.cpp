@@ -216,11 +216,11 @@ void PictureWriterJson::WriteTransform(const BAffineTransform& tr)
 
 // #pragma mark - Meta
 
-void PictureWriterJson::EnterPicture(int32 version, int32 unknown)
+void PictureWriterJson::EnterPicture(int32 version, int32 endian)
 {
 	fWr.StartObject();
 	fWr.Key("version"); fWr.Int(version);
-	fWr.Key("unknown"); fWr.Int(unknown);
+	fWr.Key("endian"); fWr.Int(endian);
 }
 
 void PictureWriterJson::ExitPicture()

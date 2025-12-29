@@ -27,7 +27,7 @@ public:
 	PictureWriterJson(JsonWriter &wr);
 
 	// Meta
-	void			EnterPicture(int32 version, int32 unknown) final;
+	void			EnterPicture(int32 version, int32 endian) final;
 	void			ExitPicture() final;
 	void			EnterPictures(int32 count) final;
 	void			ExitPictures() final;

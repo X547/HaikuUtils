@@ -142,7 +142,7 @@ void PictureWriterBinary::WriteGradient(const BGradient &gradient)
 
 // #pragma mark - Meta
 
-void PictureWriterBinary::EnterPicture(int32 version, int32 unknown)
+void PictureWriterBinary::EnterPicture(int32 version, int32 endian)
 {
 	if (!fPictureStack.empty()) {
 		PictureInfo &prevInfo = fPictureStack.back();
@@ -155,7 +155,7 @@ void PictureWriterBinary::EnterPicture(int32 version, int32 unknown)
 	info.pos = fWr.Position();
 
 	Write32(version);
-	Write32(unknown);
+	Write32(endian);
 }
 
 void PictureWriterBinary::ExitPicture()

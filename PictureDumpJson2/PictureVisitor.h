@@ -17,7 +17,7 @@ struct DrawGeometryInfo {
 class PictureVisitor {
 public:
 	// Meta
-	virtual void			EnterPicture(int32 version, int32 unknown) {}
+	virtual void			EnterPicture(int32 version, int32 endian) {}
 	virtual void			ExitPicture() {}
 	virtual void			EnterPictures(int32 count) {}
 	virtual void			ExitPictures() {}

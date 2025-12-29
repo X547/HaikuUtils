@@ -53,7 +53,7 @@ void PictureWriterView::CheckStatus(status_t status)
 
 // #pragma mark - Meta
 
-void PictureWriterView::EnterPicture(int32 version, int32 unknown)
+void PictureWriterView::EnterPicture(int32 version, int32 endian)
 {
 }
 
