@@ -220,6 +220,73 @@ void PictureWriterYaml::WriteTransform(const BAffineTransform& tr)
 	fWr << YAML::EndMap;
 }
 
+void PictureWriterYaml::WriteColorSpace(color_space val)
+{
+#define ENUM_CASE(name) case name: fWr << #name; break;
+	switch (val) {
+		ENUM_CASE(B_NO_COLOR_SPACE)
+		ENUM_CASE(B_RGBA64)
+		ENUM_CASE(B_RGB48)
+		ENUM_CASE(B_RGB32)
+		ENUM_CASE(B_RGBA32)
+		ENUM_CASE(B_RGB24)
+		ENUM_CASE(B_RGB16)
+		ENUM_CASE(B_RGB15)
+		ENUM_CASE(B_RGBA15)
+		ENUM_CASE(B_CMAP8)
+		ENUM_CASE(B_GRAY8)
+		ENUM_CASE(B_GRAY1)
+
+		ENUM_CASE(B_RGBA64_BIG)
+		ENUM_CASE(B_RGB48_BIG)
+		ENUM_CASE(B_RGB32_BIG)
+		ENUM_CASE(B_RGBA32_BIG)
+		ENUM_CASE(B_RGB24_BIG)
+		ENUM_CASE(B_RGB16_BIG)
+		ENUM_CASE(B_RGB15_BIG)
+		ENUM_CASE(B_RGBA15_BIG)
+
+		ENUM_CASE(B_YCbCr422)
+		ENUM_CASE(B_YCbCr411)
+		ENUM_CASE(B_YCbCr444)
+		ENUM_CASE(B_YCbCr420)
+
+		ENUM_CASE(B_YUV422)
+		ENUM_CASE(B_YUV411)
+		ENUM_CASE(B_YUV444)
+		ENUM_CASE(B_YUV420)
+		ENUM_CASE(B_YUV9)
+		ENUM_CASE(B_YUV12)
+
+		ENUM_CASE(B_UVL24)
+		ENUM_CASE(B_UVL32)
+		ENUM_CASE(B_UVLA32)
+
+		ENUM_CASE(B_LAB24)
+		ENUM_CASE(B_LAB32)
+		ENUM_CASE(B_LABA32)
+
+		ENUM_CASE(B_HSI24)
+		ENUM_CASE(B_HSI32)
+		ENUM_CASE(B_HSIA32)
+
+		ENUM_CASE(B_HSV24)
+		ENUM_CASE(B_HSV32)
+		ENUM_CASE(B_HSVA32)
+
+		ENUM_CASE(B_HLS24)
+		ENUM_CASE(B_HLS32)
+		ENUM_CASE(B_HLSA32)
+
+		ENUM_CASE(B_CMY24)
+		ENUM_CASE(B_CMY32)
+		ENUM_CASE(B_CMYA32)
+		ENUM_CASE(B_CMYK32)
+		default:
+			fWr << (uint32)val;
+	}
+#undef ENUM_CASE
+}
 
 
 // #pragma mark - Meta
@@ -923,8 +990,20 @@ void PictureWriterYaml::DrawBitmap(const BRect& srcRect,
 	fWr << YAML::Key << "width" << YAML::Value; fWr << width;
 	fWr << YAML::Key << "height" << YAML::Value; fWr << height;
 	fWr << YAML::Key << "bytesPerRow" << YAML::Value; fWr << bytesPerRow;
-	fWr << YAML::Key << "colorSpace" << YAML::Value; fWr << colorSpace;
-	fWr << YAML::Key << "flags" << YAML::Value; fWr << flags;
+	fWr << YAML::Key << "colorSpace" << YAML::Value; WriteColorSpace((color_space)colorSpace);
+
+	fWr << YAML::Key << "flags" << YAML::Value;
+	fWr << YAML::BeginSeq;
+	for (uint32 i = 0; i < 32; i++) {
+		if ((1U << i) & (uint32)flags) {
+			switch (i) {
+				// TODO
+				default: fWr << i;
+			}
+		}
+	}
+	fWr << YAML::EndSeq;
+
 	fWr << YAML::Key << "data" << YAML::Value << YAML::Binary((const uint8*)data, length);
 	fWr << YAML::EndMap;
 	fWr << YAML::EndMap;

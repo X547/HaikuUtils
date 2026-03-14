@@ -16,6 +16,7 @@ private:
 	void WriteShape(const BShape &shape);
 	void WriteGradient(const BGradient &gradient);
 	void WriteTransform(const BAffineTransform& transform);
+	void WriteColorSpace(color_space val);
 
 	class ShapeIterator;
 
