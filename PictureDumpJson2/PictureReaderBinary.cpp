@@ -318,9 +318,9 @@ static void DumpOp(PictureVisitor &vis, BPositionIO &rd, int16 op, int32 opSize)
 		int32 bytesPerRow;
 		int32 colorSpace;
 		int32 flags;
+		int32 size;
 		ArrayDeleter<uint8> data;
 
-		off_t pos = rd.Position();
 		ReadRect(rd, srcRect);
 		ReadRect(rd, dstRect);
 		Read32(rd, width);
@@ -328,7 +328,7 @@ static void DumpOp(PictureVisitor &vis, BPositionIO &rd, int16 op, int32 opSize)
 		Read32(rd, bytesPerRow);
 		Read32(rd, colorSpace);
 		Read32(rd, flags);
-		size_t size = opSize - (rd.Position() - pos);
+		Read32(rd, size);
 		data.SetTo(new uint8[size]);
 		rd.Read(data.Get(), size*sizeof(uint8));
 

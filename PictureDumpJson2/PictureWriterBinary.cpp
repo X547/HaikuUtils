@@ -668,6 +668,7 @@ void PictureWriterBinary::DrawBitmap(
 	Write32(bytesPerRow);
 	Write32(colorSpace);
 	Write32(flags);
+	Write32(length);
 	CheckStatus(fWr.WriteExactly(data, length));
 	EndChunk();
 }
