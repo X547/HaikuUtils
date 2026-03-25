@@ -532,7 +532,7 @@ void PictureWriterJson::SetFontFamily(const font_family family)
 {
 	fWr.StartObject();
 	fWr.Key("SET_FONT_FAMILY");
-	fWr.String(family, strlen(family) + 1);
+	fWr.String(family, strlen(family));
 	fWr.EndObject();
 }
 
@@ -540,7 +540,7 @@ void PictureWriterJson::SetFontStyle(const font_style style)
 {
 	fWr.StartObject();
 	fWr.Key("SET_FONT_STYLE");
-	fWr.String(style, strlen(style) + 1);
+	fWr.String(style, strlen(style));
 	fWr.EndObject();
 }
 
