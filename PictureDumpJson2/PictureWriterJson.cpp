@@ -877,9 +877,12 @@ void PictureWriterJson::DrawString(
 	fWr.Key("DRAW_STRING");
 	fWr.StartObject();
 	fWr.Key("string"); fWr.String(string, length);
-	// TODO: check order
-	fWr.Key("escapementSpace"); fWr.Double(delta.space);
-	fWr.Key("escapementNonSpace"); fWr.Double(delta.nonspace);
+	if (delta.nonspace != 0 || delta.space != 0) {
+		fWr.Key("delta"); fWr.StartObject();
+		fWr.Key("nonspace"); fWr.Double(delta.nonspace);
+		fWr.Key("space"); fWr.Double(delta.space);
+		fWr.EndObject();
+	}
 	fWr.EndObject();
 	fWr.EndObject();
 }

@@ -122,6 +122,7 @@ private:
 	void ReadColor(rgb_color &color);
 	void ReadPoint(BPoint &pt);
 	void ReadRect(BRect &rect);
+	void ReadEscapementDelta(escapement_delta &delta);
 	void ReadShape(BShape &shape);
 	void ReadGradientStops(BGradient &gradient);
 	void ReadGradient(ObjectDeleter<BGradient> &outGradient);

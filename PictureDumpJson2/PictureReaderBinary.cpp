@@ -305,8 +305,8 @@ static void DumpOp(PictureVisitor &vis, BPositionIO &rd, int16 op, int32 opSize)
 		BString string;
 		escapement_delta delta;
 		ReadString(rd, string);
-		ReadFloat(rd, delta.space);
 		ReadFloat(rd, delta.nonspace);
+		ReadFloat(rd, delta.space);
 		vis.DrawString(string.String(), string.Length(), delta);
 		break;
 	}

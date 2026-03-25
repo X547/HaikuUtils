@@ -281,6 +281,31 @@ void PictureReaderJson::ReadRect(BRect &rect)
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
 }
 
+void PictureReaderJson::ReadEscapementDelta(escapement_delta &delta)
+{
+	AssumeToken(JsonTokenKind::StartObject); ReadToken();
+	struct {
+		bool nonspace: 1;
+		bool space: 1;
+	} isSet {};
+	while (fToken.kind == JsonTokenKind::Key) {
+		if (fToken.strVal == "nonspace") {
+			ReadToken();
+			isSet.nonspace = true;
+			delta.nonspace = ReadReal();
+		} else if (fToken.strVal == "space") {
+			ReadToken();
+			isSet.space = true;
+			delta.space = ReadReal();
+		} else {
+			RaiseError();
+		}
+	}
+	Assume(isSet.nonspace);
+	Assume(isSet.space);
+	AssumeToken(JsonTokenKind::EndObject); ReadToken();
+}
+
 void PictureReaderJson::ReadShape(BShape &shape)
 {
 	AssumeToken(JsonTokenKind::StartArray); ReadToken();
@@ -1053,7 +1078,7 @@ void PictureReaderJson::ReadDrawString(PictureVisitor &vis)
 	escapement_delta delta {};
 	struct {
 		bool string: 1;
-		bool escapementSpace: 1;
+		bool delta: 1;
 		bool escapementNonSpace: 1;
 	} isSet {};
 	while (fToken.kind == JsonTokenKind::Key) {
@@ -1063,14 +1088,10 @@ void PictureReaderJson::ReadDrawString(PictureVisitor &vis)
 			AssumeToken(JsonTokenKind::String);
 			string = fToken.strVal;
 			ReadToken();
-		} else if (fToken.strVal == "escapementSpace") {
+		} else if (fToken.strVal == "delta") {
 			ReadToken();
-			isSet.escapementSpace = true;
-			delta.space = ReadReal();
-		} else if (fToken.strVal == "escapementNonSpace") {
-			ReadToken();
-			isSet.escapementNonSpace = true;
-			delta.nonspace = ReadReal();
+			isSet.delta = true;
+			ReadEscapementDelta(delta);
 		} else {
 			RaiseError();
 		}

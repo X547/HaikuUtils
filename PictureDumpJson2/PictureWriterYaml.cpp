@@ -908,7 +908,6 @@ void PictureWriterYaml::DrawArc(
 	} else {
 		fWr << YAML::Key << (drawInfo.isStroke ? "STROKE_ARC_GRADIENT" : "FILL_ARC_GRADIENT") << YAML::Value;
 	}
-	fWr << YAML::Key << "STROKE_ARC" << YAML::Value;
 	fWr << YAML::BeginMap;
 	fWr << YAML::Key << "center" << YAML::Value; WritePoint(center);
 	fWr << YAML::Key << "radius" << YAML::Value; WritePoint(radius);
@@ -948,9 +947,13 @@ void PictureWriterYaml::DrawString(
 	fWr << YAML::Key << "DRAW_STRING" << YAML::Value;
 	fWr << YAML::BeginMap;
 	fWr << YAML::Key << "string" << YAML::Value; WriteString(string, length);
-	// TODO: check order
-	fWr << YAML::Key << "escapementSpace" << YAML::Value; fWr << delta.space;
-	fWr << YAML::Key << "escapementNonSpace" << YAML::Value; fWr << delta.nonspace;
+	if (delta.nonspace != 0 || delta.space != 0) {
+		fWr << YAML::Key << "delta" << YAML::Value;
+		fWr << YAML::BeginMap;
+		fWr << YAML::Key << "nonspace" << YAML::Value; fWr << delta.nonspace;
+		fWr << YAML::Key << "space" << YAML::Value; fWr << delta.space;
+		fWr << YAML::EndMap;
+	}
 	fWr << YAML::EndMap;
 	fWr << YAML::EndMap;
 }

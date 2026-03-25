@@ -630,8 +630,8 @@ void PictureWriterBinary::DrawString(
 {
 	BeginChunk(B_PIC_DRAW_STRING);
 	WriteString(std::string_view(string, length));
-	WriteFloat(delta.space);
 	WriteFloat(delta.nonspace);
+	WriteFloat(delta.space);
 	EndChunk();
 }
 
