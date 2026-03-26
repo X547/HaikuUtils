@@ -727,6 +727,14 @@ void PictureWriterYaml::SetFontFace(int32 face)
 	fWr << YAML::EndMap;
 }
 
+void PictureWriterYaml::SetFontFalseBoldWidth(float width)
+{
+	fWr << YAML::BeginMap;
+	fWr << YAML::Key << "SET_FONT_FALSE_BOLD_WIDTH" << YAML::Value;
+	fWr << width;
+	fWr << YAML::EndMap;
+}
+
 
 // #pragma mark - State (delta)
 

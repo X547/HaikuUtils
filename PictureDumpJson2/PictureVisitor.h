@@ -68,6 +68,7 @@ public:
 	virtual void			SetFontShear(float shear) {}
 	virtual void			SetFontBpp(int32 bpp) {}
 	virtual void			SetFontFace(int32 face) {}
+	virtual void SetFontFalseBoldWidth(float width) {}
 
 	// State (delta)
 	virtual void			MovePenBy(float dx, float dy) {}

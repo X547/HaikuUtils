@@ -193,6 +193,7 @@ private:
 	void ReadSetFontShear(PictureVisitor &vis);
 	void ReadSetFontBpp(PictureVisitor &vis);
 	void ReadSetFontFace(PictureVisitor &vis);
+	void ReadSetFontFalseBoldWidth(PictureVisitor &vis);
 	void ReadSetTransform(PictureVisitor &vis);
 	void ReadTranslateBy(PictureVisitor &vis);
 	void ReadScaleBy(PictureVisitor &vis);

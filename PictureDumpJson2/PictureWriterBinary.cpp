@@ -456,6 +456,13 @@ void PictureWriterBinary::SetFontFace(int32 face)
 	EndChunk();
 }
 
+void PictureWriterBinary::SetFontFalseBoldWidth(float width)
+{
+	BeginChunk(B_PIC_SET_FONT_FALSE_BOLD_WIDTH);
+	WriteFloat(width);
+	EndChunk();
+}
+
 
 // #pragma mark - State (delta)
 

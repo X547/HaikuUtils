@@ -861,6 +861,9 @@ void PictureReaderJson::ReadOps(PictureVisitor &vis)
 		} else if (fToken.strVal == "SET_FONT_FACE") {
 			ReadToken();
 			ReadSetFontFace(vis);
+		} else if (fToken.strVal == "SET_FONT_FALSE_BOLD_WIDTH") {
+			ReadToken();
+			ReadSetFontFalseBoldWidth(vis);
 		} else if (fToken.strVal == "SET_TRANSFORM") {
 			ReadToken();
 			ReadSetTransform(vis);
@@ -2321,6 +2324,12 @@ void PictureReaderJson::ReadSetFontFace(PictureVisitor &vis)
 	}
 	AssumeToken(JsonTokenKind::EndArray); ReadToken();
 	vis.SetFontFace(face);
+}
+
+void PictureReaderJson::ReadSetFontFalseBoldWidth(PictureVisitor &vis)
+{
+	float width = ReadReal();
+	vis.SetFontFalseBoldWidth(width);
 }
 
 void PictureReaderJson::ReadSetTransform(PictureVisitor &vis)

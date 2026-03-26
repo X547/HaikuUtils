@@ -573,6 +573,12 @@ static void DumpOp(PictureVisitor &vis, BPositionIO &rd, int16 op, int32 opSize)
 		vis.SetFontFace(face);
 		break;
 	}
+	case B_PIC_SET_FONT_FALSE_BOLD_WIDTH: {
+		float width;
+		ReadFloat(rd, width);
+		vis.SetFontFalseBoldWidth(width);
+		break;
+	}
 	case B_PIC_SET_TRANSFORM: {
 		BAffineTransform transform;
 		ReadTransform(rd, transform);

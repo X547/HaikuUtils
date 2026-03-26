@@ -656,6 +656,14 @@ void PictureWriterJson::SetFontFace(int32 face)
 	fWr.EndObject();
 }
 
+void PictureWriterJson::SetFontFalseBoldWidth(float width)
+{
+	fWr.StartObject();
+	fWr.Key("SET_FONT_FALSE_BOLD_WIDTH");
+	fWr.Double(width);
+	fWr.EndObject();
+}
+
 
 // #pragma mark - State (delta)
 

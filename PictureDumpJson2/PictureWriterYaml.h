@@ -75,6 +75,7 @@ public:
 	void			SetFontShear(float shear) final;
 	void			SetFontBpp(int32 bpp) final;
 	void			SetFontFace(int32 face) final;
+	void 			SetFontFalseBoldWidth(float width) final;
 
 	// State (delta)
 	void			MovePenBy(float dx, float dy) final;
