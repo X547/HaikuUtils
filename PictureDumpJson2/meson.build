@@ -12,6 +12,8 @@ lib_PictureDumpJson = static_library('PictureDumpJson',
 	'PictureWriterJson.cpp',
 	'PictureWriterYaml.cpp',
 	'PictureReaderPlay.cpp',
+
+	'JsonScanner.cpp',
 	dependencies: [
 		dep_libbe,
 		dep_rapidjson,

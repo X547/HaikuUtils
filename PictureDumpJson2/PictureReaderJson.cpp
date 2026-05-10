@@ -8,6 +8,7 @@
 #include <string>
 #include <string_view>
 #include <iostream>
+#include <stdexcept>
 
 #include <GradientLinear.h>
 #include <GradientRadial.h>
@@ -16,144 +17,38 @@
 #include <GradientDiamond.h>
 
 
-class JsonTokenHandler {
-private:
-	JsonToken &fToken;
-
-	JsonTokenHandler(const JsonTokenHandler& noCopyConstruction);
-	JsonTokenHandler& operator=(const JsonTokenHandler& noAssignment);
-
-public:
-	JsonTokenHandler(JsonToken &token): fToken(token) {}
-
-	bool Null() {
-		fToken.kind = JsonTokenKind::Null;
-		return true;
-	}
-
-	bool Bool(bool b) {
-		fToken.kind = JsonTokenKind::Bool;
-		fToken.boolVal = b;
-		return true;
-	}
-
-	bool Int(int i) {
-		fToken.kind = JsonTokenKind::Int;
-		fToken.int64Val = i;
-		return true;
-	}
-
-	bool Uint(unsigned u) {
-		fToken.kind = JsonTokenKind::UInt;
-		fToken.uint64Val = u;
-		return true;
-	}
-
-	bool Int64(int64_t i) {
-		fToken.kind = JsonTokenKind::Int64;
-		fToken.int64Val = i;
-		return true;
-	}
-
-	bool Uint64(uint64_t u) {
-		fToken.kind = JsonTokenKind::UInt64;
-		fToken.uint64Val = u;
-		return true;
-	}
-
-	bool Double(double d) {
-		fToken.kind = JsonTokenKind::Double;
-		fToken.doubleVal = d;
-		return true;
-	}
-
-	bool RawNumber(const char* str, rapidjson::SizeType length, bool) {
-		fToken.kind = JsonTokenKind::RawNumber;
-		fToken.strVal = std::string_view(str, length);
-		return true;
-	}
-
-	bool String(const char* str, rapidjson::SizeType length, bool) {
-		fToken.kind = JsonTokenKind::String;
-		fToken.strVal = std::string_view(str, length);
-		return true;
-	}
-
-	bool StartObject() {
-		fToken.kind = JsonTokenKind::StartObject;
-		return true;
-	}
-
-	bool Key(const char* str, rapidjson::SizeType length, bool) {
-		fToken.kind = JsonTokenKind::Key;
-		fToken.strVal = std::string_view(str, length);
-		return true;
-	}
-
-	bool EndObject(rapidjson::SizeType memberCount) {
-		fToken.kind = JsonTokenKind::EndObject;
-		fToken.uint64Val = memberCount;
-		return true;
-	}
-
-	bool StartArray() {
-		fToken.kind = JsonTokenKind::StartArray;
-		return true;
-	}
-
-	bool EndArray(rapidjson::SizeType elementCount) {
-		fToken.kind = JsonTokenKind::EndArray;
-		fToken.uint64Val = elementCount;
-		return true;
-	}
-};
-
-
 PictureReaderJson::PictureReaderJson(std::istream &is):
-	fStream(is)
+	fScanner(is)
 {
 }
 
 void PictureReaderJson::ReadToken()
 {
-	JsonTokenHandler handler(fToken);
-	if (fRd.IterativeParseComplete()) {
-		fToken.kind = JsonTokenKind::Eos;
-		return;
-	}
-	if (!fRd.IterativeParseNext<rapidjson::kParseDefaultFlags>(fStream, handler)) {
-		RaiseError();
-	}
+	fScanner.ReadToken();
 }
 
 void PictureReaderJson::RaiseError()
 {
-	// TODO: implement
-	fprintf(stderr, "[!] error\n");
-	abort();
+	fScanner.RaiseError();
 }
 
 void PictureReaderJson::RaiseUnimplemented()
 {
-	fprintf(stderr, "[!] unimplemented\n");
-	abort();
+	throw std::runtime_error("PictureReaderJson: unimplemented");
 }
 
 void PictureReaderJson::Assume(bool cond)
 {
-	if (!cond) {
-		RaiseError();
-	}
+	fScanner.Assume(cond);
 }
 
 void PictureReaderJson::AssumeToken(JsonTokenKind tokenKind)
 {
-	Assume(fToken.kind == tokenKind);
+	fScanner.AssumeToken(tokenKind);
 }
 
 void PictureReaderJson::Accept(PictureVisitor &vis)
 {
-	fRd.IterativeParseInit();
 	ReadToken();
 	ReadPicture(vis);
 }
@@ -163,35 +58,22 @@ void PictureReaderJson::Accept(PictureVisitor &vis)
 
 bool PictureReaderJson::ReadBool()
 {
-	AssumeToken(JsonTokenKind::Bool);
-	bool val = fToken.boolVal;
-	ReadToken();
-	return val;
+	return fScanner.ReadBool();
 }
 
 uint8 PictureReaderJson::ReadUint8()
 {
-	Assume(fToken.IsInt32());
-	int32 val = fToken.Int32Val();
-	Assume(val >= 0 && val <= 0xff);
-	ReadToken();
-	return (uint8)val;
+	return fScanner.ReadUint8();
 }
 
 int32 PictureReaderJson::ReadInt32()
 {
-	Assume(fToken.IsInt32());
-	int32 val = fToken.Int32Val();
-	ReadToken();
-	return val;
+	return fScanner.ReadInt32();
 }
 
 double PictureReaderJson::ReadReal()
 {
-	Assume(fToken.IsReal());
-	double val = fToken.RealVal();
-	ReadToken();
-	return val;
+	return fScanner.ReadReal();
 }
 
 int32 PictureReaderJson::HexDigit(char digit)
@@ -212,12 +94,12 @@ int32 PictureReaderJson::HexDigit(char digit)
 void PictureReaderJson::ReadColor(rgb_color &color)
 {
 	AssumeToken(JsonTokenKind::String);
-	Assume(fToken.strVal.size() == 9);
-	Assume(fToken.strVal[0] == '#');
-	color.alpha = (HexDigit(fToken.strVal[1]) << 4) + HexDigit(fToken.strVal[2]);
-	color.red   = (HexDigit(fToken.strVal[3]) << 4) + HexDigit(fToken.strVal[4]);
-	color.green = (HexDigit(fToken.strVal[5]) << 4) + HexDigit(fToken.strVal[6]);
-	color.blue  = (HexDigit(fToken.strVal[7]) << 4) + HexDigit(fToken.strVal[8]);
+	Assume(Token().strVal.size() == 9);
+	Assume(Token().strVal[0] == '#');
+	color.alpha = (HexDigit(Token().strVal[1]) << 4) + HexDigit(Token().strVal[2]);
+	color.red   = (HexDigit(Token().strVal[3]) << 4) + HexDigit(Token().strVal[4]);
+	color.green = (HexDigit(Token().strVal[5]) << 4) + HexDigit(Token().strVal[6]);
+	color.blue  = (HexDigit(Token().strVal[7]) << 4) + HexDigit(Token().strVal[8]);
 	ReadToken();
 }
 
@@ -228,12 +110,12 @@ void PictureReaderJson::ReadPoint(BPoint &pt)
 		bool x: 1;
 		bool y: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "x") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "x") {
 			ReadToken();
 			isSet.x = true;
 			pt.x = ReadReal();
-		} else if (fToken.strVal == "y") {
+		} else if (Token().strVal == "y") {
 			ReadToken();
 			isSet.y = true;
 			pt.y = ReadReal();
@@ -255,20 +137,20 @@ void PictureReaderJson::ReadRect(BRect &rect)
 		bool right: 1;
 		bool bottom: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "left") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "left") {
 			ReadToken();
 			isSet.left = true;
 			rect.left = ReadReal();
-		} else if (fToken.strVal == "top") {
+		} else if (Token().strVal == "top") {
 			ReadToken();
 			isSet.top = true;
 			rect.top = ReadReal();
-		} else if (fToken.strVal == "right") {
+		} else if (Token().strVal == "right") {
 			ReadToken();
 			isSet.right = true;
 			rect.right = ReadReal();
-		} else if (fToken.strVal == "bottom") {
+		} else if (Token().strVal == "bottom") {
 			ReadToken();
 			isSet.bottom = true;
 			rect.bottom = ReadReal();
@@ -290,12 +172,12 @@ void PictureReaderJson::ReadEscapementDelta(escapement_delta &delta)
 		bool nonspace: 1;
 		bool space: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "nonspace") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "nonspace") {
 			ReadToken();
 			isSet.nonspace = true;
 			delta.nonspace = ReadReal();
-		} else if (fToken.strVal == "space") {
+		} else if (Token().strVal == "space") {
 			ReadToken();
 			isSet.space = true;
 			delta.space = ReadReal();
@@ -311,27 +193,27 @@ void PictureReaderJson::ReadEscapementDelta(escapement_delta &delta)
 void PictureReaderJson::ReadShape(BShape &shape)
 {
 	AssumeToken(JsonTokenKind::StartArray); ReadToken();
-	while (fToken.kind != JsonTokenKind::EndArray) {
+	while (Token().kind != JsonTokenKind::EndArray) {
 		AssumeToken(JsonTokenKind::StartObject); ReadToken();
 		AssumeToken(JsonTokenKind::Key);
-		if (fToken.strVal == "MoveTo") {
+		if (Token().strVal == "MoveTo") {
 			ReadToken();
 			BPoint pt;
 			ReadPoint(pt);
 			shape.MoveTo(pt);
-		} else if (fToken.strVal == "LineTo") {
+		} else if (Token().strVal == "LineTo") {
 			ReadToken();
 			AssumeToken(JsonTokenKind::StartArray); ReadToken();
-			while (fToken.kind != JsonTokenKind::EndArray) {
+			while (Token().kind != JsonTokenKind::EndArray) {
 				BPoint pt;
 				ReadPoint(pt);
 				shape.LineTo(pt);
 			}
 			AssumeToken(JsonTokenKind::EndArray); ReadToken();
-		} else if (fToken.strVal == "BezierTo") {
+		} else if (Token().strVal == "BezierTo") {
 			ReadToken();
 			AssumeToken(JsonTokenKind::StartArray); ReadToken();
-			while (fToken.kind != JsonTokenKind::EndArray) {
+			while (Token().kind != JsonTokenKind::EndArray) {
 				BPoint pt1, pt2, pt3;
 				ReadPoint(pt1);
 				ReadPoint(pt2);
@@ -339,12 +221,12 @@ void PictureReaderJson::ReadShape(BShape &shape)
 				shape.BezierTo(pt1, pt2, pt3);
 			}
 			AssumeToken(JsonTokenKind::EndArray); ReadToken();
-		} else if (fToken.strVal == "Close") {
+		} else if (Token().strVal == "Close") {
 			ReadToken();
 			AssumeToken(JsonTokenKind::StartObject); ReadToken();
 			AssumeToken(JsonTokenKind::EndObject); ReadToken();
 			shape.Close();
-		} else if (fToken.strVal == "ArcTo") {
+		} else if (Token().strVal == "ArcTo") {
 			ReadToken();
 			AssumeToken(JsonTokenKind::StartObject); ReadToken();
 			float rx;
@@ -361,28 +243,28 @@ void PictureReaderJson::ReadShape(BShape &shape)
 				bool ccw: 1;
 				bool point: 1;
 			} isSet {};
-			while (fToken.kind == JsonTokenKind::Key) {
-				if (fToken.strVal == "rx") {
+			while (Token().kind == JsonTokenKind::Key) {
+				if (Token().strVal == "rx") {
 					ReadToken();
 					isSet.rx = true;
 					rx = ReadReal();
-				} else if (fToken.strVal == "ry") {
+				} else if (Token().strVal == "ry") {
 					ReadToken();
 					isSet.ry = true;
 					ry = ReadReal();
-				} else if (fToken.strVal == "angle") {
+				} else if (Token().strVal == "angle") {
 					ReadToken();
 					isSet.angle = true;
 					angle = ReadReal();
-				} else if (fToken.strVal == "largeArc") {
+				} else if (Token().strVal == "largeArc") {
 					ReadToken();
 					isSet.largeArc = true;
 					largeArc = ReadBool();
-				} else if (fToken.strVal == "ccw") {
+				} else if (Token().strVal == "ccw") {
 					ReadToken();
 					isSet.ccw = true;
 					ccw = ReadBool();
-				} else if (fToken.strVal == "point") {
+				} else if (Token().strVal == "point") {
 					ReadToken();
 					isSet.point = true;
 					ReadPoint(point);
@@ -408,19 +290,19 @@ void PictureReaderJson::ReadGradientStops(BGradient &gradient)
 {
 	AssumeToken(JsonTokenKind::StartArray); ReadToken();
 	int32 i = 0;
-	while (fToken.kind != JsonTokenKind::EndArray) {
+	while (Token().kind != JsonTokenKind::EndArray) {
 		AssumeToken(JsonTokenKind::StartObject); ReadToken();
 		BGradient::ColorStop cs;
 		struct {
 			bool color: 1;
 			bool offset: 1;
 		} isSet {};
-		while (fToken.kind == JsonTokenKind::Key) {
-			if (fToken.strVal == "color") {
+		while (Token().kind == JsonTokenKind::Key) {
+			if (Token().strVal == "color") {
 				ReadToken();
 				isSet.color = true;
 				ReadColor(cs.color);
-			} else if (fToken.strVal == "offset") {
+			} else if (Token().strVal == "offset") {
 				ReadToken();
 				isSet.offset = true;
 				cs.offset = ReadReal();
@@ -440,7 +322,7 @@ void PictureReaderJson::ReadGradient(ObjectDeleter<BGradient> &outGradient)
 {
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 	AssumeToken(JsonTokenKind::Key);
-	if (fToken.strVal == "BGradientLinear") {
+	if (Token().strVal == "BGradientLinear") {
 		ReadToken();
 		AssumeToken(JsonTokenKind::StartObject); ReadToken();
 		ObjectDeleter<BGradientLinear> gradient(new BGradientLinear());
@@ -449,18 +331,18 @@ void PictureReaderJson::ReadGradient(ObjectDeleter<BGradient> &outGradient)
 			bool start: 1;
 			bool end: 1;
 		} isSet {};
-		while (fToken.kind == JsonTokenKind::Key) {
-			if (fToken.strVal == "stops") {
+		while (Token().kind == JsonTokenKind::Key) {
+			if (Token().strVal == "stops") {
 				ReadToken();
 				isSet.stops = true;
 				ReadGradientStops(*gradient.Get());
-			} else if (fToken.strVal == "start") {
+			} else if (Token().strVal == "start") {
 				ReadToken();
 				isSet.start = true;
 				BPoint start;
 				ReadPoint(start);
 				gradient->SetStart(start);
-			} else if (fToken.strVal == "end") {
+			} else if (Token().strVal == "end") {
 				ReadToken();
 				isSet.end = true;
 				BPoint end;
@@ -475,7 +357,7 @@ void PictureReaderJson::ReadGradient(ObjectDeleter<BGradient> &outGradient)
 		Assume(isSet.end);
 		AssumeToken(JsonTokenKind::EndObject); ReadToken();
 		outGradient.SetTo(gradient.Detach());
-	} else if (fToken.strVal == "BGradientRadial") {
+	} else if (Token().strVal == "BGradientRadial") {
 		ReadToken();
 		AssumeToken(JsonTokenKind::StartObject); ReadToken();
 		ObjectDeleter<BGradientRadial> gradient(new BGradientRadial());
@@ -484,18 +366,18 @@ void PictureReaderJson::ReadGradient(ObjectDeleter<BGradient> &outGradient)
 			bool center: 1;
 			bool radius: 1;
 		} isSet {};
-		while (fToken.kind == JsonTokenKind::Key) {
-			if (fToken.strVal == "stops") {
+		while (Token().kind == JsonTokenKind::Key) {
+			if (Token().strVal == "stops") {
 				ReadToken();
 				isSet.stops = true;
 				ReadGradientStops(*gradient.Get());
-			} else if (fToken.strVal == "center") {
+			} else if (Token().strVal == "center") {
 				ReadToken();
 				isSet.center = true;
 				BPoint center;
 				ReadPoint(center);
 				gradient->SetCenter(center);
-			} else if (fToken.strVal == "radius") {
+			} else if (Token().strVal == "radius") {
 				ReadToken();
 				isSet.radius = true;
 				float radius = ReadReal();
@@ -509,7 +391,7 @@ void PictureReaderJson::ReadGradient(ObjectDeleter<BGradient> &outGradient)
 		Assume(isSet.radius);
 		AssumeToken(JsonTokenKind::EndObject); ReadToken();
 		outGradient.SetTo(gradient.Detach());
-	} else if (fToken.strVal == "BGradientRadialFocus") {
+	} else if (Token().strVal == "BGradientRadialFocus") {
 		ReadToken();
 		AssumeToken(JsonTokenKind::StartObject); ReadToken();
 		ObjectDeleter<BGradientRadialFocus> gradient(new BGradientRadialFocus());
@@ -519,24 +401,24 @@ void PictureReaderJson::ReadGradient(ObjectDeleter<BGradient> &outGradient)
 			bool focus: 1;
 			bool radius: 1;
 		} isSet {};
-		while (fToken.kind == JsonTokenKind::Key) {
-			if (fToken.strVal == "stops") {
+		while (Token().kind == JsonTokenKind::Key) {
+			if (Token().strVal == "stops") {
 				ReadToken();
 				isSet.stops = true;
 				ReadGradientStops(*gradient.Get());
-			} else if (fToken.strVal == "center") {
+			} else if (Token().strVal == "center") {
 				ReadToken();
 				isSet.center = true;
 				BPoint center;
 				ReadPoint(center);
 				gradient->SetCenter(center);
-			} else if (fToken.strVal == "focus") {
+			} else if (Token().strVal == "focus") {
 				ReadToken();
 				isSet.focus = true;
 				BPoint focus;
 				ReadPoint(focus);
 				gradient->SetFocal(focus);
-			} else if (fToken.strVal == "radius") {
+			} else if (Token().strVal == "radius") {
 				ReadToken();
 				isSet.radius = true;
 				float radius = ReadReal();
@@ -551,7 +433,7 @@ void PictureReaderJson::ReadGradient(ObjectDeleter<BGradient> &outGradient)
 		Assume(isSet.radius);
 		AssumeToken(JsonTokenKind::EndObject); ReadToken();
 		outGradient.SetTo(gradient.Detach());
-	} else if (fToken.strVal == "BGradientDiamond") {
+	} else if (Token().strVal == "BGradientDiamond") {
 		ReadToken();
 		AssumeToken(JsonTokenKind::StartObject); ReadToken();
 		ObjectDeleter<BGradientDiamond> gradient(new BGradientDiamond());
@@ -559,12 +441,12 @@ void PictureReaderJson::ReadGradient(ObjectDeleter<BGradient> &outGradient)
 			bool stops: 1;
 			bool center: 1;
 		} isSet {};
-		while (fToken.kind == JsonTokenKind::Key) {
-			if (fToken.strVal == "stops") {
+		while (Token().kind == JsonTokenKind::Key) {
+			if (Token().strVal == "stops") {
 				ReadToken();
 				isSet.stops = true;
 				ReadGradientStops(*gradient.Get());
-			} else if (fToken.strVal == "center") {
+			} else if (Token().strVal == "center") {
 				ReadToken();
 				isSet.center = true;
 				BPoint center;
@@ -578,7 +460,7 @@ void PictureReaderJson::ReadGradient(ObjectDeleter<BGradient> &outGradient)
 		Assume(isSet.center);
 		AssumeToken(JsonTokenKind::EndObject); ReadToken();
 		outGradient.SetTo(gradient.Detach());
-	} else if (fToken.strVal == "BGradientConic") {
+	} else if (Token().strVal == "BGradientConic") {
 		ReadToken();
 		AssumeToken(JsonTokenKind::StartObject); ReadToken();
 		ObjectDeleter<BGradientConic> gradient(new BGradientConic());
@@ -587,18 +469,18 @@ void PictureReaderJson::ReadGradient(ObjectDeleter<BGradient> &outGradient)
 			bool center: 1;
 			bool angle: 1;
 		} isSet {};
-		while (fToken.kind == JsonTokenKind::Key) {
-			if (fToken.strVal == "stops") {
+		while (Token().kind == JsonTokenKind::Key) {
+			if (Token().strVal == "stops") {
 				ReadToken();
 				isSet.stops = true;
 				ReadGradientStops(*gradient.Get());
-			} else if (fToken.strVal == "center") {
+			} else if (Token().strVal == "center") {
 				ReadToken();
 				isSet.center = true;
 				BPoint center;
 				ReadPoint(center);
 				gradient->SetCenter(center);
-			} else if (fToken.strVal == "angle") {
+			} else if (Token().strVal == "angle") {
 				ReadToken();
 				isSet.angle = true;
 				float angle = ReadReal();
@@ -621,103 +503,103 @@ void PictureReaderJson::ReadGradient(ObjectDeleter<BGradient> &outGradient)
 void PictureReaderJson::ReadColorSpace(color_space &val)
 {
 	AssumeToken(JsonTokenKind::String);
-	if (fToken.strVal == "B_NO_COLOR_SPACE") {
+	if (Token().strVal == "B_NO_COLOR_SPACE") {
 		val = B_NO_COLOR_SPACE;
-	} else if (fToken.strVal == "B_RGBA64") {
+	} else if (Token().strVal == "B_RGBA64") {
 		val = B_RGBA64;
-	} else if (fToken.strVal == "B_RGB48") {
+	} else if (Token().strVal == "B_RGB48") {
 		val = B_RGB48;
-	} else if (fToken.strVal == "B_RGB32") {
+	} else if (Token().strVal == "B_RGB32") {
 		val = B_RGB32;
-	} else if (fToken.strVal == "B_RGBA32") {
+	} else if (Token().strVal == "B_RGBA32") {
 		val = B_RGBA32;
-	} else if (fToken.strVal == "B_RGB24") {
+	} else if (Token().strVal == "B_RGB24") {
 		val = B_RGB24;
-	} else if (fToken.strVal == "B_RGB16") {
+	} else if (Token().strVal == "B_RGB16") {
 		val = B_RGB16;
-	} else if (fToken.strVal == "B_RGB15") {
+	} else if (Token().strVal == "B_RGB15") {
 		val = B_RGB15;
-	} else if (fToken.strVal == "B_RGBA15") {
+	} else if (Token().strVal == "B_RGBA15") {
 		val = B_RGBA15;
-	} else if (fToken.strVal == "B_CMAP8") {
+	} else if (Token().strVal == "B_CMAP8") {
 		val = B_CMAP8;
-	} else if (fToken.strVal == "B_GRAY8") {
+	} else if (Token().strVal == "B_GRAY8") {
 		val = B_GRAY8;
-	} else if (fToken.strVal == "B_GRAY1") {
+	} else if (Token().strVal == "B_GRAY1") {
 		val = B_GRAY1;
-	} else if (fToken.strVal == "B_RGBA64_BIG") {
+	} else if (Token().strVal == "B_RGBA64_BIG") {
 		val = B_RGBA64_BIG;
-	} else if (fToken.strVal == "B_RGB48_BIG") {
+	} else if (Token().strVal == "B_RGB48_BIG") {
 		val = B_RGB48_BIG;
-	} else if (fToken.strVal == "B_RGB32_BIG") {
+	} else if (Token().strVal == "B_RGB32_BIG") {
 		val = B_RGB32_BIG;
-	} else if (fToken.strVal == "B_RGBA32_BIG") {
+	} else if (Token().strVal == "B_RGBA32_BIG") {
 		val = B_RGBA32_BIG;
-	} else if (fToken.strVal == "B_RGB24_BIG") {
+	} else if (Token().strVal == "B_RGB24_BIG") {
 		val = B_RGB24_BIG;
-	} else if (fToken.strVal == "B_RGB16_BIG") {
+	} else if (Token().strVal == "B_RGB16_BIG") {
 		val = B_RGB16_BIG;
-	} else if (fToken.strVal == "B_RGB15_BIG") {
+	} else if (Token().strVal == "B_RGB15_BIG") {
 		val = B_RGB15_BIG;
-	} else if (fToken.strVal == "B_RGBA15_BIG") {
+	} else if (Token().strVal == "B_RGBA15_BIG") {
 		val = B_RGBA15_BIG;
-	} else if (fToken.strVal == "B_YCbCr422") {
+	} else if (Token().strVal == "B_YCbCr422") {
 		val = B_YCbCr422;
-	} else if (fToken.strVal == "B_YCbCr411") {
+	} else if (Token().strVal == "B_YCbCr411") {
 		val = B_YCbCr411;
-	} else if (fToken.strVal == "B_YCbCr444") {
+	} else if (Token().strVal == "B_YCbCr444") {
 		val = B_YCbCr444;
-	} else if (fToken.strVal == "B_YCbCr420") {
+	} else if (Token().strVal == "B_YCbCr420") {
 		val = B_YCbCr420;
-	} else if (fToken.strVal == "B_YUV422") {
+	} else if (Token().strVal == "B_YUV422") {
 		val = B_YUV422;
-	} else if (fToken.strVal == "B_YUV411") {
+	} else if (Token().strVal == "B_YUV411") {
 		val = B_YUV411;
-	} else if (fToken.strVal == "B_YUV444") {
+	} else if (Token().strVal == "B_YUV444") {
 		val = B_YUV444;
-	} else if (fToken.strVal == "B_YUV420") {
+	} else if (Token().strVal == "B_YUV420") {
 		val = B_YUV420;
-	} else if (fToken.strVal == "B_YUV9") {
+	} else if (Token().strVal == "B_YUV9") {
 		val = B_YUV9;
-	} else if (fToken.strVal == "B_YUV12") {
+	} else if (Token().strVal == "B_YUV12") {
 		val = B_YUV12;
-	} else if (fToken.strVal == "B_UVL24") {
+	} else if (Token().strVal == "B_UVL24") {
 		val = B_UVL24;
-	} else if (fToken.strVal == "B_UVL32") {
+	} else if (Token().strVal == "B_UVL32") {
 		val = B_UVL32;
-	} else if (fToken.strVal == "B_UVLA32") {
+	} else if (Token().strVal == "B_UVLA32") {
 		val = B_UVLA32;
-	} else if (fToken.strVal == "B_LAB24") {
+	} else if (Token().strVal == "B_LAB24") {
 		val = B_LAB24;
-	} else if (fToken.strVal == "B_LAB32") {
+	} else if (Token().strVal == "B_LAB32") {
 		val = B_LAB32;
-	} else if (fToken.strVal == "B_LABA32") {
+	} else if (Token().strVal == "B_LABA32") {
 		val = B_LABA32;
-	} else if (fToken.strVal == "B_HSI24") {
+	} else if (Token().strVal == "B_HSI24") {
 		val = B_HSI24;
-	} else if (fToken.strVal == "B_HSI32") {
+	} else if (Token().strVal == "B_HSI32") {
 		val = B_HSI32;
-	} else if (fToken.strVal == "B_HSIA32") {
+	} else if (Token().strVal == "B_HSIA32") {
 		val = B_HSIA32;
-	} else if (fToken.strVal == "B_HSV24") {
+	} else if (Token().strVal == "B_HSV24") {
 		val = B_HSV24;
-	} else if (fToken.strVal == "B_HSV32") {
+	} else if (Token().strVal == "B_HSV32") {
 		val = B_HSV32;
-	} else if (fToken.strVal == "B_HSVA32") {
+	} else if (Token().strVal == "B_HSVA32") {
 		val = B_HSVA32;
-	} else if (fToken.strVal == "B_HLS24") {
+	} else if (Token().strVal == "B_HLS24") {
 		val = B_HLS24;
-	} else if (fToken.strVal == "B_HLS32") {
+	} else if (Token().strVal == "B_HLS32") {
 		val = B_HLS32;
-	} else if (fToken.strVal == "B_HLSA32") {
+	} else if (Token().strVal == "B_HLSA32") {
 		val = B_HLSA32;
-	} else if (fToken.strVal == "B_CMY24") {
+	} else if (Token().strVal == "B_CMY24") {
 		val = B_CMY24;
-	} else if (fToken.strVal == "B_CMY32") {
+	} else if (Token().strVal == "B_CMY32") {
 		val = B_CMY32;
-	} else if (fToken.strVal == "B_CMYA32") {
+	} else if (Token().strVal == "B_CMYA32") {
 		val = B_CMYA32;
-	} else if (fToken.strVal == "B_CMYK32") {
+	} else if (Token().strVal == "B_CMYK32") {
 		val = B_CMYK32;
 	} else {
 		RaiseError();
@@ -739,12 +621,12 @@ void PictureReaderJson::ReadPicture(PictureVisitor &vis)
 
 	AssumeToken(JsonTokenKind::StartObject); ReadToken();
 
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "version") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "version") {
 			ReadToken();
 			isSet.version = true;
 			version = ReadInt32();
-		} else if (fToken.strVal == "endian") {
+		} else if (Token().strVal == "endian") {
 			ReadToken();
 			isSet.endian = true;
 			endian = ReadInt32();
@@ -756,18 +638,18 @@ void PictureReaderJson::ReadPicture(PictureVisitor &vis)
 	// Assume(isSet.endian);
 	vis.EnterPicture(version, endian);
 
-	if (fToken.kind == JsonTokenKind::Key && fToken.strVal == "pictures") {
+	if (Token().kind == JsonTokenKind::Key && Token().strVal == "pictures") {
 		ReadToken();
 		AssumeToken(JsonTokenKind::StartArray); ReadToken();
 		vis.EnterPictures(-1);
-		while (fToken.kind == JsonTokenKind::StartObject) {
+		while (Token().kind == JsonTokenKind::StartObject) {
 			ReadPicture(vis);
 		}
 		AssumeToken(JsonTokenKind::EndArray); ReadToken();
 		vis.ExitPictures();
 	}
 
-	if (fToken.kind == JsonTokenKind::Key && fToken.strVal == "ops") {
+	if (Token().kind == JsonTokenKind::Key && Token().strVal == "ops") {
 		ReadToken();
 		vis.EnterOps();
 		ReadOps(vis);
@@ -781,214 +663,214 @@ void PictureReaderJson::ReadPicture(PictureVisitor &vis)
 void PictureReaderJson::ReadOps(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartArray); ReadToken();
-	while (fToken.kind == JsonTokenKind::StartObject) {
+	while (Token().kind == JsonTokenKind::StartObject) {
 		ReadToken();
 		AssumeToken(JsonTokenKind::Key);
-		if (fToken.strVal == "MOVE_PEN_BY") {
+		if (Token().strVal == "MOVE_PEN_BY") {
 			ReadToken();
 			ReadMovePenBy(vis);
-		} else if (fToken.strVal == "STROKE_LINE") {
+		} else if (Token().strVal == "STROKE_LINE") {
 			ReadToken();
 			ReadStrokeLine(vis);
-		} else if (fToken.strVal == "STROKE_RECT") {
+		} else if (Token().strVal == "STROKE_RECT") {
 			ReadToken();
 			ReadStrokeRect(vis);
-		} else if (fToken.strVal == "FILL_RECT") {
+		} else if (Token().strVal == "FILL_RECT") {
 			ReadToken();
 			ReadFillRect(vis);
-		} else if (fToken.strVal == "STROKE_ROUND_RECT") {
+		} else if (Token().strVal == "STROKE_ROUND_RECT") {
 			ReadToken();
 			ReadStrokeRoundRect(vis);
-		} else if (fToken.strVal == "FILL_ROUND_RECT") {
+		} else if (Token().strVal == "FILL_ROUND_RECT") {
 			ReadToken();
 			ReadFillRoundRect(vis);
-		} else if (fToken.strVal == "STROKE_BEZIER") {
+		} else if (Token().strVal == "STROKE_BEZIER") {
 			ReadToken();
 			ReadStrokeBezier(vis);
-		} else if (fToken.strVal == "FILL_BEZIER") {
+		} else if (Token().strVal == "FILL_BEZIER") {
 			ReadToken();
 			ReadFillBezier(vis);
-		} else if (fToken.strVal == "STROKE_POLYGON") {
+		} else if (Token().strVal == "STROKE_POLYGON") {
 			ReadToken();
 			ReadStrokePolygon(vis);
-		} else if (fToken.strVal == "FILL_POLYGON") {
+		} else if (Token().strVal == "FILL_POLYGON") {
 			ReadToken();
 			ReadFillPolygon(vis);
-		} else if (fToken.strVal == "STROKE_SHAPE") {
+		} else if (Token().strVal == "STROKE_SHAPE") {
 			ReadToken();
 			ReadStrokeShape(vis);
-		} else if (fToken.strVal == "FILL_SHAPE") {
+		} else if (Token().strVal == "FILL_SHAPE") {
 			ReadToken();
 			ReadFillShape(vis);
-		} else if (fToken.strVal == "DRAW_STRING") {
+		} else if (Token().strVal == "DRAW_STRING") {
 			ReadToken();
 			ReadDrawString(vis);
-		} else if (fToken.strVal == "DRAW_PIXELS") {
+		} else if (Token().strVal == "DRAW_PIXELS") {
 			ReadToken();
 			ReadDrawBitmap(vis);
-		} else if (fToken.strVal == "DRAW_PICTURE") {
+		} else if (Token().strVal == "DRAW_PICTURE") {
 			ReadToken();
 			ReadDrawPicture(vis);
-		} else if (fToken.strVal == "STROKE_ARC") {
+		} else if (Token().strVal == "STROKE_ARC") {
 			ReadToken();
 			ReadStrokeArc(vis);
-		} else if (fToken.strVal == "FILL_ARC") {
+		} else if (Token().strVal == "FILL_ARC") {
 			ReadToken();
 			ReadFillArc(vis);
-		} else if (fToken.strVal == "STROKE_ELLIPSE") {
+		} else if (Token().strVal == "STROKE_ELLIPSE") {
 			ReadToken();
 			ReadStrokeEllipse(vis);
-		} else if (fToken.strVal == "FILL_ELLIPSE") {
+		} else if (Token().strVal == "FILL_ELLIPSE") {
 			ReadToken();
 			ReadFillEllipse(vis);
-		} else if (fToken.strVal == "DRAW_STRING_LOCATIONS") {
+		} else if (Token().strVal == "DRAW_STRING_LOCATIONS") {
 			ReadToken();
 			ReadDrawStringLocations(vis);
-		} else if (fToken.strVal == "STROKE_RECT_GRADIENT") {
+		} else if (Token().strVal == "STROKE_RECT_GRADIENT") {
 			ReadToken();
 			ReadStrokeRectGradient(vis);
-		} else if (fToken.strVal == "FILL_RECT_GRADIENT") {
+		} else if (Token().strVal == "FILL_RECT_GRADIENT") {
 			ReadToken();
 			ReadFillRectGradient(vis);
-		} else if (fToken.strVal == "STROKE_ROUND_RECT_GRADIENT") {
+		} else if (Token().strVal == "STROKE_ROUND_RECT_GRADIENT") {
 			ReadToken();
 			ReadStrokeRoundRectGradient(vis);
-		} else if (fToken.strVal == "FILL_ROUND_RECT_GRADIENT") {
+		} else if (Token().strVal == "FILL_ROUND_RECT_GRADIENT") {
 			ReadToken();
 			ReadFillRoundRectGradient(vis);
-		} else if (fToken.strVal == "STROKE_BEZIER_GRADIENT") {
+		} else if (Token().strVal == "STROKE_BEZIER_GRADIENT") {
 			ReadToken();
 			ReadStrokeBezierGradient(vis);
-		} else if (fToken.strVal == "FILL_BEZIER_GRADIENT") {
+		} else if (Token().strVal == "FILL_BEZIER_GRADIENT") {
 			ReadToken();
 			ReadFillBezierGradient(vis);
-		} else if (fToken.strVal == "STROKE_POLYGON_GRADIENT") {
+		} else if (Token().strVal == "STROKE_POLYGON_GRADIENT") {
 			ReadToken();
 			ReadStrokePolygonGradient(vis);
-		} else if (fToken.strVal == "FILL_POLYGON_GRADIENT") {
+		} else if (Token().strVal == "FILL_POLYGON_GRADIENT") {
 			ReadToken();
 			ReadFillPolygonGradient(vis);
-		} else if (fToken.strVal == "STROKE_SHAPE_GRADIENT") {
+		} else if (Token().strVal == "STROKE_SHAPE_GRADIENT") {
 			ReadToken();
 			ReadStrokeShapeGradient(vis);
-		} else if (fToken.strVal == "FILL_SHAPE_GRADIENT") {
+		} else if (Token().strVal == "FILL_SHAPE_GRADIENT") {
 			ReadToken();
 			ReadFillShapeGradient(vis);
-		} else if (fToken.strVal == "STROKE_ARC_GRADIENT") {
+		} else if (Token().strVal == "STROKE_ARC_GRADIENT") {
 			ReadToken();
 			ReadStrokeArcGradient(vis);
-		} else if (fToken.strVal == "FILL_ARC_GRADIENT") {
+		} else if (Token().strVal == "FILL_ARC_GRADIENT") {
 			ReadToken();
 			ReadFillArcGradient(vis);
-		} else if (fToken.strVal == "STROKE_ELLIPSE_GRADIENT") {
+		} else if (Token().strVal == "STROKE_ELLIPSE_GRADIENT") {
 			ReadToken();
 			ReadStrokeEllipseGradient(vis);
-		} else if (fToken.strVal == "FILL_ELLIPSE_GRADIENT") {
+		} else if (Token().strVal == "FILL_ELLIPSE_GRADIENT") {
 			ReadToken();
 			ReadFillEllipseGradient(vis);
-		} else if (fToken.strVal == "ENTER_STATE_CHANGE") {
+		} else if (Token().strVal == "ENTER_STATE_CHANGE") {
 			ReadToken();
 			ReadEnterStateChange(vis);
-		} else if (fToken.strVal == "SET_CLIPPING_RECTS") {
+		} else if (Token().strVal == "SET_CLIPPING_RECTS") {
 			ReadToken();
 			ReadSetClipping(vis);
-		} else if (fToken.strVal == "CLIP_TO_PICTURE") {
+		} else if (Token().strVal == "CLIP_TO_PICTURE") {
 			ReadToken();
 			ReadClipToPicture(vis);
-		} else if (fToken.strVal == "GROUP") {
+		} else if (Token().strVal == "GROUP") {
 			ReadToken();
 			ReadGroup(vis);
-		} else if (fToken.strVal == "CLEAR_CLIPPING_RECTS") {
+		} else if (Token().strVal == "CLEAR_CLIPPING_RECTS") {
 			ReadToken();
 			ReadClearClipping(vis);
-		} else if (fToken.strVal == "CLIP_TO_RECT") {
+		} else if (Token().strVal == "CLIP_TO_RECT") {
 			ReadToken();
 			ReadClipToRect(vis);
-		} else if (fToken.strVal == "CLIP_TO_SHAPE") {
+		} else if (Token().strVal == "CLIP_TO_SHAPE") {
 			ReadToken();
 			ReadClipToShape(vis);
-		} else if (fToken.strVal == "SET_ORIGIN") {
+		} else if (Token().strVal == "SET_ORIGIN") {
 			ReadToken();
 			ReadSetOrigin(vis);
-		} else if (fToken.strVal == "SET_PEN_LOCATION") {
+		} else if (Token().strVal == "SET_PEN_LOCATION") {
 			ReadToken();
 			ReadSetPenLocation(vis);
-		} else if (fToken.strVal == "SET_DRAWING_MODE") {
+		} else if (Token().strVal == "SET_DRAWING_MODE") {
 			ReadToken();
 			ReadSetDrawingMode(vis);
-		} else if (fToken.strVal == "SET_LINE_MODE") {
+		} else if (Token().strVal == "SET_LINE_MODE") {
 			ReadToken();
 			ReadSetLineMode(vis);
-		} else if (fToken.strVal == "SET_PEN_SIZE") {
+		} else if (Token().strVal == "SET_PEN_SIZE") {
 			ReadToken();
 			ReadSetPenSize(vis);
-		} else if (fToken.strVal == "SET_SCALE") {
+		} else if (Token().strVal == "SET_SCALE") {
 			ReadToken();
 			ReadSetScale(vis);
-		} else if (fToken.strVal == "SET_FORE_COLOR") {
+		} else if (Token().strVal == "SET_FORE_COLOR") {
 			ReadToken();
 			ReadSetHighColor(vis);
-		} else if (fToken.strVal == "SET_BACK_COLOR") {
+		} else if (Token().strVal == "SET_BACK_COLOR") {
 			ReadToken();
 			ReadSetLowColor(vis);
-		} else if (fToken.strVal == "SET_STIPLE_PATTERN") {
+		} else if (Token().strVal == "SET_STIPLE_PATTERN") {
 			ReadToken();
 			ReadSetPattern(vis);
-		} else if (fToken.strVal == "ENTER_FONT_STATE") {
+		} else if (Token().strVal == "ENTER_FONT_STATE") {
 			ReadToken();
 			ReadEnterFontState(vis);
-		} else if (fToken.strVal == "SET_BLENDING_MODE") {
+		} else if (Token().strVal == "SET_BLENDING_MODE") {
 			ReadToken();
 			ReadSetBlendingMode(vis);
-		} else if (fToken.strVal == "SET_FILL_RULE") {
+		} else if (Token().strVal == "SET_FILL_RULE") {
 			ReadToken();
 			ReadSetFillRule(vis);
-		} else if (fToken.strVal == "SET_FONT_FAMILY") {
+		} else if (Token().strVal == "SET_FONT_FAMILY") {
 			ReadToken();
 			ReadSetFontFamily(vis);
-		} else if (fToken.strVal == "SET_FONT_STYLE") {
+		} else if (Token().strVal == "SET_FONT_STYLE") {
 			ReadToken();
 			ReadSetFontStyle(vis);
-		} else if (fToken.strVal == "SET_FONT_SPACING") {
+		} else if (Token().strVal == "SET_FONT_SPACING") {
 			ReadToken();
 			ReadSetFontSpacing(vis);
-		} else if (fToken.strVal == "SET_FONT_ENCODING") {
+		} else if (Token().strVal == "SET_FONT_ENCODING") {
 			ReadToken();
 			ReadSetFontEncoding(vis);
-		} else if (fToken.strVal == "SET_FONT_FLAGS") {
+		} else if (Token().strVal == "SET_FONT_FLAGS") {
 			ReadToken();
 			ReadSetFontFlags(vis);
-		} else if (fToken.strVal == "SET_FONT_SIZE") {
+		} else if (Token().strVal == "SET_FONT_SIZE") {
 			ReadToken();
 			ReadSetFontSize(vis);
-		} else if (fToken.strVal == "SET_FONT_ROTATE") {
+		} else if (Token().strVal == "SET_FONT_ROTATE") {
 			ReadToken();
 			ReadSetFontRotation(vis);
-		} else if (fToken.strVal == "SET_FONT_SHEAR") {
+		} else if (Token().strVal == "SET_FONT_SHEAR") {
 			ReadToken();
 			ReadSetFontShear(vis);
-		} else if (fToken.strVal == "SET_FONT_BPP") {
+		} else if (Token().strVal == "SET_FONT_BPP") {
 			ReadToken();
 			ReadSetFontBpp(vis);
-		} else if (fToken.strVal == "SET_FONT_FACE") {
+		} else if (Token().strVal == "SET_FONT_FACE") {
 			ReadToken();
 			ReadSetFontFace(vis);
-		} else if (fToken.strVal == "SET_FONT_FALSE_BOLD_WIDTH") {
+		} else if (Token().strVal == "SET_FONT_FALSE_BOLD_WIDTH") {
 			ReadToken();
 			ReadSetFontFalseBoldWidth(vis);
-		} else if (fToken.strVal == "SET_TRANSFORM") {
+		} else if (Token().strVal == "SET_TRANSFORM") {
 			ReadToken();
 			ReadSetTransform(vis);
-		} else if (fToken.strVal == "AFFINE_TRANSLATE") {
+		} else if (Token().strVal == "AFFINE_TRANSLATE") {
 			ReadToken();
 			ReadTranslateBy(vis);
-		} else if (fToken.strVal == "AFFINE_SCALE") {
+		} else if (Token().strVal == "AFFINE_SCALE") {
 			ReadToken();
 			ReadScaleBy(vis);
-		} else if (fToken.strVal == "AFFINE_ROTATE") {
+		} else if (Token().strVal == "AFFINE_ROTATE") {
 			ReadToken();
 			ReadRotateBy(vis);
-		} else if (fToken.strVal == "BLEND_LAYER") {
+		} else if (Token().strVal == "BLEND_LAYER") {
 			ReadToken();
 			ReadBlendLayer(vis);
 		} else {
@@ -1017,12 +899,12 @@ void PictureReaderJson::ReadStrokeLine(PictureVisitor &vis)
 		bool start: 1;
 		bool end: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "start") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "start") {
 			ReadToken();
 			isSet.start = true;
 			ReadPoint(start);
-		} else if (fToken.strVal == "end") {
+		} else if (Token().strVal == "end") {
 			ReadToken();
 			isSet.end = true;
 			ReadPoint(end);
@@ -1059,12 +941,12 @@ void PictureReaderJson::ReadStrokeRoundRect(PictureVisitor &vis)
 		bool rect: 1;
 		bool radius: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "rect") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "rect") {
 			ReadToken();
 			isSet.rect = true;
 			ReadRect(rect);
-		} else if (fToken.strVal == "radius") {
+		} else if (Token().strVal == "radius") {
 			ReadToken();
 			isSet.radius = true;
 			ReadPoint(radius);
@@ -1087,12 +969,12 @@ void PictureReaderJson::ReadFillRoundRect(PictureVisitor &vis)
 		bool rect: 1;
 		bool radius: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "rect") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "rect") {
 			ReadToken();
 			isSet.rect = true;
 			ReadRect(rect);
-		} else if (fToken.strVal == "radius") {
+		} else if (Token().strVal == "radius") {
 			ReadToken();
 			isSet.radius = true;
 			ReadPoint(radius);
@@ -1137,18 +1019,18 @@ void PictureReaderJson::ReadStrokePolygon(PictureVisitor &vis)
 		bool points: 1;
 		bool isClosed: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "points") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "points") {
 			ReadToken();
 			isSet.points = true;
 			AssumeToken(JsonTokenKind::StartArray); ReadToken();
-			while (fToken.kind != JsonTokenKind::EndArray) {
+			while (Token().kind != JsonTokenKind::EndArray) {
 				BPoint pt;
 				ReadPoint(pt);
 				points.push_back(pt);
 			}
 			AssumeToken(JsonTokenKind::EndArray); ReadToken();
-		} else if (fToken.strVal == "isClosed") {
+		} else if (Token().strVal == "isClosed") {
 			ReadToken();
 			isSet.isClosed = true;
 			isClosed = ReadBool();
@@ -1166,7 +1048,7 @@ void PictureReaderJson::ReadFillPolygon(PictureVisitor &vis)
 {
 	std::vector<BPoint> points;
 	AssumeToken(JsonTokenKind::StartArray); ReadToken();
-	while (fToken.kind != JsonTokenKind::EndArray) {
+	while (Token().kind != JsonTokenKind::EndArray) {
 		BPoint pt;
 		ReadPoint(pt);
 		points.push_back(pt);
@@ -1197,16 +1079,15 @@ void PictureReaderJson::ReadDrawString(PictureVisitor &vis)
 	struct {
 		bool string: 1;
 		bool delta: 1;
-		bool escapementNonSpace: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "string") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "string") {
 			ReadToken();
 			isSet.string = true;
 			AssumeToken(JsonTokenKind::String);
-			string = fToken.strVal;
+			string = Token().strVal;
 			ReadToken();
-		} else if (fToken.strVal == "delta") {
+		} else if (Token().strVal == "delta") {
 			ReadToken();
 			isSet.delta = true;
 			ReadEscapementDelta(delta);
@@ -1243,40 +1124,40 @@ void PictureReaderJson::ReadDrawBitmap(PictureVisitor &vis)
 		bool data: 1;
 	} isSet {};
 
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "sourceRect") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "sourceRect") {
 			ReadToken();
 			isSet.sourceRect = true;
 			ReadRect(sourceRect);
-		} else if (fToken.strVal == "destinationRect") {
+		} else if (Token().strVal == "destinationRect") {
 			ReadToken();
 			isSet.destinationRect = true;
 			ReadRect(destinationRect);
-		} else if (fToken.strVal == "width") {
+		} else if (Token().strVal == "width") {
 			ReadToken();
 			isSet.width = true;
 			width = ReadInt32();
-		} else if (fToken.strVal == "height") {
+		} else if (Token().strVal == "height") {
 			ReadToken();
 			isSet.height = true;
 			height = ReadInt32();
-		} else if (fToken.strVal == "bytesPerRow") {
+		} else if (Token().strVal == "bytesPerRow") {
 			ReadToken();
 			isSet.bytesPerRow = true;
 			bytesPerRow = ReadInt32();
-		} else if (fToken.strVal == "colorSpace") {
+		} else if (Token().strVal == "colorSpace") {
 			ReadToken();
 			isSet.colorSpace = true;
 			ReadColorSpace(colorSpace);
-		} else if (fToken.strVal == "flags") {
+		} else if (Token().strVal == "flags") {
 			ReadToken();
 			isSet.flags = true;
 			flags = ReadInt32();
-		} else if (fToken.strVal == "data") {
+		} else if (Token().strVal == "data") {
 			ReadToken();
 			isSet.data = true;
 			AssumeToken(JsonTokenKind::StartArray); ReadToken();
-			while (fToken.kind != JsonTokenKind::EndArray) {
+			while (Token().kind != JsonTokenKind::EndArray) {
 				uint8 val = ReadUint8();
 				data.push_back(val);
 			}
@@ -1319,12 +1200,12 @@ void PictureReaderJson::ReadDrawPicture(PictureVisitor &vis)
 		bool where: 1;
 		bool token: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "where") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "where") {
 			ReadToken();
 			isSet.where = true;
 			ReadPoint(where);
-		} else if (fToken.strVal == "token") {
+		} else if (Token().strVal == "token") {
 			ReadToken();
 			isSet.token = true;
 			token = ReadInt32();
@@ -1351,20 +1232,20 @@ void PictureReaderJson::ReadStrokeArc(PictureVisitor &vis)
 		bool startTheta: 1;
 		bool arcTheta: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "center") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "center") {
 			ReadToken();
 			isSet.center = true;
 			ReadPoint(center);
-		} else if (fToken.strVal == "radius") {
+		} else if (Token().strVal == "radius") {
 			ReadToken();
 			isSet.radius = true;
 			ReadPoint(radius);
-		} else if (fToken.strVal == "startTheta") {
+		} else if (Token().strVal == "startTheta") {
 			ReadToken();
 			isSet.startTheta = true;
 			startTheta = ReadReal();
-		} else if (fToken.strVal == "arcTheta") {
+		} else if (Token().strVal == "arcTheta") {
 			ReadToken();
 			isSet.arcTheta = true;
 			arcTheta = ReadReal();
@@ -1393,20 +1274,20 @@ void PictureReaderJson::ReadFillArc(PictureVisitor &vis)
 		bool startTheta: 1;
 		bool arcTheta: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "center") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "center") {
 			ReadToken();
 			isSet.center = true;
 			ReadPoint(center);
-		} else if (fToken.strVal == "radius") {
+		} else if (Token().strVal == "radius") {
 			ReadToken();
 			isSet.radius = true;
 			ReadPoint(radius);
-		} else if (fToken.strVal == "startTheta") {
+		} else if (Token().strVal == "startTheta") {
 			ReadToken();
 			isSet.startTheta = true;
 			startTheta = ReadReal();
-		} else if (fToken.strVal == "arcTheta") {
+		} else if (Token().strVal == "arcTheta") {
 			ReadToken();
 			isSet.arcTheta = true;
 			arcTheta = ReadReal();
@@ -1450,12 +1331,12 @@ void PictureReaderJson::ReadStrokeRectGradient(PictureVisitor &vis)
 		bool rect: 1;
 		bool gradient: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "rect") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "rect") {
 			ReadToken();
 			isSet.rect = true;
 			ReadRect(rect);
-		} else if (fToken.strVal == "gradient") {
+		} else if (Token().strVal == "gradient") {
 			ReadToken();
 			isSet.gradient = true;
 			ReadGradient(gradient);
@@ -1478,12 +1359,12 @@ void PictureReaderJson::ReadFillRectGradient(PictureVisitor &vis)
 		bool rect: 1;
 		bool gradient: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "rect") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "rect") {
 			ReadToken();
 			isSet.rect = true;
 			ReadRect(rect);
-		} else if (fToken.strVal == "gradient") {
+		} else if (Token().strVal == "gradient") {
 			ReadToken();
 			isSet.gradient = true;
 			ReadGradient(gradient);
@@ -1508,16 +1389,16 @@ void PictureReaderJson::ReadStrokeRoundRectGradient(PictureVisitor &vis)
 		bool radius: 1;
 		bool gradient: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "rect") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "rect") {
 			ReadToken();
 			isSet.rect = true;
 			ReadRect(rect);
-		} else if (fToken.strVal == "radius") {
+		} else if (Token().strVal == "radius") {
 			ReadToken();
 			isSet.radius = true;
 			ReadPoint(radius);
-		} else if (fToken.strVal == "gradient") {
+		} else if (Token().strVal == "gradient") {
 			ReadToken();
 			isSet.gradient = true;
 			ReadGradient(gradient);
@@ -1543,16 +1424,16 @@ void PictureReaderJson::ReadFillRoundRectGradient(PictureVisitor &vis)
 		bool radius: 1;
 		bool gradient: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "rect") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "rect") {
 			ReadToken();
 			isSet.rect = true;
 			ReadRect(rect);
-		} else if (fToken.strVal == "radius") {
+		} else if (Token().strVal == "radius") {
 			ReadToken();
 			isSet.radius = true;
 			ReadPoint(radius);
-		} else if (fToken.strVal == "gradient") {
+		} else if (Token().strVal == "gradient") {
 			ReadToken();
 			isSet.gradient = true;
 			ReadGradient(gradient);
@@ -1576,8 +1457,8 @@ void PictureReaderJson::ReadStrokeBezierGradient(PictureVisitor &vis)
 		bool points: 1;
 		bool gradient: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "points") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "points") {
 			ReadToken();
 			isSet.points = true;
 			AssumeToken(JsonTokenKind::StartArray); ReadToken();
@@ -1585,7 +1466,7 @@ void PictureReaderJson::ReadStrokeBezierGradient(PictureVisitor &vis)
 				ReadPoint(points[i]);
 			}
 			AssumeToken(JsonTokenKind::EndArray); ReadToken();
-		} else if (fToken.strVal == "gradient") {
+		} else if (Token().strVal == "gradient") {
 			ReadToken();
 			isSet.gradient = true;
 			ReadGradient(gradient);
@@ -1608,8 +1489,8 @@ void PictureReaderJson::ReadFillBezierGradient(PictureVisitor &vis)
 		bool points: 1;
 		bool gradient: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "points") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "points") {
 			ReadToken();
 			isSet.points = true;
 			AssumeToken(JsonTokenKind::StartArray); ReadToken();
@@ -1617,7 +1498,7 @@ void PictureReaderJson::ReadFillBezierGradient(PictureVisitor &vis)
 				ReadPoint(points[i]);
 			}
 			AssumeToken(JsonTokenKind::EndArray); ReadToken();
-		} else if (fToken.strVal == "gradient") {
+		} else if (Token().strVal == "gradient") {
 			ReadToken();
 			isSet.gradient = true;
 			ReadGradient(gradient);
@@ -1642,22 +1523,22 @@ void PictureReaderJson::ReadStrokePolygonGradient(PictureVisitor &vis)
 		bool isClosed: 1;
 		bool gradient: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "points") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "points") {
 			ReadToken();
 			isSet.points = true;
 			AssumeToken(JsonTokenKind::StartArray); ReadToken();
-			while (fToken.kind != JsonTokenKind::EndArray) {
+			while (Token().kind != JsonTokenKind::EndArray) {
 				BPoint pt;
 				ReadPoint(pt);
 				points.push_back(pt);
 			}
 			AssumeToken(JsonTokenKind::EndArray); ReadToken();
-		} else if (fToken.strVal == "isClosed") {
+		} else if (Token().strVal == "isClosed") {
 			ReadToken();
 			isSet.isClosed = true;
 			isClosed = ReadBool();
-		} else if (fToken.strVal == "gradient") {
+		} else if (Token().strVal == "gradient") {
 			ReadToken();
 			isSet.gradient = true;
 			ReadGradient(gradient);
@@ -1681,18 +1562,18 @@ void PictureReaderJson::ReadFillPolygonGradient(PictureVisitor &vis)
 		bool points: 1;
 		bool gradient: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "points") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "points") {
 			ReadToken();
 			isSet.points = true;
 			AssumeToken(JsonTokenKind::StartArray); ReadToken();
-			while (fToken.kind != JsonTokenKind::EndArray) {
+			while (Token().kind != JsonTokenKind::EndArray) {
 				BPoint pt;
 				ReadPoint(pt);
 				points.push_back(pt);
 			}
 			AssumeToken(JsonTokenKind::EndArray); ReadToken();
-		} else if (fToken.strVal == "gradient") {
+		} else if (Token().strVal == "gradient") {
 			ReadToken();
 			isSet.gradient = true;
 			ReadGradient(gradient);
@@ -1715,12 +1596,12 @@ void PictureReaderJson::ReadStrokeShapeGradient(PictureVisitor &vis)
 		bool shape: 1;
 		bool gradient: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "shape") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "shape") {
 			ReadToken();
 			isSet.shape = true;
 			ReadShape(shape);
-		} else if (fToken.strVal == "gradient") {
+		} else if (Token().strVal == "gradient") {
 			ReadToken();
 			isSet.gradient = true;
 			ReadGradient(gradient);
@@ -1743,12 +1624,12 @@ void PictureReaderJson::ReadFillShapeGradient(PictureVisitor &vis)
 		bool shape: 1;
 		bool gradient: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "shape") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "shape") {
 			ReadToken();
 			isSet.shape = true;
 			ReadShape(shape);
-		} else if (fToken.strVal == "gradient") {
+		} else if (Token().strVal == "gradient") {
 			ReadToken();
 			isSet.gradient = true;
 			ReadGradient(gradient);
@@ -1777,24 +1658,24 @@ void PictureReaderJson::ReadStrokeArcGradient(PictureVisitor &vis)
 		bool arcTheta: 1;
 		bool gradient: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "center") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "center") {
 			ReadToken();
 			isSet.center = true;
 			ReadPoint(center);
-		} else if (fToken.strVal == "radius") {
+		} else if (Token().strVal == "radius") {
 			ReadToken();
 			isSet.radius = true;
 			ReadPoint(radius);
-		} else if (fToken.strVal == "startTheta") {
+		} else if (Token().strVal == "startTheta") {
 			ReadToken();
 			isSet.startTheta = true;
 			startTheta = ReadReal();
-		} else if (fToken.strVal == "arcTheta") {
+		} else if (Token().strVal == "arcTheta") {
 			ReadToken();
 			isSet.arcTheta = true;
 			arcTheta = ReadReal();
-		} else if (fToken.strVal == "gradient") {
+		} else if (Token().strVal == "gradient") {
 			ReadToken();
 			isSet.gradient = true;
 			ReadGradient(gradient);
@@ -1826,24 +1707,24 @@ void PictureReaderJson::ReadFillArcGradient(PictureVisitor &vis)
 		bool arcTheta: 1;
 		bool gradient: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "center") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "center") {
 			ReadToken();
 			isSet.center = true;
 			ReadPoint(center);
-		} else if (fToken.strVal == "radius") {
+		} else if (Token().strVal == "radius") {
 			ReadToken();
 			isSet.radius = true;
 			ReadPoint(radius);
-		} else if (fToken.strVal == "startTheta") {
+		} else if (Token().strVal == "startTheta") {
 			ReadToken();
 			isSet.startTheta = true;
 			startTheta = ReadReal();
-		} else if (fToken.strVal == "arcTheta") {
+		} else if (Token().strVal == "arcTheta") {
 			ReadToken();
 			isSet.arcTheta = true;
 			arcTheta = ReadReal();
-		} else if (fToken.strVal == "gradient") {
+		} else if (Token().strVal == "gradient") {
 			ReadToken();
 			isSet.gradient = true;
 			ReadGradient(gradient);
@@ -1869,12 +1750,12 @@ void PictureReaderJson::ReadStrokeEllipseGradient(PictureVisitor &vis)
 		bool rect: 1;
 		bool gradient: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "rect") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "rect") {
 			ReadToken();
 			isSet.rect = true;
 			ReadRect(rect);
-		} else if (fToken.strVal == "gradient") {
+		} else if (Token().strVal == "gradient") {
 			ReadToken();
 			isSet.gradient = true;
 			ReadGradient(gradient);
@@ -1897,12 +1778,12 @@ void PictureReaderJson::ReadFillEllipseGradient(PictureVisitor &vis)
 		bool rect: 1;
 		bool gradient: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "rect") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "rect") {
 			ReadToken();
 			isSet.rect = true;
 			ReadRect(rect);
-		} else if (fToken.strVal == "gradient") {
+		} else if (Token().strVal == "gradient") {
 			ReadToken();
 			isSet.gradient = true;
 			ReadGradient(gradient);
@@ -1927,7 +1808,7 @@ void PictureReaderJson::ReadSetClipping(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartArray); ReadToken();
 	BRegion region;
-	while (fToken.kind != JsonTokenKind::EndArray) {
+	while (Token().kind != JsonTokenKind::EndArray) {
 		BRect rect;
 		ReadRect(rect);
 		region.Include(rect);
@@ -1947,16 +1828,16 @@ void PictureReaderJson::ReadClipToPicture(PictureVisitor &vis)
 		bool where: 1;
 		bool inverse: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "token") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "token") {
 			ReadToken();
 			isSet.token = true;
 			token = ReadInt32();
-		} else if (fToken.strVal == "where") {
+		} else if (Token().strVal == "where") {
 			ReadToken();
 			isSet.where = true;
 			ReadPoint(where);
-		} else if (fToken.strVal == "inverse") {
+		} else if (Token().strVal == "inverse") {
 			ReadToken();
 			isSet.inverse = true;
 			inverse = ReadBool();
@@ -1994,12 +1875,12 @@ void PictureReaderJson::ReadClipToRect(PictureVisitor &vis)
 		bool inverse: 1;
 		bool rect: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "inverse") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "inverse") {
 			ReadToken();
 			isSet.inverse = true;
 			inverse = ReadBool();
-		} else if (fToken.strVal == "rect") {
+		} else if (Token().strVal == "rect") {
 			ReadToken();
 			isSet.rect = true;
 			ReadRect(rect);
@@ -2022,12 +1903,12 @@ void PictureReaderJson::ReadClipToShape(PictureVisitor &vis)
 		bool inverse: 1;
 		bool shape: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "inverse") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "inverse") {
 			ReadToken();
 			isSet.inverse = true;
 			inverse = ReadBool();
-		} else if (fToken.strVal == "shape") {
+		} else if (Token().strVal == "shape") {
 			ReadToken();
 			isSet.shape = true;
 			ReadShape(shape);
@@ -2059,27 +1940,27 @@ void PictureReaderJson::ReadSetDrawingMode(PictureVisitor &vis)
 {
 	drawing_mode mode;
 	AssumeToken(JsonTokenKind::String);
-	if (fToken.strVal == "B_OP_COPY") {
+	if (Token().strVal == "B_OP_COPY") {
 		mode = B_OP_COPY;
-	} else if (fToken.strVal == "B_OP_OVER") {
+	} else if (Token().strVal == "B_OP_OVER") {
 		mode = B_OP_OVER;
-	} else if (fToken.strVal == "B_OP_ERASE") {
+	} else if (Token().strVal == "B_OP_ERASE") {
 		mode = B_OP_ERASE;
-	} else if (fToken.strVal == "B_OP_INVERT") {
+	} else if (Token().strVal == "B_OP_INVERT") {
 		mode = B_OP_INVERT;
-	} else if (fToken.strVal == "B_OP_ADD") {
+	} else if (Token().strVal == "B_OP_ADD") {
 		mode = B_OP_ADD;
-	} else if (fToken.strVal == "B_OP_SUBTRACT") {
+	} else if (Token().strVal == "B_OP_SUBTRACT") {
 		mode = B_OP_SUBTRACT;
-	} else if (fToken.strVal == "B_OP_BLEND") {
+	} else if (Token().strVal == "B_OP_BLEND") {
 		mode = B_OP_BLEND;
-	} else if (fToken.strVal == "B_OP_MIN") {
+	} else if (Token().strVal == "B_OP_MIN") {
 		mode = B_OP_MIN;
-	} else if (fToken.strVal == "B_OP_MAX") {
+	} else if (Token().strVal == "B_OP_MAX") {
 		mode = B_OP_MAX;
-	} else if (fToken.strVal == "B_OP_SELECT") {
+	} else if (Token().strVal == "B_OP_SELECT") {
 		mode = B_OP_SELECT;
-	} else if (fToken.strVal == "B_OP_ALPHA") {
+	} else if (Token().strVal == "B_OP_ALPHA") {
 		mode = B_OP_ALPHA;
 	} else {
 		RaiseError();
@@ -2099,40 +1980,40 @@ void PictureReaderJson::ReadSetLineMode(PictureVisitor &vis)
 		bool joinMode: 1;
 		bool miterLimit: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "capMode") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "capMode") {
 			ReadToken();
 			isSet.capMode = true;
 			AssumeToken(JsonTokenKind::String);
-			if (fToken.strVal == "B_ROUND_CAP") {
+			if (Token().strVal == "B_ROUND_CAP") {
 				capMode = B_ROUND_CAP;
-			} else if (fToken.strVal == "B_BUTT_CAP") {
+			} else if (Token().strVal == "B_BUTT_CAP") {
 				capMode = B_BUTT_CAP;
-			} else if (fToken.strVal == "B_SQUARE_CAP") {
+			} else if (Token().strVal == "B_SQUARE_CAP") {
 				capMode = B_SQUARE_CAP;
 			} else {
 				RaiseError();
 			}
 			ReadToken();
-		} else if (fToken.strVal == "joinMode") {
+		} else if (Token().strVal == "joinMode") {
 			ReadToken();
 			isSet.joinMode = true;
 			AssumeToken(JsonTokenKind::String);
-			if (fToken.strVal == "B_ROUND_JOIN") {
+			if (Token().strVal == "B_ROUND_JOIN") {
 				joinMode = B_ROUND_JOIN;
-			} else if (fToken.strVal == "B_MITER_JOIN") {
+			} else if (Token().strVal == "B_MITER_JOIN") {
 				joinMode = B_MITER_JOIN;
-			} else if (fToken.strVal == "B_BEVEL_JOIN") {
+			} else if (Token().strVal == "B_BEVEL_JOIN") {
 				joinMode = B_BEVEL_JOIN;
-			} else if (fToken.strVal == "B_BUTT_JOIN") {
+			} else if (Token().strVal == "B_BUTT_JOIN") {
 				joinMode = B_BUTT_JOIN;
-			} else if (fToken.strVal == "B_SQUARE_JOIN") {
+			} else if (Token().strVal == "B_SQUARE_JOIN") {
 				joinMode = B_SQUARE_JOIN;
 			} else {
 				RaiseError();
 			}
 			ReadToken();
-		} else if (fToken.strVal == "miterLimit") {
+		} else if (Token().strVal == "miterLimit") {
 			ReadToken();
 			isSet.miterLimit = true;
 			miterLimit = ReadReal();
@@ -2176,20 +2057,20 @@ void PictureReaderJson::ReadSetLowColor(PictureVisitor &vis)
 void PictureReaderJson::ReadSetPattern(PictureVisitor &vis)
 {
 	::pattern pat;
-	if (fToken.kind == JsonTokenKind::String) {
-		if (fToken.strVal == "B_SOLID_HIGH") {
+	if (Token().kind == JsonTokenKind::String) {
+		if (Token().strVal == "B_SOLID_HIGH") {
 			ReadToken();
 			pat = B_SOLID_HIGH;
-		} else if (fToken.strVal == "B_SOLID_LOW") {
+		} else if (Token().strVal == "B_SOLID_LOW") {
 			ReadToken();
 			pat = B_SOLID_LOW;
-		} else if (fToken.strVal == "B_MIXED_COLORS") {
+		} else if (Token().strVal == "B_MIXED_COLORS") {
 			ReadToken();
 			pat = B_MIXED_COLORS;
 		} else {
 			RaiseError();
 		}
-	} else if (fToken.kind == JsonTokenKind::StartArray) {
+	} else if (Token().kind == JsonTokenKind::StartArray) {
 		ReadToken();
 		for (int32 i = 0; i < 8; i++) {
 			pat.data[i] = ReadUint8();
@@ -2217,50 +2098,50 @@ void PictureReaderJson::ReadSetBlendingMode(PictureVisitor &vis)
 		bool srcAlpha: 1;
 		bool alphaFunc: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "srcAlpha") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "srcAlpha") {
 			ReadToken();
 			isSet.srcAlpha = true;
 			AssumeToken(JsonTokenKind::String);
-			if (fToken.strVal == "B_PIXEL_ALPHA") {
+			if (Token().strVal == "B_PIXEL_ALPHA") {
 				srcAlpha = B_PIXEL_ALPHA;
-			} else if (fToken.strVal == "B_CONSTANT_ALPHA") {
+			} else if (Token().strVal == "B_CONSTANT_ALPHA") {
 				srcAlpha = B_CONSTANT_ALPHA;
 			} else {
 				RaiseError();
 			}
 			ReadToken();
-		} else if (fToken.strVal == "alphaFunc") {
+		} else if (Token().strVal == "alphaFunc") {
 			ReadToken();
 			isSet.alphaFunc = true;
 			AssumeToken(JsonTokenKind::String);
-			if (fToken.strVal == "B_ALPHA_OVERLAY") {
+			if (Token().strVal == "B_ALPHA_OVERLAY") {
 				alphaFunc = B_ALPHA_OVERLAY;
-			} else if (fToken.strVal == "B_ALPHA_COMPOSITE") {
+			} else if (Token().strVal == "B_ALPHA_COMPOSITE") {
 				alphaFunc = B_ALPHA_COMPOSITE;
-			} else if (fToken.strVal == "B_ALPHA_COMPOSITE_SOURCE_IN") {
+			} else if (Token().strVal == "B_ALPHA_COMPOSITE_SOURCE_IN") {
 				alphaFunc = B_ALPHA_COMPOSITE_SOURCE_IN;
-			} else if (fToken.strVal == "B_ALPHA_COMPOSITE_SOURCE_OUT") {
+			} else if (Token().strVal == "B_ALPHA_COMPOSITE_SOURCE_OUT") {
 				alphaFunc = B_ALPHA_COMPOSITE_SOURCE_OUT;
-			} else if (fToken.strVal == "B_ALPHA_COMPOSITE_SOURCE_ATOP") {
+			} else if (Token().strVal == "B_ALPHA_COMPOSITE_SOURCE_ATOP") {
 				alphaFunc = B_ALPHA_COMPOSITE_SOURCE_ATOP;
-			} else if (fToken.strVal == "B_ALPHA_COMPOSITE_DESTINATION_OVER") {
+			} else if (Token().strVal == "B_ALPHA_COMPOSITE_DESTINATION_OVER") {
 				alphaFunc = B_ALPHA_COMPOSITE_DESTINATION_OVER;
-			} else if (fToken.strVal == "B_ALPHA_COMPOSITE_DESTINATION_IN") {
+			} else if (Token().strVal == "B_ALPHA_COMPOSITE_DESTINATION_IN") {
 				alphaFunc = B_ALPHA_COMPOSITE_DESTINATION_IN;
-			} else if (fToken.strVal == "B_ALPHA_COMPOSITE_DESTINATION_OUT") {
+			} else if (Token().strVal == "B_ALPHA_COMPOSITE_DESTINATION_OUT") {
 				alphaFunc = B_ALPHA_COMPOSITE_DESTINATION_OUT;
-			} else if (fToken.strVal == "B_ALPHA_COMPOSITE_DESTINATION_ATOP") {
+			} else if (Token().strVal == "B_ALPHA_COMPOSITE_DESTINATION_ATOP") {
 				alphaFunc = B_ALPHA_COMPOSITE_DESTINATION_ATOP;
-			} else if (fToken.strVal == "B_ALPHA_COMPOSITE_XOR") {
+			} else if (Token().strVal == "B_ALPHA_COMPOSITE_XOR") {
 				alphaFunc = B_ALPHA_COMPOSITE_XOR;
-			} else if (fToken.strVal == "B_ALPHA_COMPOSITE_CLEAR") {
+			} else if (Token().strVal == "B_ALPHA_COMPOSITE_CLEAR") {
 				alphaFunc = B_ALPHA_COMPOSITE_CLEAR;
-			} else if (fToken.strVal == "B_ALPHA_COMPOSITE_DIFFERENCE") {
+			} else if (Token().strVal == "B_ALPHA_COMPOSITE_DIFFERENCE") {
 				alphaFunc = B_ALPHA_COMPOSITE_DIFFERENCE;
-			} else if (fToken.strVal == "B_ALPHA_COMPOSITE_LIGHTEN") {
+			} else if (Token().strVal == "B_ALPHA_COMPOSITE_LIGHTEN") {
 				alphaFunc = B_ALPHA_COMPOSITE_LIGHTEN;
-			} else if (fToken.strVal == "B_ALPHA_COMPOSITE_DARKEN") {
+			} else if (Token().strVal == "B_ALPHA_COMPOSITE_DARKEN") {
 				alphaFunc = B_ALPHA_COMPOSITE_DARKEN;
 			} else {
 				RaiseError();
@@ -2280,9 +2161,9 @@ void PictureReaderJson::ReadSetFillRule(PictureVisitor &vis)
 {
 	int32 fillRule;
 	AssumeToken(JsonTokenKind::String);
-	if (fToken.strVal == "B_EVEN_ODD") {
+	if (Token().strVal == "B_EVEN_ODD") {
 		fillRule = B_EVEN_ODD;
-	} else if (fToken.strVal == "B_NONZERO") {
+	} else if (Token().strVal == "B_NONZERO") {
 		fillRule = B_NONZERO;
 	} else {
 		RaiseError();
@@ -2295,8 +2176,8 @@ void PictureReaderJson::ReadSetFontFamily(PictureVisitor &vis)
 {
 	font_family family;
 	AssumeToken(JsonTokenKind::String);
-	Assume(fToken.strVal.size() <= sizeof(family) - 1);
-	strcpy(family, fToken.strVal.c_str());
+	Assume(Token().strVal.size() <= sizeof(family) - 1);
+	strcpy(family, Token().strVal.c_str());
 	ReadToken();
 	vis.SetFontFamily(family);
 }
@@ -2305,8 +2186,8 @@ void PictureReaderJson::ReadSetFontStyle(PictureVisitor &vis)
 {
 	font_style style;
 	AssumeToken(JsonTokenKind::String);
-	Assume(fToken.strVal.size() <= sizeof(style) - 1);
-	strcpy(style, fToken.strVal.c_str());
+	Assume(Token().strVal.size() <= sizeof(style) - 1);
+	strcpy(style, Token().strVal.c_str());
 	ReadToken();
 	vis.SetFontStyle(style);
 }
@@ -2315,13 +2196,13 @@ void PictureReaderJson::ReadSetFontSpacing(PictureVisitor &vis)
 {
 	int32 spacing;
 	AssumeToken(JsonTokenKind::String);
-	if (fToken.strVal == "B_CHAR_SPACING") {
+	if (Token().strVal == "B_CHAR_SPACING") {
 		spacing = B_CHAR_SPACING;
-	} else if (fToken.strVal == "B_STRING_SPACING") {
+	} else if (Token().strVal == "B_STRING_SPACING") {
 		spacing = B_STRING_SPACING;
-	} else if (fToken.strVal == "B_BITMAP_SPACING") {
+	} else if (Token().strVal == "B_BITMAP_SPACING") {
 		spacing = B_BITMAP_SPACING;
-	} else if (fToken.strVal == "B_FIXED_SPACING") {
+	} else if (Token().strVal == "B_FIXED_SPACING") {
 		spacing = B_FIXED_SPACING;
 	} else {
 		RaiseError();
@@ -2334,29 +2215,29 @@ void PictureReaderJson::ReadSetFontEncoding(PictureVisitor &vis)
 {
 	int32 encoding;
 	AssumeToken(JsonTokenKind::String);
-	if (fToken.strVal == "B_UNICODE_UTF8") {
+	if (Token().strVal == "B_UNICODE_UTF8") {
 		encoding = B_UNICODE_UTF8;
-	} else if (fToken.strVal == "B_ISO_8859_1") {
+	} else if (Token().strVal == "B_ISO_8859_1") {
 		encoding = B_ISO_8859_1;
-	} else if (fToken.strVal == "B_ISO_8859_2") {
+	} else if (Token().strVal == "B_ISO_8859_2") {
 		encoding = B_ISO_8859_2;
-	} else if (fToken.strVal == "B_ISO_8859_3") {
+	} else if (Token().strVal == "B_ISO_8859_3") {
 		encoding = B_ISO_8859_3;
-	} else if (fToken.strVal == "B_ISO_8859_4") {
+	} else if (Token().strVal == "B_ISO_8859_4") {
 		encoding = B_ISO_8859_4;
-	} else if (fToken.strVal == "B_ISO_8859_5") {
+	} else if (Token().strVal == "B_ISO_8859_5") {
 		encoding = B_ISO_8859_5;
-	} else if (fToken.strVal == "B_ISO_8859_6") {
+	} else if (Token().strVal == "B_ISO_8859_6") {
 		encoding = B_ISO_8859_6;
-	} else if (fToken.strVal == "B_ISO_8859_7") {
+	} else if (Token().strVal == "B_ISO_8859_7") {
 		encoding = B_ISO_8859_7;
-	} else if (fToken.strVal == "B_ISO_8859_8") {
+	} else if (Token().strVal == "B_ISO_8859_8") {
 		encoding = B_ISO_8859_8;
-	} else if (fToken.strVal == "B_ISO_8859_9") {
+	} else if (Token().strVal == "B_ISO_8859_9") {
 		encoding = B_ISO_8859_9;
-	} else if (fToken.strVal == "B_ISO_8859_10") {
+	} else if (Token().strVal == "B_ISO_8859_10") {
 		encoding = B_ISO_8859_10;
-	} else if (fToken.strVal == "B_MACINTOSH_ROMAN") {
+	} else if (Token().strVal == "B_MACINTOSH_ROMAN") {
 		encoding = B_MACINTOSH_ROMAN;
 	} else {
 		RaiseError();
@@ -2369,10 +2250,10 @@ void PictureReaderJson::ReadSetFontFlags(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartArray); ReadToken();
 	int32 flags = 0;
-	while (fToken.kind != JsonTokenKind::EndArray) {
-		if (fToken.strVal == "B_DISABLE_ANTIALIASING") {
+	while (Token().kind != JsonTokenKind::EndArray) {
+		if (Token().strVal == "B_DISABLE_ANTIALIASING") {
 			flags |= B_DISABLE_ANTIALIASING;
-		} else if (fToken.strVal == "B_FORCE_ANTIALIASING") {
+		} else if (Token().strVal == "B_FORCE_ANTIALIASING") {
 			flags |= B_FORCE_ANTIALIASING;
 		} else {
 			RaiseError();
@@ -2411,26 +2292,26 @@ void PictureReaderJson::ReadSetFontFace(PictureVisitor &vis)
 {
 	AssumeToken(JsonTokenKind::StartArray); ReadToken();
 	int32 face = 0;
-	while (fToken.kind != JsonTokenKind::EndArray) {
-		if (fToken.strVal == "B_ITALIC_FACE") {
+	while (Token().kind != JsonTokenKind::EndArray) {
+		if (Token().strVal == "B_ITALIC_FACE") {
 			face |= B_ITALIC_FACE;
-		} else if (fToken.strVal == "B_UNDERSCORE_FACE") {
+		} else if (Token().strVal == "B_UNDERSCORE_FACE") {
 			face |= B_UNDERSCORE_FACE;
-		} else if (fToken.strVal == "B_NEGATIVE_FACE") {
+		} else if (Token().strVal == "B_NEGATIVE_FACE") {
 			face |= B_NEGATIVE_FACE;
-		} else if (fToken.strVal == "B_OUTLINED_FACE") {
+		} else if (Token().strVal == "B_OUTLINED_FACE") {
 			face |= B_OUTLINED_FACE;
-		} else if (fToken.strVal == "B_STRIKEOUT_FACE") {
+		} else if (Token().strVal == "B_STRIKEOUT_FACE") {
 			face |= B_STRIKEOUT_FACE;
-		} else if (fToken.strVal == "B_BOLD_FACE") {
+		} else if (Token().strVal == "B_BOLD_FACE") {
 			face |= B_BOLD_FACE;
-		} else if (fToken.strVal == "B_REGULAR_FACE") {
+		} else if (Token().strVal == "B_REGULAR_FACE") {
 			face |= B_REGULAR_FACE;
-		} else if (fToken.strVal == "B_CONDENSED_FACE") {
+		} else if (Token().strVal == "B_CONDENSED_FACE") {
 			face |= B_CONDENSED_FACE;
-		} else if (fToken.strVal == "B_LIGHT_FACE") {
+		} else if (Token().strVal == "B_LIGHT_FACE") {
 			face |= B_LIGHT_FACE;
-		} else if (fToken.strVal == "B_HEAVY_FACE") {
+		} else if (Token().strVal == "B_HEAVY_FACE") {
 			face |= B_HEAVY_FACE;
 		} else {
 			RaiseError();
@@ -2459,28 +2340,28 @@ void PictureReaderJson::ReadSetTransform(PictureVisitor &vis)
 		bool shy: 1;
 		bool shx: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "tx") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "tx") {
 			ReadToken();
 			isSet.tx = true;
 			tr.tx = ReadReal();
-		} else if (fToken.strVal == "ty") {
+		} else if (Token().strVal == "ty") {
 			ReadToken();
 			isSet.ty = true;
 			tr.ty = ReadReal();
-		} else if (fToken.strVal == "sx") {
+		} else if (Token().strVal == "sx") {
 			ReadToken();
 			isSet.sx = true;
 			tr.sx = ReadReal();
-		} else if (fToken.strVal == "sy") {
+		} else if (Token().strVal == "sy") {
 			ReadToken();
 			isSet.sy = true;
 			tr.sy = ReadReal();
-		} else if (fToken.strVal == "shy") {
+		} else if (Token().strVal == "shy") {
 			ReadToken();
 			isSet.shy = true;
 			tr.shy = ReadReal();
-		} else if (fToken.strVal == "shx") {
+		} else if (Token().strVal == "shx") {
 			ReadToken();
 			isSet.shx = true;
 			tr.shx = ReadReal();
@@ -2507,12 +2388,12 @@ void PictureReaderJson::ReadTranslateBy(PictureVisitor &vis)
 		bool x: 1;
 		bool y: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "x") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "x") {
 			ReadToken();
 			isSet.x = true;
 			x = ReadReal();
-		} else if (fToken.strVal == "y") {
+		} else if (Token().strVal == "y") {
 			ReadToken();
 			isSet.y = true;
 			y = ReadReal();
@@ -2535,12 +2416,12 @@ void PictureReaderJson::ReadScaleBy(PictureVisitor &vis)
 		bool x: 1;
 		bool y: 1;
 	} isSet {};
-	while (fToken.kind == JsonTokenKind::Key) {
-		if (fToken.strVal == "x") {
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "x") {
 			ReadToken();
 			isSet.x = true;
 			x = ReadReal();
-		} else if (fToken.strVal == "y") {
+		} else if (Token().strVal == "y") {
 			ReadToken();
 			isSet.y = true;
 			y = ReadReal();
