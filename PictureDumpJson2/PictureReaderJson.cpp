@@ -1319,7 +1319,37 @@ void PictureReaderJson::ReadFillEllipse(PictureVisitor &vis)
 
 void PictureReaderJson::ReadDrawStringLocations(PictureVisitor &vis)
 {
-	RaiseUnimplemented();
+	AssumeToken(JsonTokenKind::StartObject); ReadToken();
+	std::vector<BPoint> locations;
+	std::string string;
+	struct {
+		bool locations: 1;
+		bool string: 1;
+	} isSet {};
+	while (Token().kind == JsonTokenKind::Key) {
+		if (Token().strVal == "locations") {
+			ReadToken();
+			isSet.locations = true;
+			AssumeToken(JsonTokenKind::StartArray); ReadToken();
+			while (Token().kind != JsonTokenKind::EndArray) {
+				BPoint pt;
+				ReadPoint(pt);
+				locations.push_back(pt);
+			}
+			AssumeToken(JsonTokenKind::EndArray); ReadToken();
+		} else if (Token().strVal == "string") {
+			ReadToken();
+			isSet.string = true;
+			string = Token().strVal;
+			ReadToken();
+		} else {
+			RaiseError();
+		}
+	}
+	Assume(isSet.locations);
+	Assume(isSet.string);
+	AssumeToken(JsonTokenKind::EndObject); ReadToken();
+	vis.DrawString(string.data(), string.size(), locations.data(), locations.size());
 }
 
 void PictureReaderJson::ReadStrokeRectGradient(PictureVisitor &vis)
