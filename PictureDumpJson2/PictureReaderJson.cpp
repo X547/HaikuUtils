@@ -159,6 +159,8 @@ void PictureReaderJson::Accept(PictureVisitor &vis)
 }
 
 
+// #pragma mark -
+
 bool PictureReaderJson::ReadBool()
 {
 	AssumeToken(JsonTokenKind::Bool);
@@ -616,6 +618,116 @@ void PictureReaderJson::ReadGradient(ObjectDeleter<BGradient> &outGradient)
 	AssumeToken(JsonTokenKind::EndObject); ReadToken();
 }
 
+void PictureReaderJson::ReadColorSpace(color_space &val)
+{
+	AssumeToken(JsonTokenKind::String);
+	if (fToken.strVal == "B_NO_COLOR_SPACE") {
+		val = B_NO_COLOR_SPACE;
+	} else if (fToken.strVal == "B_RGBA64") {
+		val = B_RGBA64;
+	} else if (fToken.strVal == "B_RGB48") {
+		val = B_RGB48;
+	} else if (fToken.strVal == "B_RGB32") {
+		val = B_RGB32;
+	} else if (fToken.strVal == "B_RGBA32") {
+		val = B_RGBA32;
+	} else if (fToken.strVal == "B_RGB24") {
+		val = B_RGB24;
+	} else if (fToken.strVal == "B_RGB16") {
+		val = B_RGB16;
+	} else if (fToken.strVal == "B_RGB15") {
+		val = B_RGB15;
+	} else if (fToken.strVal == "B_RGBA15") {
+		val = B_RGBA15;
+	} else if (fToken.strVal == "B_CMAP8") {
+		val = B_CMAP8;
+	} else if (fToken.strVal == "B_GRAY8") {
+		val = B_GRAY8;
+	} else if (fToken.strVal == "B_GRAY1") {
+		val = B_GRAY1;
+	} else if (fToken.strVal == "B_RGBA64_BIG") {
+		val = B_RGBA64_BIG;
+	} else if (fToken.strVal == "B_RGB48_BIG") {
+		val = B_RGB48_BIG;
+	} else if (fToken.strVal == "B_RGB32_BIG") {
+		val = B_RGB32_BIG;
+	} else if (fToken.strVal == "B_RGBA32_BIG") {
+		val = B_RGBA32_BIG;
+	} else if (fToken.strVal == "B_RGB24_BIG") {
+		val = B_RGB24_BIG;
+	} else if (fToken.strVal == "B_RGB16_BIG") {
+		val = B_RGB16_BIG;
+	} else if (fToken.strVal == "B_RGB15_BIG") {
+		val = B_RGB15_BIG;
+	} else if (fToken.strVal == "B_RGBA15_BIG") {
+		val = B_RGBA15_BIG;
+	} else if (fToken.strVal == "B_YCbCr422") {
+		val = B_YCbCr422;
+	} else if (fToken.strVal == "B_YCbCr411") {
+		val = B_YCbCr411;
+	} else if (fToken.strVal == "B_YCbCr444") {
+		val = B_YCbCr444;
+	} else if (fToken.strVal == "B_YCbCr420") {
+		val = B_YCbCr420;
+	} else if (fToken.strVal == "B_YUV422") {
+		val = B_YUV422;
+	} else if (fToken.strVal == "B_YUV411") {
+		val = B_YUV411;
+	} else if (fToken.strVal == "B_YUV444") {
+		val = B_YUV444;
+	} else if (fToken.strVal == "B_YUV420") {
+		val = B_YUV420;
+	} else if (fToken.strVal == "B_YUV9") {
+		val = B_YUV9;
+	} else if (fToken.strVal == "B_YUV12") {
+		val = B_YUV12;
+	} else if (fToken.strVal == "B_UVL24") {
+		val = B_UVL24;
+	} else if (fToken.strVal == "B_UVL32") {
+		val = B_UVL32;
+	} else if (fToken.strVal == "B_UVLA32") {
+		val = B_UVLA32;
+	} else if (fToken.strVal == "B_LAB24") {
+		val = B_LAB24;
+	} else if (fToken.strVal == "B_LAB32") {
+		val = B_LAB32;
+	} else if (fToken.strVal == "B_LABA32") {
+		val = B_LABA32;
+	} else if (fToken.strVal == "B_HSI24") {
+		val = B_HSI24;
+	} else if (fToken.strVal == "B_HSI32") {
+		val = B_HSI32;
+	} else if (fToken.strVal == "B_HSIA32") {
+		val = B_HSIA32;
+	} else if (fToken.strVal == "B_HSV24") {
+		val = B_HSV24;
+	} else if (fToken.strVal == "B_HSV32") {
+		val = B_HSV32;
+	} else if (fToken.strVal == "B_HSVA32") {
+		val = B_HSVA32;
+	} else if (fToken.strVal == "B_HLS24") {
+		val = B_HLS24;
+	} else if (fToken.strVal == "B_HLS32") {
+		val = B_HLS32;
+	} else if (fToken.strVal == "B_HLSA32") {
+		val = B_HLSA32;
+	} else if (fToken.strVal == "B_CMY24") {
+		val = B_CMY24;
+	} else if (fToken.strVal == "B_CMY32") {
+		val = B_CMY32;
+	} else if (fToken.strVal == "B_CMYA32") {
+		val = B_CMYA32;
+	} else if (fToken.strVal == "B_CMYK32") {
+		val = B_CMYK32;
+	} else {
+		RaiseError();
+	}
+	ReadToken();
+}
+
+
+// #pragma mark -
+
 void PictureReaderJson::ReadPicture(PictureVisitor &vis)
 {
 	int32 version = 2;
@@ -887,6 +999,9 @@ void PictureReaderJson::ReadOps(PictureVisitor &vis)
 	AssumeToken(JsonTokenKind::EndArray); ReadToken();
 }
 
+
+// #pragma mark -
+
 void PictureReaderJson::ReadMovePenBy(PictureVisitor &vis)
 {
 	BPoint dp;
@@ -1113,7 +1228,7 @@ void PictureReaderJson::ReadDrawBitmap(PictureVisitor &vis)
 	int32 width;
 	int32 height;
 	int32 bytesPerRow;
-	int32 colorSpace;
+	color_space colorSpace;
 	int32 flags;
 	std::vector<uint8> data;
 
@@ -1152,7 +1267,7 @@ void PictureReaderJson::ReadDrawBitmap(PictureVisitor &vis)
 		} else if (fToken.strVal == "colorSpace") {
 			ReadToken();
 			isSet.colorSpace = true;
-			colorSpace = ReadInt32();
+			ReadColorSpace(colorSpace);
 		} else if (fToken.strVal == "flags") {
 			ReadToken();
 			isSet.flags = true;

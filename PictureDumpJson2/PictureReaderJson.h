@@ -126,6 +126,7 @@ private:
 	void ReadShape(BShape &shape);
 	void ReadGradientStops(BGradient &gradient);
 	void ReadGradient(ObjectDeleter<BGradient> &outGradient);
+	void ReadColorSpace(color_space &val);
 
 	void ReadPicture(PictureVisitor &vis);
 	void ReadOps(PictureVisitor &vis);
