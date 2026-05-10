@@ -596,7 +596,7 @@ void PictureWriterJson::SetFontEncoding(int32 encoding)
 	fWr.EndObject();
 }
 
-void PictureWriterJson::PictureWriterJson::SetFontFlags(int32 flags)
+void PictureWriterJson::SetFontFlags(int32 flags)
 {
 	fWr.StartObject();
 	fWr.Key("SET_FONT_FLAGS");
@@ -845,7 +845,6 @@ void PictureWriterJson::DrawArc(
 	} else {
 		fWr.Key(drawInfo.isStroke ? "STROKE_ARC_GRADIENT" : "FILL_ARC_GRADIENT");
 	}
-	fWr.Key("STROKE_ARC");
 	fWr.StartObject();
 	fWr.Key("center"); WritePoint(center);
 	fWr.Key("radius"); WritePoint(radius);
