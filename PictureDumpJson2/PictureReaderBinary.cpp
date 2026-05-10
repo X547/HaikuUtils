@@ -24,7 +24,7 @@ static void ReadFloat(BDataIO &rd, float &val) {rd.Read(&val, sizeof(val));}
 static void ReadDouble(BDataIO &rd, double &val) {rd.Read(&val, sizeof(val));}
 static void ReadPoint(BDataIO &rd, BPoint &val) {rd.Read(&val, sizeof(val));}
 static void ReadRect(BDataIO &rd, BRect &val) {rd.Read(&val, sizeof(val));}
-static void ReadTransform(BDataIO &rd, BAffineTransform &val) {rd.Read(&val, sizeof(val));}
+static void ReadTransform(BDataIO &rd, BAffineTransform &val) {rd.Read(&val.sx, 6 * sizeof(double));}
 static void ReadPattern(BDataIO &rd, pattern &val) {rd.Read(&val, sizeof(val));}
 
 static void ReadColor(BDataIO &rd, rgb_color& color)
