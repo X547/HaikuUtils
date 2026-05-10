@@ -5,17 +5,35 @@ dep_libbe = cpp.find_library('be')
 dep_rapidjson = dependency('RapidJSON')
 dep_yamp_cpp = dependency('yaml-cpp')
 
-executable('PictureDumpJson',
-	'PictureDump.cpp',
+lib_PictureDumpJson = static_library('PictureDumpJson',
 	'PictureReaderBinary.cpp',
-	'PictureReaderJson.cpp',
 	'PictureWriterBinary.cpp',
+	'PictureReaderJson.cpp',
 	'PictureWriterJson.cpp',
 	'PictureWriterYaml.cpp',
+	'PictureReaderPlay.cpp',
 	dependencies: [
 		dep_libbe,
 		dep_rapidjson,
 		dep_yamp_cpp,
+	],
+	gnu_symbol_visibility: 'hidden',
+)
+
+dep_PictureDumpJson = declare_dependency(
+	link_with: [lib_PictureDumpJson],
+	dependencies: [
+		dep_libbe,
+		dep_rapidjson,
+		dep_yamp_cpp,
+	],
+)
+
+executable('PictureDumpJson',
+	'PictureDump.cpp',
+	dependencies: [
+		dep_libbe,
+		dep_PictureDumpJson,
 	],
 	gnu_symbol_visibility: 'hidden',
 	install: true
@@ -23,11 +41,9 @@ executable('PictureDumpJson',
 
 executable('PictureDumpPlayJson',
 	'PictureDumpPlay.cpp',
-	'PictureReaderPlay.cpp',
-	'PictureWriterJson.cpp',
 	dependencies: [
 		dep_libbe,
-		dep_rapidjson,
+		dep_PictureDumpJson,
 	],
 	gnu_symbol_visibility: 'hidden',
 	install: true
@@ -35,11 +51,9 @@ executable('PictureDumpPlayJson',
 
 executable('PictureCompileJson',
 	'PictureCompile.cpp',
-	'PictureWriterBinary.cpp',
-	'PictureReaderJson.cpp',
 	dependencies: [
 		dep_libbe,
-		dep_rapidjson,
+		dep_PictureDumpJson,
 	],
 	gnu_symbol_visibility: 'hidden',
 	install: true
@@ -47,12 +61,9 @@ executable('PictureCompileJson',
 
 executable('PictureCompileViewJson',
 	'PictureCompile.cpp',
-	'PictureWriterBinary.cpp',
-	'PictureWriterView.cpp',
-	'PictureReaderJson.cpp',
 	dependencies: [
 		dep_libbe,
-		dep_rapidjson,
+		dep_PictureDumpJson,
 	],
 	gnu_symbol_visibility: 'hidden',
 	install: true
@@ -60,11 +71,9 @@ executable('PictureCompileViewJson',
 
 executable('PictureJsonIdentity',
 	'PictureJsonIdentity.cpp',
-	'PictureWriterJson.cpp',
-	'PictureReaderJson.cpp',
 	dependencies: [
 		dep_libbe,
-		dep_rapidjson,
+		dep_PictureDumpJson,
 	],
 	gnu_symbol_visibility: 'hidden',
 	install: true
